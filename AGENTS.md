@@ -160,6 +160,17 @@ Rivers are economic infrastructure, not just terrain. Key rules:
 - River Dock placement is a key strategic decision: build upstream near mines
 - **River overlay** (toggle with R): shows flow direction colored green (toward base) / red (away)
 
+### ADR-010: Wolf Domestication
+Wolves spawn as hostile Gaia fauna near forests (3-5 packs of 2-3 wolves per map). Players choose: hunt them for 50 Food, or feed them to domesticate.
+- **Feed command:** Shift+right-click wolf with villager. Costs 25 Food per feeding, 3 feedings to domesticate (75 Food total).
+- **Contested:** If another player feeds the same wolf, progress resets to them.
+- **Progress decays** at 10%/minute if not maintained — commit or lose your investment.
+- **Dog companion** (0 pop cost, not trainable): HP 25, Speed 2.5, LOS 6
+  - **Hunting assist:** +25% gather rate for nearby hunting villagers, deer flee less
+  - **Danger alert:** 10-tile sense radius, bark + minimap ping + 10% speed boost to nearby friendlies for 5s
+  - **Town patrol:** +2 LOS to buildings near Town Center per dog (max +4 with 2 dogs)
+  - Dogs flee from combat, can be garrisoned in Town Center for protection
+
 ### Combat
 Rock-paper-scissors: Infantry → Archers → Cavalry → Infantry. Siege → Buildings.
 - Buildings take 80% reduced damage from non-siege units
