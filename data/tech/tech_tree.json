@@ -1,0 +1,812 @@
+[
+  {
+    "id": "stone_tools",
+    "name": "Stone Tools",
+    "age": 0,
+    "cost": { "food": 50 },
+    "research_time": 25,
+    "prerequisites": [],
+    "effects": {
+      "economic_bonus": { "gather_rate": 0.10 }
+    },
+    "flavor_text": "Sharpened flint changes everything."
+  },
+  {
+    "id": "fire_mastery",
+    "name": "Fire Mastery",
+    "age": 0,
+    "cost": { "food": 75 },
+    "research_time": 30,
+    "prerequisites": [],
+    "effects": {
+      "economic_bonus": { "hunting_yield": 0.20 },
+      "stat_modifiers": { "night_los": 2 }
+    },
+    "flavor_text": "Warmth, light, and cooked meat."
+  },
+  {
+    "id": "animal_husbandry",
+    "name": "Animal Husbandry",
+    "age": 0,
+    "cost": { "food": 100 },
+    "research_time": 40,
+    "prerequisites": ["stone_tools"],
+    "effects": {
+      "unlock_buildings": ["sheep_pen"]
+    },
+    "flavor_text": "The first step from hunter to herder."
+  },
+  {
+    "id": "basket_weaving",
+    "name": "Basket Weaving",
+    "age": 0,
+    "cost": { "food": 75, "wood": 25 },
+    "research_time": 30,
+    "prerequisites": ["stone_tools"],
+    "effects": {
+      "economic_bonus": { "carry_capacity": 0.25 }
+    },
+    "flavor_text": "Woven reeds multiply what hands can carry."
+  },
+  {
+    "id": "bronze_working",
+    "name": "Bronze Working",
+    "age": 1,
+    "cost": { "food": 150, "gold": 100 },
+    "research_time": 45,
+    "prerequisites": [],
+    "effects": {
+      "stat_modifiers": { "melee_attack": 1 },
+      "unlock_buildings": ["barracks"],
+      "unlock_units": ["infantry"]
+    },
+    "flavor_text": "Copper and tin forge an empire."
+  },
+  {
+    "id": "writing",
+    "name": "Writing",
+    "age": 1,
+    "cost": { "food": 100, "wood": 75 },
+    "research_time": 50,
+    "prerequisites": [],
+    "effects": {
+      "unlock_buildings": ["library"]
+    },
+    "flavor_text": "Marks on clay become the memory of a people."
+  },
+  {
+    "id": "pottery",
+    "name": "Pottery",
+    "age": 1,
+    "cost": { "food": 100, "wood": 50 },
+    "research_time": 35,
+    "prerequisites": [],
+    "effects": {
+      "economic_bonus": { "food_decay_reduction": 0.50 },
+      "unlock_buildings": ["market"]
+    },
+    "flavor_text": "Fired clay stores grain through winter."
+  },
+  {
+    "id": "irrigation",
+    "name": "Irrigation",
+    "age": 1,
+    "cost": { "food": 200, "wood": 150 },
+    "research_time": 60,
+    "prerequisites": ["writing"],
+    "effects": {
+      "economic_bonus": { "farm_output": 0.25 }
+    },
+    "flavor_text": "Canals turn desert into garden."
+  },
+  {
+    "id": "masonry",
+    "name": "Masonry",
+    "age": 1,
+    "cost": { "wood": 150, "stone": 100 },
+    "research_time": 50,
+    "prerequisites": ["bronze_working"],
+    "effects": {
+      "stat_modifiers": { "building_hp": 0.20 },
+      "unlock_buildings": ["stone_wall"]
+    },
+    "flavor_text": "Fitted stone stands where mud brick crumbles."
+  },
+  {
+    "id": "sailing",
+    "name": "Sailing",
+    "age": 1,
+    "cost": { "wood": 200, "gold": 75 },
+    "research_time": 55,
+    "prerequisites": [],
+    "effects": {
+      "unlock_buildings": ["dock"],
+      "unlock_units": ["fishing_boat"]
+    },
+    "flavor_text": "The horizon beckons."
+  },
+  {
+    "id": "iron_working",
+    "name": "Iron Working",
+    "age": 2,
+    "cost": { "food": 200, "gold": 150 },
+    "research_time": 55,
+    "prerequisites": ["bronze_working"],
+    "effects": {
+      "stat_modifiers": { "melee_attack": 2 },
+      "unlock_units": ["swordsman"]
+    },
+    "flavor_text": "Iron edges shatter bronze shields."
+  },
+  {
+    "id": "philosophy",
+    "name": "Philosophy",
+    "age": 2,
+    "cost": { "gold": 150, "knowledge": 100 },
+    "research_time": 60,
+    "prerequisites": ["writing"],
+    "effects": {
+      "research_bonus": 0.25
+    },
+    "flavor_text": "The unexamined life is not worth living."
+  },
+  {
+    "id": "mathematics",
+    "name": "Mathematics",
+    "age": 2,
+    "cost": { "gold": 200, "knowledge": 150 },
+    "research_time": 65,
+    "prerequisites": ["writing"],
+    "effects": {
+      "economic_bonus": { "construction_speed": 0.15 },
+      "stat_modifiers": { "siege_accuracy": 0.10 }
+    },
+    "flavor_text": "Numbers reveal the hidden order of things."
+  },
+  {
+    "id": "currency",
+    "name": "Currency",
+    "age": 2,
+    "cost": { "gold": 250 },
+    "research_time": 50,
+    "prerequisites": ["pottery"],
+    "effects": {
+      "economic_bonus": { "gold_income": 0.15 }
+    },
+    "flavor_text": "Standardized coins replace haggled barter."
+  },
+  {
+    "id": "engineering",
+    "name": "Engineering",
+    "age": 2,
+    "cost": { "wood": 200, "stone": 200, "knowledge": 100 },
+    "research_time": 70,
+    "prerequisites": ["mathematics"],
+    "effects": {
+      "unlock_buildings": ["siege_workshop", "aqueduct"]
+    },
+    "flavor_text": "Theory meets stone and timber."
+  },
+  {
+    "id": "code_of_laws",
+    "name": "Code of Laws",
+    "age": 2,
+    "cost": { "gold": 200, "knowledge": 150 },
+    "research_time": 60,
+    "prerequisites": ["writing"],
+    "effects": {
+      "corruption_reduction": 0.30,
+      "economic_bonus": { "villager_efficiency": 0.10 }
+    },
+    "flavor_text": "Written law binds king and commoner alike."
+  },
+  {
+    "id": "trireme",
+    "name": "Trireme",
+    "age": 2,
+    "cost": { "wood": 300, "gold": 100 },
+    "research_time": 65,
+    "prerequisites": ["sailing"],
+    "effects": {
+      "unlock_units": ["war_galley"]
+    },
+    "flavor_text": "Three banks of oars drive a floating fortress."
+  },
+  {
+    "id": "herbalism",
+    "name": "Herbalism",
+    "age": 2,
+    "cost": { "food": 150, "knowledge": 100 },
+    "research_time": 50,
+    "prerequisites": [],
+    "effects": {
+      "pandemic_mitigation": { "severity_reduction": 0.25, "probability_reduction": 0.15 },
+      "stat_modifiers": { "hp_regen_ooc": 0.5 }
+    },
+    "flavor_text": "Willow bark eases fever; garlic wards infection."
+  },
+  {
+    "id": "steel_working",
+    "name": "Steel Working",
+    "age": 3,
+    "cost": { "gold": 300, "stone": 200 },
+    "research_time": 70,
+    "prerequisites": ["iron_working"],
+    "effects": {
+      "stat_modifiers": { "defense": 2, "building_armor": 0.10 }
+    },
+    "flavor_text": "Folded steel turns aside the heaviest blow."
+  },
+  {
+    "id": "feudalism",
+    "name": "Feudalism",
+    "age": 3,
+    "cost": { "food": 250, "gold": 150 },
+    "research_time": 60,
+    "prerequisites": ["code_of_laws"],
+    "effects": {
+      "economic_bonus": { "villager_train_time": -0.20, "food_income": 0.10 }
+    },
+    "flavor_text": "Land for loyalty, service for protection."
+  },
+  {
+    "id": "compass",
+    "name": "Compass",
+    "age": 3,
+    "cost": { "gold": 200, "knowledge": 150 },
+    "research_time": 65,
+    "prerequisites": ["trireme", "mathematics"],
+    "effects": {
+      "stat_modifiers": { "naval_los": 3 },
+      "unlock_buildings": ["deep_ocean_navigation"]
+    },
+    "flavor_text": "A magnetized needle opens the world."
+  },
+  {
+    "id": "printing_press",
+    "name": "Printing Press",
+    "age": 3,
+    "cost": { "gold": 300, "knowledge": 200 },
+    "research_time": 80,
+    "prerequisites": ["writing", "philosophy"],
+    "effects": {
+      "research_bonus": 0.50,
+      "economic_bonus": { "research_time": -0.10 }
+    },
+    "flavor_text": "A thousand copies where one scribe labored."
+  },
+  {
+    "id": "guilds",
+    "name": "Guilds",
+    "age": 3,
+    "cost": { "gold": 350, "knowledge": 100 },
+    "research_time": 60,
+    "prerequisites": ["currency"],
+    "effects": {
+      "economic_bonus": { "trade_rates": 0.25, "gold_income": 0.15 }
+    },
+    "flavor_text": "Masters of craft set the price of excellence."
+  },
+  {
+    "id": "castle_architecture",
+    "name": "Castle Architecture",
+    "age": 3,
+    "cost": { "stone": 400, "gold": 200 },
+    "research_time": 90,
+    "prerequisites": ["masonry", "engineering"],
+    "effects": {
+      "unlock_buildings": ["castle"],
+      "stat_modifiers": { "fortification_hp": 0.30 }
+    },
+    "flavor_text": "Concentric walls multiply the defender's advantage."
+  },
+  {
+    "id": "gunpowder",
+    "name": "Gunpowder",
+    "age": 3,
+    "cost": { "gold": 350, "knowledge": 200 },
+    "research_time": 85,
+    "prerequisites": ["iron_working"],
+    "effects": {
+      "unlock_units": ["hand_cannoneer"],
+      "stat_modifiers": { "siege_damage": 0.25 }
+    },
+    "war_spillover": { "mining_efficiency": 0.10 },
+    "flavor_text": "Thunder and fire from a bamboo tube."
+  },
+  {
+    "id": "banking",
+    "name": "Banking",
+    "age": 3,
+    "cost": { "gold": 400, "knowledge": 200 },
+    "research_time": 75,
+    "prerequisites": ["currency", "guilds"],
+    "effects": {
+      "economic_bonus": { "gold_income": 0.20 },
+      "corruption_reduction": 0.25
+    },
+    "flavor_text": "Double-entry bookkeeping reveals every stolen coin."
+  },
+  {
+    "id": "shipbuilding",
+    "name": "Shipbuilding",
+    "age": 3,
+    "cost": { "wood": 350, "gold": 200 },
+    "research_time": 70,
+    "prerequisites": ["compass"],
+    "effects": {
+      "stat_modifiers": { "naval_hp": 0.25 },
+      "economic_bonus": { "transport_capacity": 0.50 }
+    },
+    "flavor_text": "Carvel hulls carry cargo the world over."
+  },
+  {
+    "id": "crop_rotation",
+    "name": "Crop Rotation",
+    "age": 3,
+    "cost": { "food": 250, "wood": 150 },
+    "research_time": 55,
+    "prerequisites": ["irrigation"],
+    "effects": {
+      "economic_bonus": { "farm_output": 0.30 }
+    },
+    "flavor_text": "Turnips restore what wheat has taken."
+  },
+  {
+    "id": "steam_power",
+    "name": "Steam Power",
+    "age": 4,
+    "cost": { "wood": 400, "gold": 300, "knowledge": 200 },
+    "research_time": 80,
+    "prerequisites": ["engineering"],
+    "effects": {
+      "economic_bonus": { "villager_work_rate": 0.30 },
+      "unlock_buildings": ["factory"]
+    },
+    "flavor_text": "Boiling water moves mountains."
+  },
+  {
+    "id": "rifling",
+    "name": "Rifling",
+    "age": 4,
+    "cost": { "gold": 350, "knowledge": 250 },
+    "research_time": 70,
+    "prerequisites": ["gunpowder"],
+    "effects": {
+      "stat_modifiers": { "ranged_attack": 0.30 }
+    },
+    "war_spillover": { "mining_efficiency": 0.15 },
+    "flavor_text": "Spiral grooves turn muskets into precision instruments."
+  },
+  {
+    "id": "railroad",
+    "name": "Railroad",
+    "age": 4,
+    "cost": { "wood": 500, "stone": 400, "gold": 200 },
+    "research_time": 90,
+    "prerequisites": ["steam_power"],
+    "effects": {
+      "economic_bonus": { "resource_transport_speed": 1.0 }
+    },
+    "flavor_text": "Iron rails bind a continent."
+  },
+  {
+    "id": "electricity",
+    "name": "Electricity",
+    "age": 4,
+    "cost": { "gold": 400, "knowledge": 350 },
+    "research_time": 85,
+    "prerequisites": ["mathematics", "steam_power"],
+    "effects": {
+      "research_bonus": 1.0,
+      "unlock_buildings": ["telegraph"]
+    },
+    "flavor_text": "Tamed lightning illuminates the age of reason."
+  },
+  {
+    "id": "steel_production",
+    "name": "Steel Production",
+    "age": 4,
+    "cost": { "stone": 400, "gold": 300, "knowledge": 200 },
+    "research_time": 80,
+    "prerequisites": ["steel_working"],
+    "effects": {
+      "stat_modifiers": { "building_hp": 0.30, "naval_hp": 0.30 }
+    },
+    "flavor_text": "Bessemer converters pour molten futures."
+  },
+  {
+    "id": "chemistry",
+    "name": "Chemistry",
+    "age": 4,
+    "cost": { "gold": 350, "knowledge": 300 },
+    "research_time": 75,
+    "prerequisites": ["mathematics"],
+    "effects": {},
+    "flavor_text": "Elements arranged reveal nature's alphabet."
+  },
+  {
+    "id": "sanitation",
+    "name": "Sanitation",
+    "age": 4,
+    "cost": { "food": 300, "stone": 200, "knowledge": 200 },
+    "research_time": 65,
+    "prerequisites": ["engineering", "herbalism"],
+    "effects": {
+      "pandemic_mitigation": { "severity_reduction": 0.50, "probability_reduction": 0.30 },
+      "economic_bonus": { "population_growth": 0.25 }
+    },
+    "flavor_text": "Clean water saves more lives than any army."
+  },
+  {
+    "id": "pasteurization",
+    "name": "Pasteurization",
+    "age": 4,
+    "cost": { "food": 350, "knowledge": 300 },
+    "research_time": 70,
+    "prerequisites": ["chemistry", "sanitation"],
+    "effects": {
+      "economic_bonus": { "food_decay_eliminated": true },
+      "stat_modifiers": { "camp_disease_immunity": true, "idle_hp_regen": 1.0 }
+    },
+    "flavor_text": "Invisible killers made visible and vanquished."
+  },
+  {
+    "id": "vaccines",
+    "name": "Vaccines",
+    "age": 4,
+    "cost": { "food": 400, "knowledge": 500 },
+    "research_time": 80,
+    "prerequisites": ["pasteurization"],
+    "effects": {
+      "pandemic_mitigation": { "immune": true },
+      "stat_modifiers": { "military_max_hp": 0.15 }
+    },
+    "flavor_text": "A scratch on the arm shields millions."
+  },
+  {
+    "id": "assembly_line",
+    "name": "Assembly Line",
+    "age": 4,
+    "cost": { "gold": 500, "knowledge": 300 },
+    "research_time": 85,
+    "prerequisites": ["steam_power"],
+    "effects": {
+      "economic_bonus": { "unit_train_time": -0.40 }
+    },
+    "flavor_text": "Interchangeable parts, unstoppable production."
+  },
+  {
+    "id": "dynamite",
+    "name": "Dynamite",
+    "age": 4,
+    "cost": { "gold": 300, "knowledge": 250 },
+    "research_time": 70,
+    "prerequisites": ["gunpowder", "chemistry"],
+    "effects": {
+      "stat_modifiers": { "siege_damage": 0.50 }
+    },
+    "war_spillover": { "stone_mining": 0.25 },
+    "flavor_text": "Nobel's invention reshapes both battlefield and quarry."
+  },
+  {
+    "id": "civil_service",
+    "name": "Civil Service",
+    "age": 4,
+    "cost": { "gold": 400, "knowledge": 300 },
+    "research_time": 70,
+    "prerequisites": ["code_of_laws", "banking"],
+    "effects": {
+      "corruption_reduction": 1.0,
+      "economic_bonus": { "bureaucracy_efficiency": 0.15 }
+    },
+    "flavor_text": "Merit replaces patronage; the state serves the people."
+  },
+  {
+    "id": "ballistics",
+    "name": "Ballistics",
+    "age": 4,
+    "cost": { "gold": 400, "knowledge": 350 },
+    "research_time": 80,
+    "prerequisites": ["mathematics", "rifling"],
+    "effects": {
+      "stat_modifiers": { "ranged_accuracy": 0.20 },
+      "unlock_units": ["artillery"]
+    },
+    "war_spillover": { "navigation": 0.10 },
+    "flavor_text": "Calculated arcs turn artillery into science."
+  },
+  {
+    "id": "atomic_theory",
+    "name": "Atomic Theory",
+    "age": 5,
+    "cost": { "gold": 500, "knowledge": 500 },
+    "research_time": 70,
+    "prerequisites": ["chemistry"],
+    "effects": {
+      "research_bonus": 0.50
+    },
+    "flavor_text": "Splitting the atom splits the future."
+  },
+  {
+    "id": "computing_theory",
+    "name": "Computing Theory",
+    "age": 5,
+    "cost": { "knowledge": 600 },
+    "research_time": 75,
+    "prerequisites": ["electricity", "mathematics"],
+    "effects": {
+      "research_bonus": 1.0
+    },
+    "singularity_chain": true,
+    "flavor_text": "Turing's machine thinks in ones and zeros."
+  },
+  {
+    "id": "transistors",
+    "name": "Transistors",
+    "age": 5,
+    "cost": { "gold": 500, "knowledge": 600 },
+    "research_time": 70,
+    "prerequisites": ["electricity"],
+    "effects": {
+      "research_bonus": 0.25
+    },
+    "flavor_text": "Silicon replaces vacuum tubes."
+  },
+  {
+    "id": "nuclear_fission",
+    "name": "Nuclear Fission",
+    "age": 5,
+    "cost": { "gold": 600, "knowledge": 700 },
+    "research_time": 90,
+    "prerequisites": ["atomic_theory"],
+    "effects": {
+      "unlock_buildings": ["nuclear_plant"]
+    },
+    "flavor_text": "Controlled chain reactions power cities."
+  },
+  {
+    "id": "rocketry",
+    "name": "Rocketry",
+    "age": 5,
+    "cost": { "gold": 500, "knowledge": 500 },
+    "research_time": 80,
+    "prerequisites": ["ballistics", "chemistry"],
+    "effects": {
+      "unlock_units": ["missile"]
+    },
+    "war_spillover": { "navigation": 0.15 },
+    "flavor_text": "Warheads become launch vehicles."
+  },
+  {
+    "id": "satellite",
+    "name": "Satellite",
+    "age": 5,
+    "cost": { "gold": 700, "knowledge": 600 },
+    "research_time": 85,
+    "prerequisites": ["rocketry"],
+    "effects": {
+      "stat_modifiers": { "map_visibility_territory": true, "unit_speed": 0.10 }
+    },
+    "flavor_text": "Eyes in the sky see everything."
+  },
+  {
+    "id": "semiconductor_fab",
+    "name": "Semiconductor Fab",
+    "age": 5,
+    "cost": { "gold": 800, "knowledge": 700 },
+    "research_time": 90,
+    "prerequisites": ["transistors"],
+    "effects": {
+      "research_bonus": 0.15
+    },
+    "singularity_chain": true,
+    "flavor_text": "Nanometer precision etches intelligence into sand."
+  },
+  {
+    "id": "internet",
+    "name": "Internet",
+    "age": 5,
+    "cost": { "gold": 600, "knowledge": 900 },
+    "research_time": 85,
+    "prerequisites": ["computing_theory", "semiconductor_fab"],
+    "effects": {
+      "research_bonus": 2.0,
+      "economic_bonus": { "library_research_sharing": true }
+    },
+    "singularity_chain": true,
+    "flavor_text": "All human knowledge, connected."
+  },
+  {
+    "id": "machine_learning",
+    "name": "Machine Learning",
+    "age": 5,
+    "cost": { "gold": 500, "knowledge": 800 },
+    "research_time": 80,
+    "prerequisites": ["computing_theory", "statistics"],
+    "effects": {
+      "research_bonus": 0.75
+    },
+    "singularity_chain": true,
+    "flavor_text": "Machines that learn from their mistakes."
+  },
+  {
+    "id": "statistics",
+    "name": "Statistics",
+    "age": 5,
+    "cost": { "gold": 400, "knowledge": 500 },
+    "research_time": 65,
+    "prerequisites": ["mathematics"],
+    "effects": {
+      "economic_bonus": { "gold_income": 0.10 }
+    },
+    "flavor_text": "Probability tames uncertainty."
+  },
+  {
+    "id": "radar",
+    "name": "Radar",
+    "age": 5,
+    "cost": { "gold": 500, "knowledge": 600 },
+    "research_time": 70,
+    "prerequisites": ["electricity", "rocketry"],
+    "effects": {
+      "stat_modifiers": { "enemy_detection_range": 0.50 }
+    },
+    "war_spillover": { "farm_output": 0.10 },
+    "flavor_text": "Radio waves reveal what eyes cannot see."
+  },
+  {
+    "id": "guided_missiles",
+    "name": "Guided Missiles",
+    "age": 5,
+    "cost": { "gold": 700, "knowledge": 700 },
+    "research_time": 85,
+    "prerequisites": ["rocketry", "computing_theory"],
+    "effects": {
+      "stat_modifiers": { "ranged_attack": 0.50 }
+    },
+    "flavor_text": "Precision strikes from beyond the horizon."
+  },
+  {
+    "id": "antibiotics",
+    "name": "Antibiotics",
+    "age": 5,
+    "cost": { "food": 500, "knowledge": 800 },
+    "research_time": 80,
+    "prerequisites": ["vaccines", "chemistry"],
+    "effects": {
+      "stat_modifiers": { "war_survival": { "stabilize_chance": 0.25, "stabilize_hp": 1, "cooldown": 60 } },
+      "pandemic_mitigation": { "villager_death_immunity": true }
+    },
+    "flavor_text": "Penicillin turns mortal wounds into recoverable injuries."
+  },
+  {
+    "id": "genetics",
+    "name": "Genetics",
+    "age": 5,
+    "cost": { "food": 400, "knowledge": 700 },
+    "research_time": 75,
+    "prerequisites": ["antibiotics", "chemistry"],
+    "effects": {
+      "economic_bonus": { "food_output": 0.40, "population_health": 0.20 }
+    },
+    "flavor_text": "Reading the code of life itself."
+  },
+  {
+    "id": "cybersecurity",
+    "name": "Cybersecurity",
+    "age": 5,
+    "cost": { "gold": 500, "knowledge": 800 },
+    "research_time": 80,
+    "prerequisites": ["internet"],
+    "effects": {
+      "stat_modifiers": { "espionage_protection": true, "tech_regression_defense": 0.10 }
+    },
+    "flavor_text": "Digital walls guard digital knowledge."
+  },
+  {
+    "id": "neural_networks",
+    "name": "Neural Networks",
+    "age": 6,
+    "cost": { "gold": 800, "knowledge": 1200 },
+    "research_time": 60,
+    "prerequisites": ["machine_learning"],
+    "effects": {
+      "research_bonus": 1.50
+    },
+    "singularity_chain": true,
+    "flavor_text": "Artificial neurons mirror the brain's architecture."
+  },
+  {
+    "id": "big_data",
+    "name": "Big Data",
+    "age": 6,
+    "cost": { "gold": 600, "knowledge": 1000 },
+    "research_time": 55,
+    "prerequisites": ["internet", "statistics"],
+    "effects": {
+      "economic_bonus": { "economic_optimization": 0.20 }
+    },
+    "singularity_chain": true,
+    "flavor_text": "Patterns emerge from the noise of billions."
+  },
+  {
+    "id": "parallel_computing",
+    "name": "Parallel Computing",
+    "age": 6,
+    "cost": { "gold": 1000, "knowledge": 1500 },
+    "research_time": 70,
+    "prerequisites": ["semiconductor_fab"],
+    "effects": {
+      "research_bonus": 0.50,
+      "unlock_buildings": ["gpu_foundry"]
+    },
+    "singularity_chain": true,
+    "flavor_text": "A thousand processors think as one."
+  },
+  {
+    "id": "deep_learning",
+    "name": "Deep Learning",
+    "age": 6,
+    "cost": { "gold": 1000, "knowledge": 2000 },
+    "research_time": 80,
+    "prerequisites": ["neural_networks", "big_data"],
+    "effects": {
+      "research_bonus": 3.0
+    },
+    "singularity_chain": true,
+    "flavor_text": "Layers upon layers learn what programmers cannot teach."
+  },
+  {
+    "id": "quantum_computing",
+    "name": "Quantum Computing",
+    "age": 6,
+    "cost": { "gold": 1500, "knowledge": 2500 },
+    "research_time": 90,
+    "prerequisites": ["computing_theory", "parallel_computing"],
+    "effects": {
+      "research_bonus": 1.0
+    },
+    "flavor_text": "Superposition solves in seconds what silicon takes millennia."
+  },
+  {
+    "id": "robotics",
+    "name": "Robotics",
+    "age": 6,
+    "cost": { "gold": 800, "knowledge": 1500 },
+    "research_time": 65,
+    "prerequisites": ["machine_learning", "assembly_line"],
+    "effects": {
+      "economic_bonus": { "villager_work_rate": 0.50, "military_production": 0.30 }
+    },
+    "flavor_text": "Steel hands never tire."
+  },
+  {
+    "id": "transformer_architecture",
+    "name": "Transformer Architecture",
+    "age": 6,
+    "cost": { "gold": 1500, "knowledge": 3000 },
+    "research_time": 100,
+    "prerequisites": ["deep_learning", "parallel_computing"],
+    "effects": {
+      "unlock_buildings": ["transformer_lab"]
+    },
+    "singularity_chain": true,
+    "public_alert": true,
+    "flavor_text": "Attention is all you need."
+  },
+  {
+    "id": "alignment_research",
+    "name": "Alignment Research",
+    "age": 6,
+    "cost": { "gold": 1000, "knowledge": 4000 },
+    "research_time": 120,
+    "prerequisites": ["transformer_architecture"],
+    "effects": {
+      "unlock_buildings": ["agi_core"]
+    },
+    "singularity_chain": true,
+    "public_alert": true,
+    "flavor_text": "The hardest problem: ensuring it wants what we want."
+  }
+]

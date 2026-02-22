@@ -1,0 +1,28 @@
+{
+  "enabled": true,
+  "active_ages": [0, 1, 2, 3],
+  "check_interval_seconds": 120,
+  "base_probability": 0.05,
+  "density_threshold": 15,
+  "density_scaling": 0.02,
+  "effects": {
+    "villager_work_rate_penalty": -0.30,
+    "villager_death_chance": 0.05,
+    "duration_seconds": 45
+  },
+  "tech_mitigations": {
+    "herbalism": {
+      "severity_reduction": 0.25,
+      "probability_reduction": 0.15
+    },
+    "sanitation": {
+      "severity_reduction": 0.50,
+      "probability_reduction": 0.30
+    },
+    "vaccines": {
+      "immune": true
+    }
+  },
+  "visual": "green_particle_cloud_over_town_center",
+  "audio": "plague_bell_toll"
+}

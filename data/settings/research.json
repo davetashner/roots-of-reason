@@ -1,0 +1,24 @@
+{
+  "age_research_multipliers": {
+    "0": 1.0,
+    "1": 1.0,
+    "2": 1.1,
+    "3": 1.2,
+    "4": 1.5,
+    "5": 2.5,
+    "6": 5.0
+  },
+  "war_research_bonus_by_age": {
+    "0": 0.05,
+    "1": 0.08,
+    "2": 0.10,
+    "3": 0.15,
+    "4": 0.30,
+    "5": 0.40,
+    "6": 0.25
+  },
+  "war_bonus_activation": "at_least_1_military_unit_in_combat",
+  "war_bonus_linger_seconds": 30,
+  "formula": "effective_speed = base_speed * age_multiplier * (1 + sum(tech_bonuses)) * (1 + war_bonus)",
+  "effective_time_formula": "base_time / effective_speed"
+}
