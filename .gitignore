@@ -1,7 +1,6 @@
 # Godot 4
 .godot/
 *.translation
-export_presets.cfg
 
 # OS
 .DS_Store
@@ -23,4 +22,4 @@ builds/
 
 # Backlog visualizer (generated, not committed)
 backlog-graph.html
-cover.png.import
+assets/branding/cover.png.import
