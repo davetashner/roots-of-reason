@@ -176,6 +176,18 @@ Rock-paper-scissors: Infantry → Archers → Cavalry → Infantry. Siege → Bu
 - Buildings take 80% reduced damage from non-siege units
 - Damage formula: `attacker.attack - defender.defense` (minimum 1)
 
+### ADR-011: Knowledge Burning — Tech Regression on City Destruction
+When an enemy destroys a Town Center, the defender **loses their most recently researched tech**.
+- Triggers on EVERY TC destruction by an enemy (not self-demolish, not Gaia)
+- **Age advancements cannot be lost** — only individual techs within ages
+- Lost tech bonuses are **immediately reverted** (unit stats, economic multipliers, unlocks)
+- Existing units/buildings from lost unlocks **remain** but no new ones can be produced until re-researched
+- Re-research at **full cost**, same prerequisites
+- **Singularity interaction:** Losing Transformer Architecture PAUSES AGI Core construction (devastating but recoverable). Researching Singularity techs triggers a public alert to all players.
+- **Strategic research order:** Research high-value techs early to push them deeper in the history stack (less likely to be the "most recent" lost)
+- Visual: burning scroll particles, screen flash, distinctive audio chime
+- Settings tunable via `data/settings/knowledge_burning.json`
+
 ### Victory Conditions
 1. **Conquest:** Destroy all enemy Town Centers
 2. **Singularity:** First to complete AGI Core (requires full tech tree)
