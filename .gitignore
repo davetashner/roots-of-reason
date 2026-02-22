@@ -1,6 +1,8 @@
 # Godot 4
 .godot/
 *.translation
+*.uid
+*.import
 
 # OS
 .DS_Store
@@ -28,4 +30,3 @@ reports/
 
 # Backlog visualizer (generated, not committed)
 backlog-graph.html
-assets/branding/cover.png.import
