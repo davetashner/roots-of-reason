@@ -3,6 +3,7 @@ extends Node
 
 var _cache: Dictionary = {}
 
+
 func load_json(path: String) -> Variant:
 	if path in _cache:
 		return _cache[path]
@@ -18,11 +19,13 @@ func load_json(path: String) -> Variant:
 	_cache[path] = json.data
 	return json.data
 
+
 func get_unit_stats(unit_name: String) -> Dictionary:
 	var data: Variant = load_json("res://data/units/%s.json" % unit_name)
 	if data == null:
 		return {}
 	return data
+
 
 func get_building_stats(building_name: String) -> Dictionary:
 	var data: Variant = load_json("res://data/buildings/%s.json" % building_name)
@@ -30,11 +33,13 @@ func get_building_stats(building_name: String) -> Dictionary:
 		return {}
 	return data
 
+
 func get_civ_data(civ_name: String) -> Dictionary:
 	var data: Variant = load_json("res://data/civilizations/%s.json" % civ_name)
 	if data == null:
 		return {}
 	return data
+
 
 func clear_cache() -> void:
 	_cache.clear()

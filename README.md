@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/branding/cover.png" alt="Roots of Reason" width="480">
+  <img src="assets/branding/hero.png" alt="Roots of Reason" width="480">
 </p>
 
 # Roots of Reason
