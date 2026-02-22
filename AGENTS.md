@@ -89,18 +89,49 @@ project/
 | Building 3x3 | 384x256px max | 9 tiles |
 | Trees/resources | ~64-80px tall | 1 tile |
 
-**Animation budget per unit:**
-- Idle: 4 frames x 8 dirs = 32
-- Walk: 8 frames x 8 dirs = 64
-- Attack: 6 frames x 8 dirs = 48
-- Death: 6 frames x 1 dir = 6
-- Military total: ~150 frames
-- Villager total: ~230 frames (adds gather animations)
+**Animation budget per unit (AUTHORING cost, not output):**
+- Idle: 4 keyframes → rendered to 32 output frames (8 cameras)
+- Walk: 8 keyframes → 64 output frames
+- Attack: 6 keyframes → 48 output frames
+- Death: 6 keyframes → 6 output frames (1 dir, mirrored)
+- Military: ~24 keyframes authored → ~150 output frames (6x multiplication)
+- Villager: ~48 keyframes authored → ~230 output frames
+
+**3D-to-2D Render Pipeline (how sprites are actually made):**
+This is the core production method, modeled after how Age of Empires was made.
+1. Model once in Blender (low-poly, stylized)
+2. Rig + animate once (one direction only)
+3. Render rig (`blender/render_rig.blend`): 8 cameras at 45° intervals, isometric angle, ortho projection
+4. Batch render script (`blender/batch_render.py`): renders all anims from all cameras headless
+5. Spritesheet packer (`tools/spritesheet_packer.py`): packs PNGs → spritesheets + Godot SpriteFrames
+6. One animation authored = 8 directions output. One model = all player colors via shader.
+
+**Three production phases:**
+- Phase 1: Fully procedural (Python generators, zero manual art, geometric shapes)
+- Phase 2: Blender 3D → 2D pipeline (model once, render 8 dirs automatically)
+- Phase 3: AI textures on 3D models + hand polish on hero units
+
+**Player colors:** Runtime shader recoloring — NOT baked per-player sprites.
+- Sprites rendered with magenta (#FF00FF) mask region
+- Godot shader swaps mask to player color preserving luminance
+- ONE sprite set serves all players
+- Colors: Blue (#2E86DE), Red (#E74C3C), Teal (#1ABC9C), Orange (#F39C12)
 
 **Asset naming:** snake_case, lowercase.
 - Units: `{unit_name}_{animation}_{direction}_{frame}.png`
 - Buildings: `{building_name}_{state}.png`
 - Tiles: `{terrain}_{variant}_{index}.png`
+
+**Asset toolchain:**
+- `tools/generate_tiles.py` — procedural Phase 1 tileset
+- `tools/generate_unit_sprites.py` — procedural Phase 1 unit sprites
+- `tools/generate_building_sprites.py` — procedural Phase 1 building sprites
+- `tools/spritesheet_packer.py` — pack PNGs → spritesheets + Godot resources
+- `tools/validate_sprites.py` — CI validation (dimensions, frame counts, naming, masks)
+- `tools/asset_pipeline.py` — orchestrator (runs full pipeline in one command)
+- `blender/render_rig.blend` — 8-camera isometric render template
+- `blender/batch_render.py` — headless Blender batch renderer
+- `tools/asset_config.json` — single source of truth for all asset definitions
 
 **Color palettes:**
 - Player colors: Blue (#2E86DE), Red (#E74C3C), Teal (#1ABC9C), Orange (#F39C12)
