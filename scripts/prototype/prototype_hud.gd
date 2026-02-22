@@ -37,6 +37,4 @@ func _process(_delta: float) -> void:
 	if _input_handler != null and _input_handler.has_method("get_selected_count"):
 		selected_count = _input_handler.get_selected_count()
 
-	_label.text = "Zoom: %.1fx | Tile: (%d, %d) | Selected: %d" % [
-		zoom_level, grid_pos.x, grid_pos.y, selected_count
-	]
+	_label.text = "Zoom: %.1fx | Tile: (%d, %d) | Selected: %d" % [zoom_level, grid_pos.x, grid_pos.y, selected_count]

@@ -31,8 +31,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	# Selection ring
 	if selected:
-		draw_arc(Vector2.ZERO, SELECTION_RING_RADIUS, 0, TAU, 32,
-				Color(0.0, 1.0, 0.0, 0.8), 2.0)
+		draw_arc(Vector2.ZERO, SELECTION_RING_RADIUS, 0, TAU, 32, Color(0.0, 1.0, 0.0, 0.8), 2.0)
 
 	# Unit body
 	draw_circle(Vector2.ZERO, RADIUS, unit_color)
@@ -40,13 +39,11 @@ func _draw() -> void:
 	# Direction triangle (points toward target if moving, else right)
 	var dir := Vector2.RIGHT
 	if _moving:
-		dir = ((_target_pos - position).normalized()
-				if _target_pos.distance_to(position) > 1.0 else Vector2.RIGHT)
+		dir = ((_target_pos - position).normalized() if _target_pos.distance_to(position) > 1.0 else Vector2.RIGHT)
 	var tip := dir * (RADIUS + 4.0)
 	var left := dir.rotated(2.5) * RADIUS * 0.5
 	var right := dir.rotated(-2.5) * RADIUS * 0.5
-	draw_colored_polygon(PackedVector2Array([tip, left, right]),
-			Color(1, 1, 1, 0.9))
+	draw_colored_polygon(PackedVector2Array([tip, left, right]), Color(1, 1, 1, 0.9))
 
 	# Movement target indicator
 	if _moving:
