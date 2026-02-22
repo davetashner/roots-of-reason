@@ -259,6 +259,108 @@ cmd_coverage() {
     return 0
 }
 
+# ==================== scaffold ====================
+cmd_scaffold() {
+    if [[ $# -lt 1 ]]; then
+        err "Usage: ror scaffold <path/name> [--type Node2D]"
+        echo "  Example: ror scaffold map/pathfinder"
+        echo "  Example: ror scaffold ui/minimap --type Control"
+        exit 1
+    fi
+
+    local feature_path="$1"
+    shift
+    local base_type="Node2D"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --type) base_type="$2"; shift 2 ;;
+            *)      err "Unknown scaffold option: $1"; exit 1 ;;
+        esac
+    done
+
+    # Derive names from path
+    local dir_part name
+    dir_part="$(dirname "$feature_path")"
+    name="$(basename "$feature_path")"
+
+    # PascalCase from snake_case
+    local pascal_name=""
+    IFS='_' read -ra parts <<< "$name"
+    for part in "${parts[@]}"; do
+        pascal_name+="$(tr '[:lower:]' '[:upper:]' <<< "${part:0:1}")${part:1}"
+    done
+
+    # Build file paths
+    local scene_dir script_dir test_dir
+    if [[ "$dir_part" == "." ]]; then
+        scene_dir="$PROJECT_ROOT/scenes"
+        script_dir="$PROJECT_ROOT/scripts"
+        test_dir="$PROJECT_ROOT/tests"
+    else
+        scene_dir="$PROJECT_ROOT/scenes/$dir_part"
+        script_dir="$PROJECT_ROOT/scripts/$dir_part"
+        test_dir="$PROJECT_ROOT/tests/$dir_part"
+    fi
+
+    local scene_file="$scene_dir/${name}.tscn"
+    local script_file="$script_dir/${name}.gd"
+    local test_file="$test_dir/test_${name}.gd"
+
+    # Refuse to overwrite
+    local conflict=false
+    for f in "$scene_file" "$script_file" "$test_file"; do
+        if [[ -f "$f" ]]; then
+            err "File already exists: $f"
+            conflict=true
+        fi
+    done
+    if $conflict; then
+        exit 1
+    fi
+
+    # Build res:// path for script reference
+    local res_script_path
+    if [[ "$dir_part" == "." ]]; then
+        res_script_path="res://scripts/${name}.gd"
+    else
+        res_script_path="res://scripts/${dir_part}/${name}.gd"
+    fi
+
+    # Create directories
+    mkdir -p "$scene_dir" "$script_dir" "$test_dir"
+
+    # Write scene file
+    cat > "$scene_file" <<TSCN
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="${res_script_path}" id="1"]
+
+[node name="${pascal_name}" type="${base_type}"]
+script = ExtResource("1")
+TSCN
+
+    # Write script file
+    cat > "$script_file" <<GDSCRIPT
+extends ${base_type}
+## TODO: describe ${pascal_name}.
+GDSCRIPT
+
+    # Write test file
+    cat > "$test_file" <<GDTEST
+extends GdUnitTestSuite
+## Tests for ${pascal_name}.
+
+
+func test_placeholder() -> void:
+	assert_bool(true).is_true()
+GDTEST
+
+    ok "Created: $scene_file"
+    ok "Created: $script_file"
+    ok "Created: $test_file"
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -274,6 +376,10 @@ ${BOLD}COMMANDS${RESET}
   lint [--fix] [path] Run gdlint + gdformat check
                         ror lint                    — check scripts/ tests/
                         ror lint --fix              — auto-format then lint
+  scaffold <path/name> [--type Node2D]
+                      Create scene + script + test boilerplate
+                        ror scaffold map/pathfinder
+                        ror scaffold ui/minimap --type Control
   coverage [options]  Test-file coverage gate
                         ror coverage                — check at 90% threshold
                         ror coverage --threshold 90 — custom threshold
@@ -289,6 +395,7 @@ EOF
 case "${1:-help}" in
     test)     shift; cmd_test "$@" ;;
     lint)     shift; cmd_lint "$@" ;;
+    scaffold) shift; cmd_scaffold "$@" ;;
     coverage) shift; cmd_coverage "$@" ;;
     help|--help|-h) cmd_help ;;
     *)

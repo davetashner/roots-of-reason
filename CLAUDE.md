@@ -35,6 +35,9 @@ ror coverage    # Check 90% line coverage on gameplay scripts
 
 Use `/gdtest` skill to generate test suites for new scripts.
 
+- **After creating a new GDScript file**, run `/gdtest <path>` to generate its test suite
+- **Available skills:** `/gdtest` (test generation), `/hud` (HUD elements), `/ui-theme` (Godot themes)
+
 ## Workflow
 
 - **Never push directly to main** — always create a PR
