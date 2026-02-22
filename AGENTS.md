@@ -225,6 +225,13 @@ The medical tech chain (Herbalism → Sanitation → Pasteurization → Vaccines
 - **Compound effect:** ~60% more effective research output during wartime for medically advanced civs
 - **Balance levers:** Stabilize chance (25%) and cooldown (60s) are tunable in `data/settings/war_survival.json`
 
+### ADR-017: Historical Events System
+Named scripted events that fire based on age progression or tech milestones, creating memorable turning points.
+- **Black Plague:** Guaranteed mega-pandemic in Medieval Age affecting all players. -50% work rate, 15% villager death, 90s duration. Mitigated by medical techs (Herbalism, Sanitation), immune with Vaccines. Aftermath grants labor scarcity (+15% work rate) and innovation pressure (+20% research speed) for 2 minutes.
+- **Renaissance:** Per-player golden age triggered by researching Printing Press + Banking + Guilds. +35% research speed, +50% Knowledge gen, +20% gold income for 3 minutes. Bonus for Libraries (3+) and Markets (2+).
+- **Phoenix interaction:** Renaissance within 120s of Black Plague survival gives 1.5x bonus multiplier.
+- Settings in `data/settings/historical_events.json`
+
 ### Victory Conditions
 1. **Conquest:** Destroy all enemy Town Centers
 2. **Singularity:** First to complete AGI Core (requires full tech tree)

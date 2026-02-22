@@ -269,6 +269,18 @@ Gaia hostile naval units that spawn after any player researches Compass.
 - Avoid military vessels and garrisoned docks
 - Spawn rate decreases in later ages, nearly gone by Singularity
 
+### Historical Events — Black Plague & Renaissance
+
+Named historical events are scripted moments that fire based on age or tech milestones. They create memorable turning points that mirror real history.
+
+**The Black Plague** — a guaranteed mega-pandemic that strikes all players in the Medieval Age (3-6 minutes into the age). Far worse than random pandemics: -50% work rate, 15% villager death chance, halts trade income, lasts 90 seconds. Herbalism and Sanitation mitigate it; Vaccines grant immunity (but Vaccines is Industrial — most players won't have it). After the plague passes, survivors get a temporary labor scarcity bonus (+15% work rate) and innovation pressure (+20% research speed) for 2 minutes — mirroring how the historical Black Death drove wages up and accelerated the transition to the Renaissance.
+
+**The Renaissance** — a golden age event triggered per-player when they research Printing Press + Banking + Guilds (all Medieval techs). Grants +35% research speed, +50% Knowledge generation, +20% gold income for 3 minutes. Players with 3+ Libraries or 2+ Markets get additional bonuses. This is the reward for investing in the economy/knowledge tech path rather than pure military.
+
+**Phoenix Interaction:** If a player triggers the Renaissance within 120 seconds of surviving the Black Plague, all Renaissance bonuses are multiplied by 1.5x — "From death, rebirth."
+
+Settings in `data/settings/historical_events.json`.
+
 ### War Survival (Medical Tech Chain)
 
 The medical chain creates an escalating war survival advantage:
@@ -296,6 +308,7 @@ The medical chain creates an escalating war survival advantage:
 | `data/settings/pandemics.json` | Pandemic event settings |
 | `data/settings/pirates.json` | Pirate spawning settings |
 | `data/settings/war_survival.json` | Medical chain combat settings |
+| `data/settings/historical_events.json` | Named historical events (Black Plague, Renaissance) |
 
 ## Balance Levers
 
