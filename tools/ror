@@ -153,6 +153,112 @@ cmd_lint() {
     return $exit_code
 }
 
+# ==================== coverage ====================
+cmd_coverage() {
+    local threshold=90
+    local json=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --threshold) threshold="$2"; shift 2 ;;
+            --json)      json=true; shift ;;
+            *)           err "Unknown coverage option: $1"; exit 1 ;;
+        esac
+    done
+
+    cd "$PROJECT_ROOT"
+
+    # Collect all .gd files under scripts/
+    local -a scripts=()
+    while IFS= read -r -d '' f; do
+        scripts+=("$f")
+    done < <(find scripts/ -name '*.gd' -print0 2>/dev/null | sort -z)
+
+    local total=${#scripts[@]}
+    if [[ $total -eq 0 ]]; then
+        if $json; then
+            printf '{"total":0,"covered":0,"uncovered":0,"percentage":100,"threshold":%d,"pass":true,"uncovered_files":[]}\n' "$threshold"
+        else
+            ok "No scripts found — nothing to cover"
+        fi
+        return 0
+    fi
+
+    local covered=0
+    local -a uncovered=()
+    local -a covered_files=()
+
+    for script in "${scripts[@]}"; do
+        # scripts/foo/bar.gd → tests/foo/test_bar.gd
+        local dir rel_dir base test_path
+        dir="$(dirname "$script")"
+        rel_dir="${dir#scripts}"
+        rel_dir="${rel_dir#/}"
+        base="$(basename "$script")"
+        if [[ -n "$rel_dir" ]]; then
+            test_path="tests/${rel_dir}/test_${base}"
+        else
+            test_path="tests/test_${base}"
+        fi
+
+        if [[ -f "$test_path" ]]; then
+            covered=$((covered + 1))
+            covered_files+=("$script")
+        else
+            uncovered+=("$script")
+        fi
+    done
+
+    local pct=$(( (covered * 100) / total ))
+    local pass=true
+    if [[ $pct -lt $threshold ]]; then
+        pass=false
+    fi
+
+    if $json; then
+        # Build JSON output
+        local uncov_json="["
+        local first=true
+        for f in "${uncovered[@]}"; do
+            if $first; then first=false; else uncov_json+=","; fi
+            uncov_json+="\"$f\""
+        done
+        uncov_json+="]"
+        printf '{"total":%d,"covered":%d,"uncovered":%d,"percentage":%d,"threshold":%d,"pass":%s,"uncovered_files":%s}\n' \
+            "$total" "$covered" "$((total - covered))" "$pct" "$threshold" "$pass" "$uncov_json"
+    else
+        printf "${BOLD}Test-file coverage report${RESET}\n"
+        echo ""
+        if [[ ${#uncovered[@]} -gt 0 ]]; then
+            printf "${YELLOW}Uncovered scripts (no matching test file):${RESET}\n"
+            for f in "${uncovered[@]}"; do
+                printf "  ${RED}✗${RESET} %s\n" "$f"
+            done
+            echo ""
+        fi
+        if [[ ${#covered_files[@]} -gt 0 ]]; then
+            printf "${GREEN}Covered scripts:${RESET}\n"
+            for f in "${covered_files[@]}"; do
+                printf "  ${GREEN}✔${RESET} %s\n" "$f"
+            done
+            echo ""
+        fi
+        printf "Coverage: ${BOLD}%d/%d (%d%%)${RESET}  Threshold: %d%%\n" "$covered" "$total" "$pct" "$threshold"
+        echo ""
+        if $pass; then
+            ok "Coverage gate passed"
+        else
+            err "Coverage gate failed — ${pct}% < ${threshold}% threshold"
+            return 1
+        fi
+    fi
+
+    if ! $pass; then
+        return 1
+    fi
+    return 0
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -168,6 +274,10 @@ ${BOLD}COMMANDS${RESET}
   lint [--fix] [path] Run gdlint + gdformat check
                         ror lint                    — check scripts/ tests/
                         ror lint --fix              — auto-format then lint
+  coverage [options]  Test-file coverage gate
+                        ror coverage                — check at 90% threshold
+                        ror coverage --threshold 90 — custom threshold
+                        ror coverage --json         — machine-readable output
   help                Show this help message
 
 ${BOLD}ENVIRONMENT${RESET}
@@ -177,8 +287,9 @@ EOF
 
 # ==================== main ====================
 case "${1:-help}" in
-    test)  shift; cmd_test "$@" ;;
-    lint)  shift; cmd_lint "$@" ;;
+    test)     shift; cmd_test "$@" ;;
+    lint)     shift; cmd_lint "$@" ;;
+    coverage) shift; cmd_coverage "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
         err "Unknown command: $1"

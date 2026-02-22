@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   checks: write
+  pull-requests: write
 
 jobs:
   lint:
@@ -43,3 +44,62 @@ jobs:
           godot-version: "4.6"
           paths: res://tests
           timeout: 10
+
+  coverage:
+    name: Test-File Coverage
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run coverage gate
+        id: coverage
+        run: |
+          set +e
+          output=$(tools/ror coverage --json --threshold 90)
+          exit_code=$?
+          set -e
+          echo "$output"
+
+          # Parse for summary
+          total=$(echo "$output" | python3 -c "import sys,json; print(json.load(sys.stdin)['total'])")
+          covered=$(echo "$output" | python3 -c "import sys,json; print(json.load(sys.stdin)['covered'])")
+          pct=$(echo "$output" | python3 -c "import sys,json; print(json.load(sys.stdin)['percentage'])")
+          pass=$(echo "$output" | python3 -c "import sys,json; print(str(json.load(sys.stdin)['pass']).lower())")
+          uncovered=$(echo "$output" | python3 -c "import sys,json; d=json.load(sys.stdin); print('\n'.join('- \`'+f+'\`' for f in d['uncovered_files']))")
+
+          {
+            echo "summary<<EOF"
+            echo "## Test-File Coverage: ${covered}/${total} (${pct}%)"
+            echo ""
+            if [ -n "$uncovered" ]; then
+              echo "<details><summary>Uncovered scripts</summary>"
+              echo ""
+              echo "$uncovered"
+              echo ""
+              echo "</details>"
+              echo ""
+            fi
+            if [ "$pass" = "true" ]; then
+              echo ":white_check_mark: Coverage gate **passed** (threshold: 90%)"
+            else
+              echo ":x: Coverage gate **failed** (threshold: 90%)"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          exit $exit_code
+        continue-on-error: true
+
+      - name: Post coverage comment on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage
+          message: ${{ steps.coverage.outputs.summary }}
+
+      - name: Fail if coverage below threshold
+        if: steps.coverage.outcome == 'failure'
+        run: |
+          echo "::error::Test-file coverage is below 90% threshold"
+          exit 1

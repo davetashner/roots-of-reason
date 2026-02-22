@@ -4,6 +4,8 @@
 
 # Roots of Reason
 
+![coverage](https://img.shields.io/badge/test--file_coverage-90%25-brightgreen)
+
 A civilization RTS inspired by Age of Empires where the endgame is achieving artificial general intelligence. Built with Godot 4 + GDScript, 2D isometric, single-player vs AI.
 
 ## Features
