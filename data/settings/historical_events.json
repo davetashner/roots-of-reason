@@ -1,0 +1,93 @@
+{
+  "enabled": true,
+  "events": {
+    "black_plague": {
+      "name": "The Black Plague",
+      "type": "mega_pandemic",
+      "trigger": {
+        "method": "guaranteed_by_age",
+        "trigger_age": 3,
+        "trigger_delay_seconds": [180, 360],
+        "once_per_game": true
+      },
+      "effects": {
+        "villager_work_rate_penalty": -0.50,
+        "villager_death_chance": 0.15,
+        "duration_seconds": 90,
+        "military_hp_drain_per_second": 2,
+        "trade_income_penalty": -0.75,
+        "population_growth_halt": true
+      },
+      "tech_mitigations": {
+        "herbalism": {
+          "death_chance_reduction": 0.30,
+          "duration_reduction": 0.20
+        },
+        "sanitation": {
+          "death_chance_reduction": 0.50,
+          "work_rate_penalty_reduction": 0.40
+        },
+        "vaccines": {
+          "immune": true
+        }
+      },
+      "aftermath": {
+        "labor_scarcity_bonus": {
+          "description": "Surviving villagers are more productive due to labor scarcity",
+          "villager_work_rate_bonus": 0.15,
+          "duration_seconds": 120
+        },
+        "innovation_pressure": {
+          "description": "Crisis drives innovation — mirrors historical post-plague advancement",
+          "research_speed_bonus": 0.20,
+          "duration_seconds": 120
+        }
+      },
+      "affects_all_players": true,
+      "visual": "dark_fog_spreading_from_trade_routes",
+      "audio": "death_knell_bells_and_crows",
+      "announcement": "The Black Plague has arrived. Pray for your people.",
+      "flavor_text": "A shadow creeps along the trade routes. The rats carry something worse than hunger."
+    },
+    "renaissance": {
+      "name": "The Renaissance",
+      "type": "golden_age",
+      "trigger": {
+        "method": "tech_milestone",
+        "required_techs": ["printing_press", "banking", "guilds"],
+        "trigger_age_minimum": 3,
+        "per_player": true,
+        "once_per_player": true
+      },
+      "effects": {
+        "research_speed_bonus": 0.35,
+        "knowledge_generation_bonus": 0.50,
+        "gold_income_bonus": 0.20,
+        "building_cost_reduction": 0.10,
+        "duration_seconds": 180
+      },
+      "bonus_triggers": {
+        "has_library_count_3_plus": {
+          "description": "Renaissance centers of learning",
+          "extra_knowledge_bonus": 0.25
+        },
+        "has_market_count_2_plus": {
+          "description": "Renaissance merchant class",
+          "extra_gold_bonus": 0.15
+        }
+      },
+      "affects_all_players": false,
+      "visual": "golden_particle_glow_over_libraries_and_markets",
+      "audio": "renaissance_fanfare_with_lute",
+      "announcement": "A Renaissance dawns! Knowledge and commerce flourish.",
+      "flavor_text": "From the ashes of plague and war, a rebirth of learning. The world will never be the same."
+    }
+  },
+  "plague_renaissance_interaction": {
+    "description": "If a player triggers the Renaissance within 120s of surviving the Black Plague, they receive an additional 'Phoenix' bonus",
+    "phoenix_bonus": {
+      "all_effects_multiplied": 1.5,
+      "extra_announcement": "From death, rebirth — the Phoenix rises!"
+    }
+  }
+}

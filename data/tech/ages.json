@@ -1,0 +1,65 @@
+[
+  {
+    "id": "stone_age",
+    "name": "Stone Age",
+    "index": 0,
+    "advance_cost": {},
+    "advance_prerequisites": [],
+    "research_multiplier": 1.0,
+    "flavor_text": "Survival basics. No Knowledge generation."
+  },
+  {
+    "id": "bronze_age",
+    "name": "Bronze Age",
+    "index": 1,
+    "advance_cost": { "food": 500 },
+    "advance_prerequisites": ["stone_tools", "fire_mastery"],
+    "research_multiplier": 1.0,
+    "flavor_text": "First civilizations. Writing enables Knowledge generation."
+  },
+  {
+    "id": "iron_age",
+    "name": "Iron Age",
+    "index": 2,
+    "advance_cost": { "food": 800, "gold": 200 },
+    "advance_prerequisites": ["bronze_working", "writing"],
+    "research_multiplier": 1.1,
+    "flavor_text": "Classical civilizations. Philosophy, mathematics, law."
+  },
+  {
+    "id": "medieval_age",
+    "name": "Medieval Age",
+    "index": 3,
+    "advance_cost": { "food": 1000, "gold": 600 },
+    "advance_prerequisites": ["iron_working", "mathematics"],
+    "research_multiplier": 1.2,
+    "flavor_text": "Feudalism, castles, gunpowder, ocean exploration."
+  },
+  {
+    "id": "industrial_age",
+    "name": "Industrial Age",
+    "index": 4,
+    "advance_cost": { "food": 1200, "gold": 800, "knowledge": 400 },
+    "advance_prerequisites": ["gunpowder", "printing_press"],
+    "research_multiplier": 1.5,
+    "flavor_text": "Major acceleration begins. War bonus becomes significant."
+  },
+  {
+    "id": "information_age",
+    "name": "Information Age",
+    "index": 5,
+    "advance_cost": { "gold": 1500, "knowledge": 1000 },
+    "advance_prerequisites": ["electricity", "assembly_line"],
+    "research_multiplier": 2.5,
+    "flavor_text": "Research acceleration is dramatic. The AGI precursor chain begins."
+  },
+  {
+    "id": "singularity_age",
+    "name": "Singularity Age",
+    "index": 6,
+    "advance_cost": { "gold": 2000, "knowledge": 2000 },
+    "advance_prerequisites": ["computing_theory", "semiconductor_fab"],
+    "research_multiplier": 5.0,
+    "flavor_text": "Exponential research. The AGI race. Every tech choice is critical."
+  }
+]

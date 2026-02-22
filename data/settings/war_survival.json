@@ -1,0 +1,17 @@
+{
+  "pasteurization": {
+    "idle_hp_regen_per_second": 1.0,
+    "idle_threshold_seconds": 5,
+    "camp_disease_immunity": true
+  },
+  "vaccines": {
+    "military_max_hp_bonus": 0.15,
+    "pandemic_immunity": true
+  },
+  "antibiotics": {
+    "stabilize_chance": 0.25,
+    "stabilize_hp": 1,
+    "stabilize_cooldown_seconds": 60,
+    "villager_pandemic_death_immunity": true
+  }
+}

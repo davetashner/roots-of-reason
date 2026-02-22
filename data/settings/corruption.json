@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "active_ages": [1, 2, 3, 4],
+  "base_rate_per_building": 0.015,
+  "building_threshold": 8,
+  "max_corruption": 0.30,
+  "affected_resources": ["food", "wood", "stone", "gold"],
+  "knowledge_immune": true,
+  "tech_reductions": {
+    "code_of_laws": -0.30,
+    "banking": -0.25,
+    "civil_service": -1.0
+  },
+  "formula": "corruption_rate = min(max_corruption, max(0, (building_count - threshold) * base_rate - tech_reductions))"
+}

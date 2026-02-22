@@ -188,6 +188,50 @@ When an enemy destroys a Town Center, the defender **loses their most recently r
 - Visual: burning scroll particles, screen flash, distinctive audio chime
 - Settings tunable via `data/settings/knowledge_burning.json`
 
+### ADR-013: Research Acceleration
+Research speed scales by age, with war bonuses and tech bonuses stacking multiplicatively.
+- **Age multipliers:** 1.0 / 1.0 / 1.1 / 1.2 / 1.5 / 2.5 / 5.0 (Stone → Singularity)
+- **War bonus by age:** +5% / +8% / +10% / +15% / +30% / +40% / +25% — activates when at least 1 military unit is in combat, lingers 30 seconds
+- **Military tech spillovers:** defined per-tech in `data/tech/tech_tree.json` (e.g., Rifling grants Mining +15%)
+- **Formula:** `effective_speed = base_speed * age_multiplier * (1 + sum(tech_bonuses)) * (1 + war_bonus)`
+- Settings in `data/settings/research.json`
+
+### ADR-014: Pandemic & Corruption Systems
+Two early-game friction mechanics keep early ages from being pure economy sims. Both are data-driven from JSON settings.
+- **Corruption:** Persistent scaling with empire size, reducing resource income (except Knowledge)
+  - Active ages 1–4, starts above 8 buildings, 1.5%/building, caps at 30%
+  - Counters: Code of Laws (-30%), Banking (-25%), Civil Service (eliminates)
+  - Settings in `data/settings/corruption.json`
+- **Pandemics:** Random events based on population density
+  - Active ages 0–3, checked every 2 minutes, base 5% chance (+2% per villager above 15)
+  - Effects: -30% work rate, 5% villager death chance, 45 second duration
+  - Counters: Herbalism (-25% severity), Sanitation (-50% severity), Vaccines (full immunity)
+  - Settings in `data/settings/pandemics.json`
+
+### ADR-015: Pirate Spawning System
+Gaia-controlled hostile naval units that spawn after any player researches Compass (deep ocean navigation).
+- Spawn every 90 seconds from ocean edges, max 8 active pirates
+- Carry 30–120 Gold bounty (drops on death, scaled by age)
+- Target soft naval targets (fishing boats, trade barges, transport ships)
+- Avoid military vessels and garrisoned docks
+- Spawn rate decreases in later ages (1.0x Medieval → 0.2x Singularity)
+- Settings in `data/settings/pirates.json`
+
+### ADR-016: War Survival — Medical Tech Chain
+The medical tech chain (Herbalism → Sanitation → Pasteurization → Vaccines → Antibiotics) creates an escalating war survival advantage. Each tech makes armies more durable, sustaining the war research bonus longer, accelerating tech progression.
+- **Pasteurization:** +1 HP/s idle regen (after 5s idle), camp disease immunity
+- **Vaccines:** +15% max HP for military units, pandemic immunity
+- **Antibiotics:** 25% chance to stabilize at 1 HP instead of dying (60s cooldown per unit), villager pandemic death immunity
+- **Compound effect:** ~60% more effective research output during wartime for medically advanced civs
+- **Balance levers:** Stabilize chance (25%) and cooldown (60s) are tunable in `data/settings/war_survival.json`
+
+### ADR-017: Historical Events System
+Named scripted events that fire based on age progression or tech milestones, creating memorable turning points.
+- **Black Plague:** Guaranteed mega-pandemic in Medieval Age affecting all players. -50% work rate, 15% villager death, 90s duration. Mitigated by medical techs (Herbalism, Sanitation), immune with Vaccines. Aftermath grants labor scarcity (+15% work rate) and innovation pressure (+20% research speed) for 2 minutes.
+- **Renaissance:** Per-player golden age triggered by researching Printing Press + Banking + Guilds. +35% research speed, +50% Knowledge gen, +20% gold income for 3 minutes. Bonus for Libraries (3+) and Markets (2+).
+- **Phoenix interaction:** Renaissance within 120s of Black Plague survival gives 1.5x bonus multiplier.
+- Settings in `data/settings/historical_events.json`
+
 ### Victory Conditions
 1. **Conquest:** Destroy all enemy Town Centers
 2. **Singularity:** First to complete AGI Core (requires full tech tree)
