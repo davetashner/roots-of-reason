@@ -14,6 +14,12 @@ Thumbs.db
 # Build artifacts
 builds/
 
+# GdUnit4 test reports (generated locally)
+reports/
+
+# Developer tooling venvs
+.venv-gdtoolkit/
+
 # Generated assets (Phase 1 - regenerable)
 # Uncomment if generators are set up:
 # assets/sprites/units/placeholder/
