@@ -32,14 +32,14 @@ func test_roundtrip_grid_screen_grid() -> void:
 func test_snap_to_grid_exact() -> void:
 	var screen := IsoUtils.grid_to_screen(Vector2(4, 7))
 	var snapped := IsoUtils.snap_to_grid(screen)
-	assert_vectori(snapped).is_equal(Vector2i(4, 7))
+	assert_vector(snapped).is_equal(Vector2i(4, 7))
 
 
 func test_snap_to_grid_with_offset() -> void:
 	var screen := IsoUtils.grid_to_screen(Vector2(4, 7))
 	# Small offset should still snap to same cell
 	var snapped := IsoUtils.snap_to_grid(screen + Vector2(5, 5))
-	assert_vectori(snapped).is_equal(Vector2i(4, 7))
+	assert_vector(snapped).is_equal(Vector2i(4, 7))
 
 
 func test_tile_dimensions() -> void:
