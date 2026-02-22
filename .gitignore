@@ -1,0 +1,25 @@
+# Godot 4
+.godot/
+*.translation
+export_presets.cfg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Build artifacts
+builds/
+
+# Generated assets (Phase 1 - regenerable)
+# Uncomment if generators are set up:
+# assets/sprites/units/placeholder/
+# assets/sprites/buildings/placeholder/
+# assets/tiles/terrain/generated/
+
+# Backlog visualizer (generated, not committed)
+backlog-graph.html

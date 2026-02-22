@@ -1,0 +1,32 @@
+{
+  "name": "Mesopotamia",
+  "description": "Masters of architecture and knowledge. Their builders construct wonders at astonishing speed.",
+  "bonuses": {
+    "build_speed": 1.15
+  },
+  "unique_building": {
+    "name": "Ziggurat",
+    "replaces": "library",
+    "knowledge_multiplier": 1.5
+  },
+  "unique_unit": {
+    "name": "Immortal Guard",
+    "base_unit": "infantry",
+    "hp_bonus": 20,
+    "self_heal_rate": 0.5
+  },
+  "unique_techs": [
+    {
+      "name": "Irrigation",
+      "age": 2,
+      "effect": { "farm_output": 1.25 },
+      "cost": { "food": 200, "wood": 150 }
+    },
+    {
+      "name": "Code of Laws",
+      "age": 4,
+      "effect": { "all_resource_income": 1.10 },
+      "cost": { "gold": 300, "knowledge": 200 }
+    }
+  ]
+}

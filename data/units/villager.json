@@ -1,0 +1,20 @@
+{
+  "name": "Villager",
+  "hp": 25,
+  "attack": 3,
+  "defense": 0,
+  "speed": 1.5,
+  "range": 0,
+  "los": 4,
+  "carry_capacity": 10,
+  "gather_rates": {
+    "food": 0.4,
+    "wood": 0.4,
+    "stone": 0.35,
+    "gold": 0.35
+  },
+  "build_speed": 1.0,
+  "population_cost": 1,
+  "train_time": 25,
+  "train_cost": { "food": 50 }
+}

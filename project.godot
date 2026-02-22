@@ -1,0 +1,27 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; but it can also be manually edited with care.
+
+[application]
+
+config/name="Roots of Reason"
+config/features=PackedStringArray("4.6")
+run/main_scene="res://scenes/prototype/prototype_main.tscn"
+config/icon="res://icon.svg"
+
+[autoload]
+
+GameManager="*res://scripts/autoloads/game_manager.gd"
+ResourceManager="*res://scripts/autoloads/resource_manager.gd"
+DataLoader="*res://scripts/autoloads/data_loader.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"

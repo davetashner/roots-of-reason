@@ -1,0 +1,12 @@
+{
+  "name": "Town Center",
+  "hp": 2400,
+  "footprint": [3, 3],
+  "build_time": 150,
+  "build_cost": { "wood": 275, "stone": 100 },
+  "population_bonus": 5,
+  "is_drop_off": true,
+  "drop_off_types": ["food", "wood", "stone", "gold"],
+  "units_produced": ["villager"],
+  "age_required": 0
+}
