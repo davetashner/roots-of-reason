@@ -232,6 +232,74 @@ Named scripted events that fire based on age progression or tech milestones, cre
 - **Phoenix interaction:** Renaissance within 120s of Black Plague survival gives 1.5x bonus multiplier.
 - Settings in `data/settings/historical_events.json`
 
+### ADR-018: Pathfinding — AStarGrid2D
+Godot's built-in `AStarGrid2D` is the pathfinding backend. No custom A* or NavMesh.
+- **Grid size** matches the tilemap — one cell per isometric tile
+- **Diagonal movement** enabled (8-directional), diagonal cost = `sqrt(2)`
+- **Terrain costs** loaded from `data/settings/terrain.json`:
+  - Grass/dirt: 1.0, Forest: 2.0, Shallows/ford: 3.0, Deep water: impassable (land), River: 0.5x speed (see ADR-009)
+  - Buildings and resource nodes mark their footprint cells as **solid** (impassable)
+- **Unit-type overrides:** Naval units invert land/water passability. Siege units treat forest as impassable.
+- **Partial recalculation:** When buildings are placed/destroyed, update only affected cells — never rebuild the full grid
+- **Path caching:** No cache. `AStarGrid2D` is fast enough for single-player scale (<200x200 maps). Re-evaluate if profiling shows otherwise.
+- **Flow fields:** Not used. AStarGrid2D handles the expected unit counts (<200 simultaneous pathfinding requests). Revisit only if profiling proves a bottleneck.
+- Settings in `data/settings/terrain.json`
+
+### ADR-019: Population Cap System
+Population limits how many units a player can field. Cap is raised by buildings, not age advancement.
+- **Starting cap:** 5 (from initial Town Center's `population_bonus`)
+- **Cap sources:** Each building defines a `population_bonus` field in its JSON (0 for most buildings). Key providers:
+  - Town Center: +5
+  - House (1x1, 25 Wood, Stone Age): +5, max 20 Houses
+  - Castle (3x3, Medieval): +10
+- **Hard cap:** 200 — no combination of buildings can exceed this
+- **Pop cost per unit** defined in each unit's JSON (`population_cost` field — already exists on Villager)
+- **At cap:** Training queues pause with "Population limit reached" message. Queued units resume automatically when pop frees up (unit dies or building grants more cap).
+- **Garrison interaction:** Garrisoned units still count toward pop cap (no exploit)
+- **Display:** HUD shows `current_pop / pop_cap` (e.g., "47/100")
+- Settings in `data/settings/population.json`
+
+### ADR-020: Playable Milestones
+Four milestones define the path from prototype to content-complete. Each milestone is a playable game — not a feature checklist.
+
+**Milestone 1 — "Gather & Build" (First Playable)**
+- Isometric camera (pan, zoom, edge-scroll)
+- Procedural map with terrain tiles and resource nodes (trees, berries, stone, gold)
+- Villager: select, move (A* pathfinding), gather resources, return to Town Center
+- Town Center: train villagers, resource drop-off
+- House: build to raise pop cap
+- HUD: resource counts, pop count, minimap placeholder
+- One civilization (Mesopotamia), no enemy, no combat
+- **Exit criteria:** A player can gather all 4 physical resources, build houses, and train villagers until pop cap
+
+**Milestone 2 — "Fight"**
+- 3 military units (Infantry, Archer, Cavalry) with rock-paper-scissors combat
+- Barracks production building
+- Unit selection: box-select, control groups, right-click commands (move, attack, gather, build)
+- Basic AI opponent: builds economy, trains military, attacks
+- Fog of war
+- Win condition: Conquest (destroy enemy Town Center)
+- **Exit criteria:** A full game can be played and won/lost against AI
+
+**Milestone 3 — "Advance"**
+- Full 7-age progression with tech tree (64 techs)
+- All 3 civilizations with unique units/buildings
+- All building types, all unit types (including Siege, Naval)
+- Resource transport (rivers, barges)
+- Knowledge generation and research queue
+- Advanced mechanics: corruption, pandemics, Knowledge Burning, wolf domestication
+- Victory conditions: Conquest, Singularity, Wonder
+- **Exit criteria:** A full game from Stone Age to Singularity is winnable via all 3 victory conditions
+
+**Milestone 4 — "Ship It"**
+- AI difficulty levels (Easy, Medium, Hard)
+- Historical events (Black Plague, Renaissance)
+- Pirates, medical tech chain, research acceleration
+- Save/load game state
+- Audio, polished UI, Phase 2+ art
+- Performance within budgets, export builds verified
+- **Exit criteria:** A stranger can download, play a full game, and have fun
+
 ### Victory Conditions
 1. **Conquest:** Destroy all enemy Town Centers
 2. **Singularity:** First to complete AGI Core (requires full tech tree)
