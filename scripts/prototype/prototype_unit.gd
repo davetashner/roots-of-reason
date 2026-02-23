@@ -1,20 +1,29 @@
 extends Node2D
 ## Prototype unit — colored circle with direction indicator, click-to-select,
 ## right-click-to-move. Villagers can build construction sites and gather resources.
+## Military units have combat state machine with attack-move, patrol, and stances.
+
+signal unit_died(unit: Node2D)
 
 enum GatherState { NONE, MOVING_TO_RESOURCE, GATHERING, MOVING_TO_DROP_OFF, DEPOSITING }
+enum CombatState { NONE, PURSUING, ATTACKING, ATTACK_MOVING, PATROLLING }
+enum Stance { AGGRESSIVE, DEFENSIVE, STAND_GROUND }
 
 const RADIUS: float = 12.0
 const MOVE_SPEED: float = 150.0
 const SELECTION_RING_RADIUS: float = 16.0
+const TILE_SIZE: float = 64.0
 
 @export var unit_color: Color = Color(0.2, 0.4, 0.9)
 @export var owner_id: int = 0
 @export var unit_type: String = "land"
 @export var entity_category: String = ""
+@export var unit_category: String = ""
 
 var stats: UnitStats = null
 var selected: bool = false
+var hp: int = 0
+var max_hp: int = 0
 var _target_pos: Vector2 = Vector2.ZERO
 var _moving: bool = false
 var _path: Array[Vector2] = []
@@ -39,12 +48,27 @@ var _drop_off_target: Node2D = null
 var _scene_root: Node = null
 var _pending_gather_target_name: String = ""
 
+# Combat state
+var _combat_state: CombatState = CombatState.NONE
+var _stance: Stance = Stance.AGGRESSIVE
+var _combat_target: Node2D = null
+var _attack_cooldown: float = 0.0
+var _scan_timer: float = 0.0
+var _attack_move_destination: Vector2 = Vector2.ZERO
+var _patrol_point_a: Vector2 = Vector2.ZERO
+var _patrol_point_b: Vector2 = Vector2.ZERO
+var _patrol_heading_to_b: bool = true
+var _leash_origin: Vector2 = Vector2.ZERO
+var _combat_config: Dictionary = {}
+var _pending_combat_target_name: String = ""
+
 
 func _ready() -> void:
 	_target_pos = position
 	_init_stats()
 	_load_build_config()
 	_load_gather_config()
+	_load_combat_config()
 
 
 func _init_stats() -> void:
@@ -112,6 +136,39 @@ func _load_gather_config() -> void:
 		_drop_off_reach = float(gather_cfg.get("drop_off_reach", _drop_off_reach))
 
 
+func _load_combat_config() -> void:
+	# Load combat settings from JSON
+	var cfg: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		cfg = DataLoader.get_settings("combat")
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_settings"):
+			cfg = dl.get_settings("combat")
+	if not cfg.is_empty():
+		_combat_config = cfg
+	# Initialize HP from stats
+	if stats != null:
+		var stat_hp: float = stats.get_stat("hp")
+		if stat_hp > 0:
+			max_hp = int(stat_hp)
+			hp = max_hp
+	# Set default stance from unit data
+	var unit_cfg: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		unit_cfg = DataLoader.get_unit_stats(unit_type)
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_unit_stats"):
+			unit_cfg = dl.get_unit_stats(unit_type)
+	if not unit_cfg.is_empty():
+		var stance_str: String = str(unit_cfg.get("default_stance", "aggressive"))
+		_stance = _stance_from_string(stance_str)
+		# Set unit_category from unit data
+		if unit_category == "":
+			unit_category = str(unit_cfg.get("unit_category", ""))
+
+
 func _process(delta: float) -> void:
 	var game_delta := GameManager.get_game_delta(delta)
 	if game_delta == 0.0:
@@ -135,6 +192,7 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	_tick_build(game_delta)
 	_tick_gather(game_delta)
+	_tick_combat(game_delta)
 
 
 func _tick_build(game_delta: float) -> void:
@@ -331,6 +389,8 @@ func assign_gather_target(node: Node2D) -> void:
 	# Cancel build task
 	_build_target = null
 	_pending_build_target_name = ""
+	# Cancel combat
+	_cancel_combat()
 	# Set up gather
 	_gather_target = node
 	_gather_type = node.resource_type if "resource_type" in node else ""
@@ -344,12 +404,19 @@ func assign_gather_target(node: Node2D) -> void:
 func assign_build_target(building: Node2D) -> void:
 	# Cancel gather task
 	_cancel_gather()
+	# Cancel combat
+	_cancel_combat()
 	_build_target = building
 	move_to(building.global_position)
 
 
 func is_idle() -> bool:
-	return not _moving and _build_target == null and _gather_state == GatherState.NONE
+	return (
+		not _moving
+		and _build_target == null
+		and _gather_state == GatherState.NONE
+		and _combat_state == CombatState.NONE
+	)
 
 
 func resolve_build_target(scene_root: Node) -> void:
@@ -370,10 +437,404 @@ func resolve_gather_target(scene_root: Node) -> void:
 	_pending_gather_target_name = ""
 
 
+# -- Combat --
+
+
+func _tick_combat(game_delta: float) -> void:
+	if hp <= 0:
+		return
+	# Decrement attack cooldown
+	if _attack_cooldown > 0.0:
+		_attack_cooldown -= game_delta
+	# Increment scan timer
+	_scan_timer += game_delta
+	# Validate combat target
+	if _combat_target != null and not is_instance_valid(_combat_target):
+		_combat_target = null
+	if _combat_target != null and "hp" in _combat_target and _combat_target.hp <= 0:
+		_combat_target = null
+
+	match _combat_state:
+		CombatState.NONE:
+			_tick_combat_none()
+		CombatState.PURSUING:
+			_tick_combat_pursuing()
+		CombatState.ATTACKING:
+			_tick_combat_attacking()
+		CombatState.ATTACK_MOVING:
+			_tick_combat_attack_moving()
+		CombatState.PATROLLING:
+			_tick_combat_patrolling()
+
+
+func _tick_combat_none() -> void:
+	var stance_cfg := _get_stance_config()
+	if not stance_cfg.get("auto_scan", false):
+		return
+	var interval: float = float(_combat_config.get("scan_interval", 0.5))
+	if _scan_timer < interval:
+		return
+	_scan_timer = 0.0
+	var target := _scan_for_targets()
+	if target != null:
+		_combat_target = target
+		_leash_origin = position
+		_combat_state = CombatState.PURSUING
+		move_to(target.global_position)
+
+
+func _tick_combat_pursuing() -> void:
+	if _combat_target == null:
+		_return_from_combat()
+		return
+	# Check leash range
+	var leash: float = float(_combat_config.get("leash_range", 8)) * TILE_SIZE
+	if position.distance_to(_leash_origin) > leash:
+		_combat_target = null
+		_return_from_combat()
+		return
+	# Check if in attack range
+	var attack_range := _get_attack_range()
+	var dist := position.distance_to(_combat_target.global_position)
+	var range_pixels: float = maxf(1.0, float(attack_range)) * TILE_SIZE
+	if attack_range <= 0:
+		range_pixels = TILE_SIZE  # Melee: adjacent tile
+	if dist <= range_pixels:
+		_moving = false
+		_path.clear()
+		_path_index = 0
+		_combat_state = CombatState.ATTACKING
+	else:
+		# Keep moving toward target
+		if not _moving:
+			move_to(_combat_target.global_position)
+
+
+func _tick_combat_attacking() -> void:
+	if _combat_target == null:
+		_return_from_combat()
+		return
+	# Face the target
+	var dir := _combat_target.global_position - position
+	if dir.length() > 0.1:
+		_facing = dir.normalized()
+	# Check if target moved out of range
+	var attack_range := _get_attack_range()
+	var dist := position.distance_to(_combat_target.global_position)
+	var range_pixels: float = maxf(1.0, float(attack_range)) * TILE_SIZE
+	if attack_range <= 0:
+		range_pixels = TILE_SIZE
+	if dist > range_pixels * 1.2:
+		# Target moved away — pursue if stance allows
+		var stance_cfg := _get_stance_config()
+		if stance_cfg.get("pursue", false):
+			_combat_state = CombatState.PURSUING
+			move_to(_combat_target.global_position)
+		else:
+			_combat_target = null
+			_return_from_combat()
+		return
+	# Apply damage if cooldown ready
+	if _attack_cooldown <= 0.0:
+		_deal_damage_to_target()
+		var cooldown: float = float(_combat_config.get("attack_cooldown", 1.0))
+		_attack_cooldown = cooldown
+		queue_redraw()
+
+
+func _tick_combat_attack_moving() -> void:
+	# Scan while moving
+	var interval: float = float(_combat_config.get("scan_interval", 0.5))
+	if _scan_timer >= interval:
+		_scan_timer = 0.0
+		if _combat_target == null:
+			var target := _scan_for_targets()
+			if target != null:
+				_combat_target = target
+				_combat_state = CombatState.PURSUING
+				_leash_origin = position
+				move_to(target.global_position)
+				return
+	# If we have a target, pursue it
+	if _combat_target != null:
+		_combat_state = CombatState.PURSUING
+		_leash_origin = position
+		move_to(_combat_target.global_position)
+		return
+	# If reached destination, done
+	if not _moving:
+		_combat_state = CombatState.NONE
+
+
+func _tick_combat_patrolling() -> void:
+	# Scan while patrolling
+	var interval: float = float(_combat_config.get("scan_interval", 0.5))
+	if _scan_timer >= interval:
+		_scan_timer = 0.0
+		var target := _scan_for_targets()
+		if target != null:
+			_combat_target = target
+			_combat_state = CombatState.PURSUING
+			_leash_origin = position
+			move_to(target.global_position)
+			return
+	# Move between patrol points
+	if not _moving:
+		if _patrol_heading_to_b:
+			_patrol_heading_to_b = false
+			move_to(_patrol_point_a)
+		else:
+			_patrol_heading_to_b = true
+			move_to(_patrol_point_b)
+
+
+func _scan_for_targets() -> Node2D:
+	var root := _scene_root if _scene_root != null else get_parent()
+	if root == null:
+		return null
+	var scan_radius: float = float(_combat_config.get("aggro_scan_radius", 6)) * TILE_SIZE
+	var candidates: Array = []
+	for child in root.get_children():
+		if child == self:
+			continue
+		if not (child is Node2D):
+			continue
+		if not CombatResolver.is_hostile(self, child):
+			continue
+		if "hp" in child and child.hp <= 0:
+			continue
+		var dist: float = position.distance_to(child.global_position)
+		if dist > scan_radius:
+			continue
+		candidates.append(child)
+	if candidates.is_empty():
+		return null
+	# Sort by priority
+	var attack_type := _get_attack_type()
+	var priority_cfg: Dictionary = _combat_config.get("target_priority", {})
+	var sorted := CombatResolver.sort_targets_by_priority(candidates, attack_type, priority_cfg)
+	# Within same priority category, pick nearest
+	var best: Node2D = null
+	var best_dist := INF
+	for candidate in sorted:
+		var dist: float = position.distance_to(candidate.global_position)
+		if dist < best_dist:
+			best_dist = dist
+			best = candidate
+		# Only check first priority group — break when category changes
+		if best != null:
+			var best_cat := CombatResolver._get_category(best)
+			var cand_cat := CombatResolver._get_category(candidate)
+			if cand_cat != best_cat:
+				break
+	return best
+
+
+func _deal_damage_to_target() -> void:
+	if _combat_target == null or not is_instance_valid(_combat_target):
+		return
+	var attacker_stats := _build_stats_dict()
+	var defender_stats := _build_target_stats_dict(_combat_target)
+	var damage := CombatResolver.calculate_damage(attacker_stats, defender_stats, _combat_config)
+	if _combat_target.has_method("take_damage"):
+		_combat_target.take_damage(damage, self)
+	elif "hp" in _combat_target:
+		_combat_target.hp -= damage
+		if _combat_target.hp <= 0:
+			_combat_target.hp = 0
+
+
+func _build_stats_dict() -> Dictionary:
+	var result: Dictionary = {
+		"attack": get_stat("attack"),
+		"defense": get_stat("defense"),
+		"unit_category": unit_category,
+		"unit_type": unit_type,
+		"attack_type": _get_attack_type(),
+	}
+	# Include bonus_vs and building_damage_ignore_reduction from base stats
+	if stats != null:
+		var raw: Dictionary = stats._base_stats
+		if raw.has("bonus_vs"):
+			result["bonus_vs"] = raw["bonus_vs"]
+		if raw.has("building_damage_ignore_reduction"):
+			result["building_damage_ignore_reduction"] = raw["building_damage_ignore_reduction"]
+	return result
+
+
+func _build_target_stats_dict(target: Node2D) -> Dictionary:
+	var result: Dictionary = {
+		"defense": 0.0,
+		"unit_category": "",
+		"unit_type": "",
+	}
+	if target.has_method("get_stat"):
+		result["defense"] = target.get_stat("defense")
+	elif "defense" in target:
+		result["defense"] = float(target.defense)
+	if "unit_category" in target:
+		result["unit_category"] = target.unit_category
+	elif "entity_category" in target:
+		result["unit_category"] = target.entity_category
+	if "unit_type" in target:
+		result["unit_type"] = target.unit_type
+	return result
+
+
+func take_damage(amount: int, attacker: Node2D) -> void:
+	hp -= amount
+	if hp < 0:
+		hp = 0
+	queue_redraw()
+	# Retaliate if defensive stance and idle
+	var stance_cfg := _get_stance_config()
+	if (
+		stance_cfg.get("retaliate", false)
+		and _combat_state == CombatState.NONE
+		and attacker != null
+		and is_instance_valid(attacker)
+	):
+		_combat_target = attacker
+		_leash_origin = position
+		_combat_state = CombatState.PURSUING
+		move_to(attacker.global_position)
+	# Die if HP depleted
+	if hp <= 0:
+		_die()
+
+
+func _die() -> void:
+	unit_died.emit(self)
+	queue_free()
+
+
+func attack_move_to(world_pos: Vector2) -> void:
+	# Cancel gather and build
+	_cancel_gather()
+	_build_target = null
+	_pending_build_target_name = ""
+	# Set combat state
+	_combat_state = CombatState.ATTACK_MOVING
+	_attack_move_destination = world_pos
+	_leash_origin = position
+	_combat_target = null
+	move_to(world_pos)
+
+
+func patrol_between(point_a: Vector2, point_b: Vector2) -> void:
+	# Cancel gather and build
+	_cancel_gather()
+	_build_target = null
+	_pending_build_target_name = ""
+	# Set combat state
+	_combat_state = CombatState.PATROLLING
+	_patrol_point_a = point_a
+	_patrol_point_b = point_b
+	_patrol_heading_to_b = true
+	_combat_target = null
+	move_to(point_b)
+
+
+func set_stance(new_stance: Stance) -> void:
+	_stance = new_stance
+	# Stand ground cancels pursuit
+	if new_stance == Stance.STAND_GROUND:
+		if _combat_state == CombatState.PURSUING:
+			_combat_target = null
+			_combat_state = CombatState.NONE
+			_moving = false
+			_path.clear()
+			_path_index = 0
+
+
+func _cancel_combat() -> void:
+	_combat_state = CombatState.NONE
+	_combat_target = null
+	_attack_cooldown = 0.0
+	_scan_timer = 0.0
+
+
+func _return_from_combat() -> void:
+	# Return to previous task based on combat state
+	var prev_state := _combat_state
+	_combat_target = null
+	if prev_state == CombatState.ATTACK_MOVING:
+		_combat_state = CombatState.ATTACK_MOVING
+		move_to(_attack_move_destination)
+	elif prev_state == CombatState.PATROLLING:
+		_combat_state = CombatState.PATROLLING
+		if _patrol_heading_to_b:
+			move_to(_patrol_point_b)
+		else:
+			move_to(_patrol_point_a)
+	else:
+		_combat_state = CombatState.NONE
+
+
+func _get_attack_type() -> String:
+	if stats != null and stats._base_stats.has("attack_type"):
+		return str(stats._base_stats["attack_type"])
+	return "melee"
+
+
+func _get_attack_range() -> int:
+	if stats != null:
+		return int(stats.get_stat("range"))
+	return 0
+
+
+func _get_stance_config() -> Dictionary:
+	var stance_name := _stance_to_string(_stance)
+	var stances: Dictionary = _combat_config.get("stances", {})
+	if stances.has(stance_name):
+		return stances[stance_name]
+	# Default: aggressive
+	return {"auto_scan": true, "pursue": true, "retaliate": true}
+
+
+func _stance_to_string(s: Stance) -> String:
+	match s:
+		Stance.AGGRESSIVE:
+			return "aggressive"
+		Stance.DEFENSIVE:
+			return "defensive"
+		Stance.STAND_GROUND:
+			return "stand_ground"
+	return "aggressive"
+
+
+func _stance_from_string(s: String) -> Stance:
+	match s:
+		"aggressive":
+			return Stance.AGGRESSIVE
+		"defensive":
+			return Stance.DEFENSIVE
+		"stand_ground":
+			return Stance.STAND_GROUND
+	return Stance.AGGRESSIVE
+
+
+func resolve_combat_target(scene_root: Node) -> void:
+	if _pending_combat_target_name == "":
+		return
+	var target := scene_root.get_node_or_null(_pending_combat_target_name)
+	if target is Node2D:
+		_combat_target = target
+	_pending_combat_target_name = ""
+
+
 func _draw() -> void:
 	# Selection ring
 	if selected:
-		draw_arc(Vector2.ZERO, SELECTION_RING_RADIUS, 0, TAU, 32, Color(0.0, 1.0, 0.0, 0.8), 2.0)
+		draw_arc(
+			Vector2.ZERO,
+			SELECTION_RING_RADIUS,
+			0,
+			TAU,
+			32,
+			Color(0.0, 1.0, 0.0, 0.8),
+			2.0,
+		)
 
 	# Unit body
 	draw_circle(Vector2.ZERO, RADIUS, unit_color)
@@ -396,6 +857,22 @@ func _draw() -> void:
 		var carry_color := Color(0.9, 0.8, 0.1, 0.8)
 		var ratio := float(_carried_amount) / float(_carry_capacity)
 		draw_arc(Vector2.ZERO, RADIUS + 2.0, 0, TAU * ratio, 16, carry_color, 2.0)
+
+	# HP bar (only if damaged)
+	if max_hp > 0 and hp < max_hp:
+		var bar_width: float = RADIUS * 2.5
+		var bar_height: float = 3.0
+		var bar_y: float = -RADIUS - 8.0
+		var ratio: float = float(hp) / float(max_hp)
+		var bg_rect := Rect2(-bar_width / 2.0, bar_y, bar_width, bar_height)
+		draw_rect(bg_rect, Color(0.2, 0.2, 0.2, 0.8))
+		var fg_rect := Rect2(-bar_width / 2.0, bar_y, bar_width * ratio, bar_height)
+		var hp_color: Color
+		if ratio > 0.5:
+			hp_color = Color(0.2, 0.8, 0.2)
+		else:
+			hp_color = Color(0.9, 0.2, 0.2)
+		draw_rect(fg_rect, hp_color)
 
 
 func move_to(world_pos: Vector2) -> void:
@@ -445,11 +922,24 @@ func save_state() -> Dictionary:
 		"gather_type": _gather_type,
 		"carried_amount": _carried_amount,
 		"gather_accumulator": _gather_accumulator,
+		"hp": hp,
+		"max_hp": max_hp,
+		"combat_state": _combat_state,
+		"stance": _stance,
+		"attack_move_destination_x": _attack_move_destination.x,
+		"attack_move_destination_y": _attack_move_destination.y,
+		"patrol_point_a_x": _patrol_point_a.x,
+		"patrol_point_a_y": _patrol_point_a.y,
+		"patrol_point_b_x": _patrol_point_b.x,
+		"patrol_point_b_y": _patrol_point_b.y,
+		"patrol_heading_to_b": _patrol_heading_to_b,
 	}
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
 	if _gather_target != null and is_instance_valid(_gather_target):
 		state["gather_target_name"] = str(_gather_target.name)
+	if _combat_target != null and is_instance_valid(_combat_target):
+		state["combat_target_name"] = str(_combat_target.name)
 	if stats != null:
 		state["stats"] = stats.save_state()
 	return state
@@ -467,6 +957,25 @@ func load_state(data: Dictionary) -> void:
 	_gather_type = str(data.get("gather_type", ""))
 	_carried_amount = int(data.get("carried_amount", 0))
 	_gather_accumulator = float(data.get("gather_accumulator", 0.0))
+	# Restore combat state
+	hp = int(data.get("hp", max_hp))
+	max_hp = int(data.get("max_hp", max_hp))
+	_combat_state = int(data.get("combat_state", CombatState.NONE)) as CombatState
+	_stance = int(data.get("stance", Stance.AGGRESSIVE)) as Stance
+	_attack_move_destination = Vector2(
+		float(data.get("attack_move_destination_x", 0)),
+		float(data.get("attack_move_destination_y", 0)),
+	)
+	_patrol_point_a = Vector2(
+		float(data.get("patrol_point_a_x", 0)),
+		float(data.get("patrol_point_a_y", 0)),
+	)
+	_patrol_point_b = Vector2(
+		float(data.get("patrol_point_b_x", 0)),
+		float(data.get("patrol_point_b_y", 0)),
+	)
+	_patrol_heading_to_b = bool(data.get("patrol_heading_to_b", true))
+	_pending_combat_target_name = str(data.get("combat_target_name", ""))
 	if data.has("stats"):
 		if stats == null:
 			stats = UnitStats.new()

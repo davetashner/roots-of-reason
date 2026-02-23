@@ -19,6 +19,9 @@ var _pathfinder: Node = null
 var _target_detector: Node = null
 var _cursor_overlay: Node = null
 var _command_config: Dictionary = {}
+var _attack_move_mode: bool = false
+var _patrol_mode: bool = false
+var _patrol_first_point: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -101,6 +104,31 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _handle_key(key: InputEventKey) -> void:
 	var keycode := key.keycode
+	# Attack-move mode
+	if keycode == KEY_A:
+		_attack_move_mode = true
+		_patrol_mode = false
+		_patrol_first_point = Vector2.ZERO
+		if _cursor_overlay != null and _cursor_overlay.has_method("update_command"):
+			_cursor_overlay.update_command("attack_move", _command_config.get("cursor_labels", {}))
+		return
+	# Patrol mode
+	if keycode == KEY_P:
+		if not _patrol_mode:
+			_patrol_mode = true
+			_attack_move_mode = false
+			_patrol_first_point = Vector2.ZERO
+			if _cursor_overlay != null and _cursor_overlay.has_method("update_command"):
+				_cursor_overlay.update_command("patrol", _command_config.get("cursor_labels", {}))
+		return
+	# Escape cancels modes
+	if keycode == KEY_ESCAPE:
+		_attack_move_mode = false
+		_patrol_mode = false
+		_patrol_first_point = Vector2.ZERO
+		if _cursor_overlay != null and _cursor_overlay.has_method("clear"):
+			_cursor_overlay.clear()
+		return
 	if keycode < KEY_0 or keycode > KEY_9:
 		return
 	var group_index: int = keycode - KEY_0
@@ -167,6 +195,33 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 	if mb.button_index == MOUSE_BUTTON_LEFT:
 		if mb.pressed:
 			var world_pos := _screen_to_world(mb.position, camera)
+			# Attack-move mode: issue attack-move to click position
+			if _attack_move_mode:
+				_attack_move_mode = false
+				var selected := _get_selected_units()
+				_show_click_marker(world_pos, "attack_move")
+				for unit in selected:
+					if unit.has_method("attack_move_to"):
+						unit.attack_move_to(world_pos)
+				if _cursor_overlay != null and _cursor_overlay.has_method("clear"):
+					_cursor_overlay.clear()
+				return
+			# Patrol mode: set two points
+			if _patrol_mode:
+				var selected := _get_selected_units()
+				if _patrol_first_point == Vector2.ZERO:
+					_patrol_first_point = world_pos
+					_show_click_marker(world_pos, "patrol")
+				else:
+					_show_click_marker(world_pos, "patrol")
+					for unit in selected:
+						if unit.has_method("patrol_between"):
+							unit.patrol_between(_patrol_first_point, world_pos)
+					_patrol_mode = false
+					_patrol_first_point = Vector2.ZERO
+					if _cursor_overlay != null and _cursor_overlay.has_method("clear"):
+						_cursor_overlay.clear()
+				return
 			# Check if clicking a unit
 			var clicked_unit := _unit_at(world_pos)
 			if clicked_unit != null:
