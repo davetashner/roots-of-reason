@@ -1,0 +1,160 @@
+class_name PopulationManager
+extends Node
+## Tracks current population and housing-based population cap per player.
+## Each completed housing building (House, Town Center) adds its population_bonus
+## to the cap. Hard cap and starting cap are loaded from data/settings/population.json.
+
+signal population_changed(player_id: int, current: int, cap: int)
+signal near_cap_warning(player_id: int)
+
+var _current_population: Dictionary = {}  # player_id -> int
+var _population_cap: Dictionary = {}  # player_id -> int
+var _building_contributions: Dictionary = {}  # player_id -> Array[int] (instance_id -> bonus)
+
+var _hard_cap: int = 200
+var _starting_cap: int = 5
+var _near_cap_threshold: int = 2
+
+
+func _ready() -> void:
+	_load_config()
+
+
+func _load_config() -> void:
+	var cfg: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		cfg = DataLoader.get_settings("population")
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_settings"):
+			cfg = dl.get_settings("population")
+	if cfg.is_empty():
+		return
+	_hard_cap = int(cfg.get("hard_cap", _hard_cap))
+	_starting_cap = int(cfg.get("starting_cap", _starting_cap))
+
+
+func _ensure_player(player_id: int) -> void:
+	if player_id not in _current_population:
+		_current_population[player_id] = 0
+	if player_id not in _population_cap:
+		_population_cap[player_id] = _starting_cap
+	if player_id not in _building_contributions:
+		_building_contributions[player_id] = {}
+
+
+func register_building(building: Node, player_id: int = 0) -> void:
+	_ensure_player(player_id)
+	var bonus: int = _get_population_bonus(building)
+	if bonus <= 0:
+		return
+	var contributions: Dictionary = _building_contributions[player_id]
+	contributions[building.get_instance_id()] = bonus
+	_building_contributions[player_id] = contributions
+	_recalculate_cap(player_id)
+
+
+func unregister_building(building: Node, player_id: int = 0) -> void:
+	_ensure_player(player_id)
+	var contributions: Dictionary = _building_contributions[player_id]
+	var bid: int = building.get_instance_id()
+	if bid in contributions:
+		contributions.erase(bid)
+		_building_contributions[player_id] = contributions
+		_recalculate_cap(player_id)
+
+
+func register_unit(_unit: Node, player_id: int = 0) -> void:
+	_ensure_player(player_id)
+	_current_population[player_id] = int(_current_population[player_id]) + 1
+	_emit_population_changed(player_id)
+
+
+func unregister_unit(_unit: Node, player_id: int = 0) -> void:
+	_ensure_player(player_id)
+	_current_population[player_id] = maxi(int(_current_population[player_id]) - 1, 0)
+	_emit_population_changed(player_id)
+
+
+func can_train(player_id: int, pop_cost: int = 1) -> bool:
+	_ensure_player(player_id)
+	return int(_current_population[player_id]) + pop_cost <= int(_population_cap[player_id])
+
+
+func get_population(player_id: int) -> int:
+	_ensure_player(player_id)
+	return int(_current_population[player_id])
+
+
+func get_population_cap(player_id: int) -> int:
+	_ensure_player(player_id)
+	return int(_population_cap[player_id])
+
+
+func is_near_cap(player_id: int, threshold: int = 2) -> bool:
+	_ensure_player(player_id)
+	var current: int = int(_current_population[player_id])
+	var cap: int = int(_population_cap[player_id])
+	return cap - current <= threshold and current < cap
+
+
+func _get_population_bonus(building: Node) -> int:
+	if "building_name" not in building:
+		return 0
+	var building_name: String = building.building_name
+	if building_name == "":
+		return 0
+	var stats: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		stats = DataLoader.get_building_stats(building_name)
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_building_stats"):
+			stats = dl.get_building_stats(building_name)
+	return int(stats.get("population_bonus", 0))
+
+
+func _recalculate_cap(player_id: int) -> void:
+	var total: int = _starting_cap
+	var contributions: Dictionary = _building_contributions.get(player_id, {})
+	for bid in contributions:
+		total += int(contributions[bid])
+	_population_cap[player_id] = mini(total, _hard_cap)
+	_emit_population_changed(player_id)
+
+
+func _emit_population_changed(player_id: int) -> void:
+	var current: int = int(_current_population[player_id])
+	var cap: int = int(_population_cap[player_id])
+	population_changed.emit(player_id, current, cap)
+	if is_near_cap(player_id, _near_cap_threshold):
+		near_cap_warning.emit(player_id)
+
+
+func save_state() -> Dictionary:
+	var pop_data: Dictionary = {}
+	for pid in _current_population:
+		pop_data[str(pid)] = {
+			"current": int(_current_population[pid]),
+			"cap": int(_population_cap[pid]),
+		}
+	return {
+		"population": pop_data,
+		"hard_cap": _hard_cap,
+		"starting_cap": _starting_cap,
+	}
+
+
+func load_state(data: Dictionary) -> void:
+	_current_population.clear()
+	_population_cap.clear()
+	_building_contributions.clear()
+	_hard_cap = int(data.get("hard_cap", _hard_cap))
+	_starting_cap = int(data.get("starting_cap", _starting_cap))
+	var pop_data: Dictionary = data.get("population", {})
+	for pid_str in pop_data:
+		var pid: int = int(pid_str)
+		var entry: Dictionary = pop_data[pid_str]
+		_current_population[pid] = int(entry.get("current", 0))
+		_population_cap[pid] = int(entry.get("cap", _starting_cap))
+		_building_contributions[pid] = {}

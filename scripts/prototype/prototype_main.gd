@@ -23,6 +23,8 @@ var _target_detector: Node
 var _cursor_overlay: Node
 var _building_placer: Node
 var _info_panel: PanelContainer
+var _population_manager: Node
+var _resource_bar: PanelContainer
 
 
 func _ready() -> void:
@@ -32,6 +34,7 @@ func _ready() -> void:
 	_setup_target_detection()
 	_setup_input()
 	_setup_building_placer()
+	_setup_population()
 	_setup_units()
 	_setup_demo_entities()
 	_setup_hud()
@@ -97,6 +100,13 @@ func _setup_input() -> void:
 		_input_handler.setup(_camera, _pathfinder, _target_detector)
 
 
+func _setup_population() -> void:
+	_population_manager = Node.new()
+	_population_manager.name = "PopulationManager"
+	_population_manager.set_script(load("res://scripts/prototype/population_manager.gd"))
+	add_child(_population_manager)
+
+
 func _setup_building_placer() -> void:
 	_building_placer = Node.new()
 	_building_placer.name = "BuildingPlacer"
@@ -128,6 +138,8 @@ func _setup_units() -> void:
 			_input_handler.register_unit(unit)
 		if _target_detector != null:
 			_target_detector.register_entity(unit)
+		if _population_manager != null:
+			_population_manager.register_unit(unit, 0)
 
 
 func _setup_demo_entities() -> void:
@@ -180,6 +192,8 @@ func _setup_demo_entities() -> void:
 	building.build_progress = 1.0
 	add_child(building)
 	_target_detector.register_entity(building)
+	if _population_manager != null:
+		_population_manager.register_building(building, building.owner_id)
 	# Mark footprint cells solid
 	var cells := BuildingValidator.get_footprint_cells(bld_pos, Vector2i(3, 3))
 	for cell in cells:
@@ -187,9 +201,16 @@ func _setup_demo_entities() -> void:
 
 
 func _on_building_placed(building: Node2D) -> void:
+	if building.has_signal("construction_complete"):
+		building.construction_complete.connect(_on_building_construction_complete)
 	var idle_unit := _find_nearest_idle_unit(building.global_position)
 	if idle_unit != null and idle_unit.has_method("assign_build_target"):
 		idle_unit.assign_build_target(building)
+
+
+func _on_building_construction_complete(building: Node2D) -> void:
+	if _population_manager != null and "owner_id" in building:
+		_population_manager.register_building(building, building.owner_id)
 
 
 func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
@@ -270,7 +291,19 @@ func _setup_resource_bar() -> void:
 	resource_bar_layer.name = "ResourceBar"
 	resource_bar_layer.layer = 10
 	add_child(resource_bar_layer)
-	var resource_bar := PanelContainer.new()
-	resource_bar.name = "ResourceBarPanel"
-	resource_bar.set_script(load("res://scripts/ui/resource_bar.gd"))
-	resource_bar_layer.add_child(resource_bar)
+	_resource_bar = PanelContainer.new()
+	_resource_bar.name = "ResourceBarPanel"
+	_resource_bar.set_script(load("res://scripts/ui/resource_bar.gd"))
+	resource_bar_layer.add_child(_resource_bar)
+	# Connect population manager to resource bar display
+	if _population_manager != null:
+		_population_manager.population_changed.connect(_on_population_changed)
+		# Initial display update
+		var current: int = _population_manager.get_population(0)
+		var cap: int = _population_manager.get_population_cap(0)
+		_resource_bar.update_population(current, cap)
+
+
+func _on_population_changed(player_id: int, current: int, cap: int) -> void:
+	if player_id == 0 and _resource_bar != null:
+		_resource_bar.update_population(current, cap)
