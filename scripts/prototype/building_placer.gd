@@ -143,6 +143,7 @@ func _confirm_placement() -> void:
 				"building_name": _building_name,
 				"grid_pos": [_current_grid_pos.x, _current_grid_pos.y],
 				"player_id": _player_id,
+				"node": building,
 			}
 		)
 	)
@@ -168,9 +169,13 @@ func _create_building(bname: String, grid_pos: Vector2i, footprint: Vector2i) ->
 	building.footprint = footprint
 	building.grid_pos = grid_pos
 	building.owner_id = _player_id
-	building.hp = int(_building_stats.get("hp", 100))
-	building.max_hp = building.hp
+	building.max_hp = int(_building_stats.get("hp", 100))
 	building.entity_category = "own_building" if _player_id == 0 else "enemy_building"
+	# Start under construction
+	building.under_construction = true
+	building.build_progress = 0.0
+	building.hp = 0
+	building._build_time = float(_building_stats.get("build_time", 25))
 	get_parent().add_child(building)
 	return building
 
@@ -224,7 +229,19 @@ func _screen_to_world(screen_pos: Vector2) -> Vector2:
 
 
 func save_state() -> Dictionary:
-	return {"placed_buildings": _placed_buildings.duplicate(true)}
+	var buildings_out: Array[Dictionary] = []
+	for entry: Dictionary in _placed_buildings:
+		var out := {
+			"building_name": entry.get("building_name", ""),
+			"grid_pos": entry.get("grid_pos", [0, 0]),
+			"player_id": entry.get("player_id", 0),
+		}
+		var node: Node2D = entry.get("node")
+		if is_instance_valid(node):
+			out["under_construction"] = node.under_construction
+			out["build_progress"] = node.build_progress
+		buildings_out.append(out)
+	return {"placed_buildings": buildings_out}
 
 
 func load_state(data: Dictionary) -> void:
@@ -239,7 +256,16 @@ func load_state(data: Dictionary) -> void:
 			continue
 		var fp: Array = stats.get("footprint", [1, 1])
 		var footprint := Vector2i(int(fp[0]), int(fp[1]))
+		_player_id = pid
 		var building := _create_building(bname, grid_pos, footprint)
+		# Restore construction state from saved data
+		if entry.has("under_construction"):
+			building.under_construction = bool(entry["under_construction"])
+		if entry.has("build_progress"):
+			building.build_progress = float(entry["build_progress"])
+			building.hp = int(building.build_progress * building.max_hp)
+		if not building.under_construction:
+			building.hp = building.max_hp
 		if _pathfinder != null:
 			var cells := BuildingValidator.get_footprint_cells(grid_pos, footprint)
 			for cell in cells:
@@ -253,6 +279,7 @@ func load_state(data: Dictionary) -> void:
 					"building_name": bname,
 					"grid_pos": [grid_pos.x, grid_pos.y],
 					"player_id": pid,
+					"node": building,
 				}
 			)
 		)

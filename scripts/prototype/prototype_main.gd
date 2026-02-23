@@ -101,6 +101,7 @@ func _setup_building_placer() -> void:
 	_building_placer.set_script(load("res://scripts/prototype/building_placer.gd"))
 	add_child(_building_placer)
 	_building_placer.setup(_camera, _pathfinder, _map_node, _target_detector)
+	_building_placer.building_placed.connect(_on_building_placed)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -117,6 +118,7 @@ func _setup_units() -> void:
 		unit.name = "Unit_%d" % i
 		unit.set_script(UnitScript)
 		unit.position = IsoUtils.grid_to_screen(Vector2(UNIT_POSITIONS[i]))
+		unit.unit_type = "villager"
 		add_child(unit)
 		# Register with input handler after both are in tree
 		if _input_handler.has_method("register_unit"):
@@ -146,7 +148,7 @@ func _setup_demo_entities() -> void:
 		res_node.position = IsoUtils.grid_to_screen(Vector2(resource_positions[i]))
 		add_child(res_node)
 		_target_detector.register_entity(res_node)
-	# Own building (blue, 3x3 town center)
+	# Own building (blue, 3x3 town center) — fully built
 	var building := Node2D.new()
 	building.name = "Building_0"
 	building.set_script(load("res://scripts/prototype/prototype_building.gd"))
@@ -158,12 +160,37 @@ func _setup_demo_entities() -> void:
 	building.grid_pos = bld_pos
 	building.hp = 2400
 	building.max_hp = 2400
+	building.under_construction = false
+	building.build_progress = 1.0
 	add_child(building)
 	_target_detector.register_entity(building)
 	# Mark footprint cells solid
 	var cells := BuildingValidator.get_footprint_cells(bld_pos, Vector2i(3, 3))
 	for cell in cells:
 		_pathfinder.set_cell_solid(cell, true)
+
+
+func _on_building_placed(building: Node2D) -> void:
+	var idle_unit := _find_nearest_idle_unit(building.global_position)
+	if idle_unit != null and idle_unit.has_method("assign_build_target"):
+		idle_unit.assign_build_target(building)
+
+
+func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
+	var best: Node2D = null
+	var best_dist := INF
+	for child in get_children():
+		if not child.has_method("is_idle"):
+			continue
+		if "owner_id" in child and child.owner_id != 0:
+			continue
+		if not child.is_idle():
+			continue
+		var dist: float = child.global_position.distance_to(target_pos)
+		if dist < best_dist:
+			best_dist = dist
+			best = child
+	return best
 
 
 func _setup_hud() -> void:
