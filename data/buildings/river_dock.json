@@ -10,8 +10,8 @@
   "units_produced": [],
   "age_required": 1,
   "placement_constraint": "adjacent_to_river",
-  "transport_speed_multiplier": 1.5,
-  "max_barge_capacity": 20,
-  "barge_spawn_interval": 60,
-  "barge_hp": 150
+  "transport_speed_multiplier": 3.0,
+  "max_barge_capacity": 30,
+  "barge_spawn_interval": 5.0,
+  "barge_hp": 15
 }

@@ -1,0 +1,6 @@
+{
+  "base_barge_speed": 180.0,
+  "max_downstream_search_depth": 200,
+  "depot_river_proximity": 2,
+  "barge_visual_size": 24
+}
