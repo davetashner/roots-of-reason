@@ -1,0 +1,345 @@
+extends PanelContainer
+## Bottom-center info panel showing selected unit/building details.
+## Polls InputHandler selection each frame; updates HP in real-time.
+
+const PANEL_WIDTH: float = 400.0
+const PANEL_HEIGHT: float = 120.0
+const PORTRAIT_SIZE: float = 64.0
+
+var _input_handler: Node = null
+var _tracked_entity: Node = null
+var _tracked_entities: Array = []
+var _is_multi: bool = false
+
+# Config loaded from data/settings/info_panel.json
+var _hp_green_threshold: float = 0.6
+var _hp_yellow_threshold: float = 0.3
+
+# Child nodes
+var _portrait: ColorRect = null
+var _name_label: Label = null
+var _hp_bar_fill: Panel = null
+var _hp_bar_bg: Panel = null
+var _hp_label: Label = null
+var _stats_label: Label = null
+var _hp_bar_container: HBoxContainer = null
+
+
+func _ready() -> void:
+	_load_config()
+	_build_ui()
+	visible = false
+
+
+func _load_config() -> void:
+	var cfg: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		cfg = DataLoader.get_settings("info_panel")
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_settings"):
+			cfg = dl.get_settings("info_panel")
+	if cfg.is_empty():
+		return
+	_hp_green_threshold = float(cfg.get("hp_green_threshold", _hp_green_threshold))
+	_hp_yellow_threshold = float(cfg.get("hp_yellow_threshold", _hp_yellow_threshold))
+
+
+func _build_ui() -> void:
+	custom_minimum_size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
+	size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
+	# Anchor bottom-center
+	anchor_left = 0.5
+	anchor_right = 0.5
+	anchor_top = 1.0
+	anchor_bottom = 1.0
+	offset_left = -PANEL_WIDTH / 2.0
+	offset_right = PANEL_WIDTH / 2.0
+	offset_top = -PANEL_HEIGHT
+	offset_bottom = 0.0
+	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	grow_vertical = Control.GROW_DIRECTION_BEGIN
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var hbox := HBoxContainer.new()
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_theme_constant_override("separation", 12)
+	add_child(hbox)
+
+	# Portrait
+	_portrait = ColorRect.new()
+	_portrait.custom_minimum_size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	_portrait.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(_portrait)
+
+	# Right side
+	var vbox := VBoxContainer.new()
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 4)
+	hbox.add_child(vbox)
+
+	# Name
+	_name_label = Label.new()
+	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_name_label.add_theme_font_size_override("font_size", 16)
+	vbox.add_child(_name_label)
+
+	# HP bar row
+	_hp_bar_container = HBoxContainer.new()
+	_hp_bar_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hp_bar_container.custom_minimum_size = Vector2(0, 16)
+	_hp_bar_container.add_theme_constant_override("separation", 8)
+	vbox.add_child(_hp_bar_container)
+
+	# HP bar background
+	_hp_bar_bg = Panel.new()
+	_hp_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hp_bar_bg.custom_minimum_size = Vector2(180, 14)
+	_hp_bar_bg.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.15, 0.15, 0.15, 0.9)
+	_hp_bar_bg.add_theme_stylebox_override("panel", bg_style)
+	_hp_bar_container.add_child(_hp_bar_bg)
+
+	# HP bar fill (drawn on top of background)
+	_hp_bar_fill = Panel.new()
+	_hp_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hp_bar_fill.position = Vector2.ZERO
+	_hp_bar_fill.size = Vector2(180, 14)
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = Color(0.2, 0.8, 0.2, 0.9)
+	_hp_bar_fill.add_theme_stylebox_override("panel", fill_style)
+	_hp_bar_bg.add_child(_hp_bar_fill)
+
+	# HP label
+	_hp_label = Label.new()
+	_hp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hp_label.add_theme_font_size_override("font_size", 12)
+	_hp_bar_container.add_child(_hp_label)
+
+	# Stats line
+	_stats_label = Label.new()
+	_stats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stats_label.add_theme_font_size_override("font_size", 13)
+	vbox.add_child(_stats_label)
+
+
+func setup(input_handler: Node) -> void:
+	_input_handler = input_handler
+
+
+func show_unit(unit: Node2D) -> void:
+	_tracked_entity = unit
+	_tracked_entities.clear()
+	_is_multi = false
+	visible = true
+	# Portrait color
+	if "unit_color" in unit:
+		_portrait.color = unit.unit_color
+	else:
+		_portrait.color = Color(0.2, 0.4, 0.9)
+	# Name
+	var display_name: String = _get_unit_display_name(unit)
+	_name_label.text = display_name
+	# Stats from DataLoader
+	var stats := _get_unit_stats(unit)
+	var atk: int = int(stats.get("attack", 0))
+	var def: int = int(stats.get("defense", 0))
+	var spd: float = float(stats.get("speed", 0.0))
+	_stats_label.text = "ATK: %d  DEF: %d  SPD: %.1f" % [atk, def, spd]
+	_update_unit_hp(unit, stats)
+
+
+func show_building(building: Node2D) -> void:
+	_tracked_entity = building
+	_tracked_entities.clear()
+	_is_multi = false
+	visible = true
+	# Portrait color
+	if building.owner_id == 0:
+		_portrait.color = Color(0.2, 0.5, 1.0)
+	else:
+		_portrait.color = Color(0.8, 0.2, 0.2)
+	# Name
+	var display_name: String = _get_building_display_name(building)
+	_name_label.text = display_name
+	# Stats
+	if building.under_construction:
+		var pct := int(building.build_progress * 100.0)
+		_stats_label.text = "Progress: %d%%" % pct
+	else:
+		_stats_label.text = ""
+	_update_building_hp(building)
+
+
+func show_multi_select(units: Array) -> void:
+	_tracked_entity = null
+	_tracked_entities = units.duplicate()
+	_is_multi = true
+	visible = true
+	# Portrait: use first unit's color
+	if not units.is_empty() and "unit_color" in units[0]:
+		_portrait.color = units[0].unit_color
+	else:
+		_portrait.color = Color(0.2, 0.4, 0.9)
+	# Name: count + type
+	var type_name := _get_unit_display_name(units[0]) if not units.is_empty() else "Units"
+	_name_label.text = "%d %ss selected" % [units.size(), type_name]
+	# Aggregate HP
+	_stats_label.text = ""
+	_update_multi_hp(units)
+
+
+func clear() -> void:
+	_tracked_entity = null
+	_tracked_entities.clear()
+	_is_multi = false
+	visible = false
+
+
+func _get_hp_color(ratio: float) -> Color:
+	if ratio > _hp_green_threshold:
+		return Color(0.2, 0.8, 0.2, 0.9)
+	if ratio > _hp_yellow_threshold:
+		return Color(0.9, 0.8, 0.1, 0.9)
+	return Color(0.9, 0.2, 0.2, 0.9)
+
+
+func _process(_delta: float) -> void:
+	if _input_handler == null:
+		return
+	# Poll selection from InputHandler
+	var selected: Array[Node] = _input_handler._get_selected_units()
+	if selected.is_empty():
+		if visible:
+			clear()
+		return
+	# Determine what to show
+	if selected.size() == 1:
+		var entity: Node = selected[0]
+		if _is_multi or _tracked_entity != entity:
+			if _is_building(entity):
+				show_building(entity as Node2D)
+			else:
+				show_unit(entity as Node2D)
+		else:
+			_update()
+	else:
+		# Multi-select — only units (not buildings) in multi
+		if not _is_multi or _tracked_entities.size() != selected.size():
+			show_multi_select(selected)
+		else:
+			_update()
+
+
+func _update() -> void:
+	if _is_multi:
+		_update_multi_hp(_tracked_entities)
+		return
+	if _tracked_entity == null or not is_instance_valid(_tracked_entity):
+		clear()
+		return
+	if _is_building(_tracked_entity):
+		_update_building_hp(_tracked_entity as Node2D)
+		if _tracked_entity.under_construction:
+			var pct := int(_tracked_entity.build_progress * 100.0)
+			_stats_label.text = "Progress: %d%%" % pct
+	else:
+		var stats := _get_unit_stats(_tracked_entity as Node2D)
+		_update_unit_hp(_tracked_entity as Node2D, stats)
+
+
+func _update_unit_hp(unit: Node2D, stats: Dictionary) -> void:
+	var max_hp_val: int = int(stats.get("hp", 25))
+	var current_hp: int = max_hp_val
+	if "hp" in unit:
+		current_hp = int(unit.hp)
+		max_hp_val = int(unit.max_hp) if "max_hp" in unit else max_hp_val
+	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
+	_set_hp_bar(ratio, current_hp, max_hp_val)
+
+
+func _update_building_hp(building: Node2D) -> void:
+	var current_hp: int = building.hp
+	var max_hp_val: int = building.max_hp
+	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
+	_set_hp_bar(ratio, current_hp, max_hp_val)
+
+
+func _update_multi_hp(units: Array) -> void:
+	var total_hp: int = 0
+	var total_max: int = 0
+	for u in units:
+		if not is_instance_valid(u):
+			continue
+		if "hp" in u and "max_hp" in u:
+			total_hp += int(u.hp)
+			total_max += int(u.max_hp)
+		else:
+			var stats := _get_unit_stats(u as Node2D)
+			var hp_val: int = int(stats.get("hp", 25))
+			total_hp += hp_val
+			total_max += hp_val
+	var ratio: float = float(total_hp) / float(total_max) if total_max > 0 else 0.0
+	_set_hp_bar(ratio, total_hp, total_max)
+
+
+func _set_hp_bar(ratio: float, current: int, maximum: int) -> void:
+	ratio = clampf(ratio, 0.0, 1.0)
+	var bar_width: float = _hp_bar_bg.custom_minimum_size.x
+	_hp_bar_fill.size = Vector2(bar_width * ratio, _hp_bar_fill.size.y)
+	var fill_style: StyleBoxFlat = _hp_bar_fill.get_theme_stylebox("panel") as StyleBoxFlat
+	if fill_style != null:
+		fill_style.bg_color = _get_hp_color(ratio)
+	_hp_label.text = "HP: %d/%d" % [current, maximum]
+
+
+func _get_unit_stats(unit: Node2D) -> Dictionary:
+	var unit_type: String = unit.unit_type if "unit_type" in unit else "villager"
+	var stats: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		stats = DataLoader.get_unit_stats(unit_type)
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_unit_stats"):
+			stats = dl.get_unit_stats(unit_type)
+	return stats
+
+
+func _get_unit_display_name(unit: Node2D) -> String:
+	var unit_type: String = unit.unit_type if "unit_type" in unit else "unit"
+	var stats := _get_unit_stats(unit)
+	if stats.has("name"):
+		return str(stats["name"])
+	return unit_type.capitalize()
+
+
+func _get_building_display_name(building: Node2D) -> String:
+	var bname: String = building.building_name if "building_name" in building else ""
+	var stats: Dictionary = {}
+	if bname != "":
+		if Engine.has_singleton("DataLoader"):
+			stats = DataLoader.get_building_stats(bname)
+		elif is_instance_valid(Engine.get_main_loop()):
+			var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+			if dl and dl.has_method("get_building_stats"):
+				stats = dl.get_building_stats(bname)
+	if stats.has("name"):
+		return str(stats["name"])
+	if bname != "":
+		return bname.replace("_", " ").capitalize()
+	return "Building"
+
+
+func _is_building(entity: Node) -> bool:
+	return "building_name" in entity
+
+
+func save_state() -> Dictionary:
+	return {}
+
+
+func load_state(_data: Dictionary) -> void:
+	pass

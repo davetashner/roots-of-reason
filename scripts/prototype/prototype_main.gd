@@ -22,6 +22,7 @@ var _pathfinder: Node
 var _target_detector: Node
 var _cursor_overlay: Node
 var _building_placer: Node
+var _info_panel: PanelContainer
 
 
 func _ready() -> void:
@@ -220,6 +221,16 @@ func _setup_hud() -> void:
 	# Connect camera and input handler
 	if hud.has_method("setup"):
 		hud.setup(_camera, _input_handler)
+	# Info panel for selected unit/building details
+	var info_panel_layer := CanvasLayer.new()
+	info_panel_layer.name = "InfoPanel"
+	info_panel_layer.layer = 10
+	add_child(info_panel_layer)
+	_info_panel = PanelContainer.new()
+	_info_panel.name = "InfoPanelWidget"
+	_info_panel.set_script(load("res://scripts/ui/info_panel.gd"))
+	info_panel_layer.add_child(_info_panel)
+	_info_panel.setup(_input_handler)
 	# Cursor overlay for command context labels
 	_cursor_overlay = CanvasLayer.new()
 	_cursor_overlay.name = "CursorOverlay"
