@@ -18,5 +18,6 @@
   "train_time": 25,
   "train_cost": { "food": 50 },
   "armor_type": "none",
-  "attack_type": "melee"
+  "attack_type": "melee",
+  "unit_category": "civilian"
 }

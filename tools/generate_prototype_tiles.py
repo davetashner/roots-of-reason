@@ -78,6 +78,38 @@ def generate_building_tile(name: str, fill: str, border: str, out_dir: Path) -> 
     print(f"  Created {path}")
 
 
+# Unit placeholder definitions: name -> (fill_color, border_color, letter)
+UNITS = {
+    "archer":   ("#5B8C3A", "#4B7C2A", "A"),
+    "cavalry":  ("#8B6914", "#7B5904", "C"),
+    "siege":    ("#6B4A3A", "#5B3A2A", "S"),
+    "naval":    ("#2A6B8B", "#1A5B7B", "N"),
+}
+
+UNIT_SIZE = 32
+
+
+def generate_unit_tile(name: str, fill: str, border: str, letter: str, out_dir: Path) -> None:
+    img = Image.new("RGBA", (UNIT_SIZE, UNIT_SIZE), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    cx, cy = UNIT_SIZE // 2, UNIT_SIZE // 2
+    radius = UNIT_SIZE // 2 - 2
+    draw.ellipse(
+        [(cx - radius, cy - radius), (cx + radius, cy + radius)],
+        fill=fill,
+        outline=border,
+        width=2,
+    )
+    # Draw letter indicator centered
+    bbox = draw.textbbox((0, 0), letter)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    draw.text((cx - tw // 2, cy - th // 2 - 1), letter, fill="white")
+    path = out_dir / f"{name}.png"
+    img.save(path)
+    print(f"  Created {path}")
+
+
 def main() -> None:
     script_dir = Path(__file__).resolve().parent
     project_root = script_dir.parent
@@ -94,6 +126,12 @@ def main() -> None:
     print("Generating prototype building sprites...")
     for name, (fill, border) in BUILDINGS.items():
         generate_building_tile(name, fill, border, building_dir)
+    # Generate unit placeholder sprites
+    unit_dir = project_root / "assets" / "sprites" / "units" / "placeholder"
+    unit_dir.mkdir(parents=True, exist_ok=True)
+    print("Generating prototype unit sprites...")
+    for name, (fill, border, letter) in UNITS.items():
+        generate_unit_tile(name, fill, border, letter, unit_dir)
     print("Done.")
 
 
