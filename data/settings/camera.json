@@ -1,0 +1,8 @@
+{
+  "pan_speed": 500.0,
+  "zoom_min": 0.5,
+  "zoom_max": 3.0,
+  "zoom_step": 0.1,
+  "zoom_lerp_weight": 8.0,
+  "edge_scroll_margin": 20
+}

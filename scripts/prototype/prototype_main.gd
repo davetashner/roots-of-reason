@@ -41,6 +41,23 @@ func _setup_camera() -> void:
 	_camera.position = center
 	_camera.enabled = true
 	add_child(_camera)
+	# Compute map bounds from corner grid positions and pass to camera
+	var map_size := 20
+	var corners: Array[Vector2] = [
+		IsoUtils.grid_to_screen(Vector2(0, 0)),
+		IsoUtils.grid_to_screen(Vector2(map_size, 0)),
+		IsoUtils.grid_to_screen(Vector2(0, map_size)),
+		IsoUtils.grid_to_screen(Vector2(map_size, map_size)),
+	]
+	var min_pos := corners[0]
+	var max_pos := corners[0]
+	for corner in corners:
+		min_pos.x = minf(min_pos.x, corner.x)
+		min_pos.y = minf(min_pos.y, corner.y)
+		max_pos.x = maxf(max_pos.x, corner.x)
+		max_pos.y = maxf(max_pos.y, corner.y)
+	var bounds := Rect2(min_pos, max_pos - min_pos)
+	_camera.setup(bounds)
 
 
 func _setup_input() -> void:

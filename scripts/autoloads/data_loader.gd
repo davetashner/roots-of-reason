@@ -41,5 +41,12 @@ func get_civ_data(civ_name: String) -> Dictionary:
 	return data
 
 
+func get_settings(settings_name: String) -> Dictionary:
+	var data: Variant = load_json("res://data/settings/%s.json" % settings_name)
+	if data == null:
+		return {}
+	return data
+
+
 func clear_cache() -> void:
 	_cache.clear()
