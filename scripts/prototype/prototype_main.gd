@@ -3,6 +3,7 @@ extends Node2D
 ## programmatically at runtime.
 
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
+const ProductionQueueScript := preload("res://scripts/prototype/production_queue.gd")
 
 const UNIT_POSITIONS: Array[Vector2i] = [
 	Vector2i(3, 3),
@@ -197,6 +198,7 @@ func _setup_demo_entities() -> void:
 	_target_detector.register_entity(building)
 	if _population_manager != null:
 		_population_manager.register_building(building, building.owner_id)
+	_try_attach_production_queue(building)
 	# Mark footprint cells solid
 	var cells := BuildingValidator.get_footprint_cells(bld_pos, Vector2i(3, 3))
 	for cell in cells:
@@ -214,6 +216,7 @@ func _on_building_placed(building: Node2D) -> void:
 func _on_building_construction_complete(building: Node2D) -> void:
 	if _population_manager != null and "owner_id" in building:
 		_population_manager.register_building(building, building.owner_id)
+	_try_attach_production_queue(building)
 
 
 func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
@@ -231,6 +234,52 @@ func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
 			best_dist = dist
 			best = child
 	return best
+
+
+func _try_attach_production_queue(building: Node2D) -> void:
+	if not "building_name" in building:
+		return
+	var building_name: String = building.building_name
+	if building_name == "":
+		return
+	var stats: Dictionary = DataLoader.get_building_stats(building_name)
+	var units_produced: Array = stats.get("units_produced", [])
+	if units_produced.is_empty():
+		return
+	var pq := Node.new()
+	pq.name = "ProductionQueue"
+	pq.set_script(ProductionQueueScript)
+	building.add_child(pq)
+	var owner_id: int = building.owner_id if "owner_id" in building else 0
+	pq.setup(building, owner_id, _population_manager)
+	pq.unit_produced.connect(_on_unit_produced)
+
+
+func _on_unit_produced(unit_type: String, building: Node2D) -> void:
+	var unit := Node2D.new()
+	var unit_count := get_child_count()
+	unit.name = "Unit_%d" % unit_count
+	unit.set_script(UnitScript)
+	unit.unit_type = unit_type
+	var owner_id: int = building.owner_id if "owner_id" in building else 0
+	unit.owner_id = owner_id
+	# Spawn at building position offset by rally point
+	var pq: Node = building.get_node_or_null("ProductionQueue")
+	var offset := Vector2i(1, 1)
+	if pq != null and pq.has_method("get_rally_point_offset"):
+		offset = pq.get_rally_point_offset()
+	var spawn_grid: Vector2i = Vector2i.ZERO
+	if "grid_pos" in building:
+		spawn_grid = building.grid_pos + offset
+	unit.position = IsoUtils.grid_to_screen(Vector2(spawn_grid))
+	add_child(unit)
+	unit._scene_root = self
+	if _input_handler != null and _input_handler.has_method("register_unit"):
+		_input_handler.register_unit(unit)
+	if _target_detector != null:
+		_target_detector.register_entity(unit)
+	if _population_manager != null:
+		_population_manager.register_unit(unit, owner_id)
 
 
 func _on_resource_depleted(node: Node2D) -> void:
