@@ -1,0 +1,4 @@
+{
+  "max_queue_size": 5,
+  "rally_point_offset": [1, 1]
+}
