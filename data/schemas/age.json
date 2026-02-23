@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Age",
+  "description": "Age progression definition",
+  "type": "object",
+  "required": ["id", "name", "index"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "index": { "type": "integer", "minimum": 0 },
+    "advance_cost": { "type": "object" },
+    "advance_prerequisites": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "research_multiplier": { "type": "number", "minimum": 0 },
+    "flavor_text": { "type": "string" }
+  },
+  "additionalProperties": false
+}

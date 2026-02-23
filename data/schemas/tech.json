@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Technology",
+  "description": "Tech tree entry definition",
+  "type": "object",
+  "required": ["id", "name", "age", "cost", "research_time", "prerequisites", "effects"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "age": { "type": "integer", "minimum": 0 },
+    "cost": { "type": "object" },
+    "research_time": { "type": "number", "minimum": 0 },
+    "prerequisites": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "effects": { "type": "object" },
+    "flavor_text": { "type": "string" },
+    "singularity_chain": { "type": "boolean" },
+    "public_alert": { "type": "boolean" },
+    "war_spillover": { "type": "object" }
+  },
+  "additionalProperties": false
+}

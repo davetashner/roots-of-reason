@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Civilization",
+  "description": "Civilization definition",
+  "type": "object",
+  "required": ["name", "description", "bonuses"],
+  "properties": {
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "bonuses": { "type": "object" },
+    "unique_building": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "replaces": { "type": "string" },
+        "knowledge_multiplier": { "type": "number" }
+      }
+    },
+    "unique_unit": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "base_unit": { "type": "string" },
+        "hp_bonus": { "type": "number" },
+        "self_heal_rate": { "type": "number" }
+      }
+    },
+    "unique_techs": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  },
+  "additionalProperties": false
+}
