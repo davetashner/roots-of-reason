@@ -266,6 +266,11 @@ func _issue_context_command(world_pos: Vector2) -> void:
 	var cmd := CommandResolver.resolve(unit_type, category, _command_config.get("command_table", {}))
 	command_issued.emit(selected, cmd, target, world_pos)
 	_show_click_marker(world_pos, cmd)
+	if cmd == "build" and target != null and target.has_method("apply_build_work"):
+		for unit in selected:
+			if unit.has_method("assign_build_target"):
+				unit.assign_build_target(target)
+		return
 	_move_selected(world_pos)
 
 
