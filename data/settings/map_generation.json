@@ -49,5 +49,49 @@
     "min_river_length": 5,
     "min_source_spacing": 15,
     "seed_offset": 2000
+  },
+  "resource_generation": {
+    "resources": {
+      "gold_mine": {
+        "density_per_1000_tiles": 3,
+        "terrain_affinity": { "stone": 1.0, "mountain": 0.8, "dirt": 0.3 },
+        "forbidden_terrain": ["water", "river"],
+        "min_spacing": 8,
+        "noise_weight": 0.4,
+        "noise_seed_offset": 4000
+      },
+      "stone_mine": {
+        "density_per_1000_tiles": 4,
+        "terrain_affinity": { "stone": 1.0, "mountain": 0.6, "dirt": 0.4 },
+        "forbidden_terrain": ["water", "river"],
+        "min_spacing": 6,
+        "noise_weight": 0.4,
+        "noise_seed_offset": 4100
+      },
+      "berry_bush": {
+        "density_per_1000_tiles": 5,
+        "terrain_affinity": { "grass": 1.0, "forest": 0.7, "dirt": 0.5 },
+        "forbidden_terrain": ["water", "river", "mountain", "stone"],
+        "min_spacing": 4,
+        "noise_weight": 0.3,
+        "noise_seed_offset": 4200
+      },
+      "tree": {
+        "density_per_1000_tiles": 12,
+        "terrain_affinity": { "forest": 1.0, "grass": 0.6, "dirt": 0.3 },
+        "forbidden_terrain": ["water", "river", "mountain"],
+        "min_spacing": 2,
+        "noise_weight": 0.5,
+        "noise_seed_offset": 4300
+      }
+    },
+    "placement_order": ["gold_mine", "stone_mine", "berry_bush", "tree"],
+    "starting_zone_radius": 15,
+    "starting_zone_guarantees": {
+      "gold_mine": 1,
+      "stone_mine": 2,
+      "berry_bush": 2,
+      "tree": 4
+    }
   }
 }
