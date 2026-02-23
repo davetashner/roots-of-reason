@@ -14,6 +14,7 @@ const TERRAIN_WEIGHTS: Dictionary = {
 }
 
 var _tile_textures: Dictionary = {}
+var _tile_grid: Dictionary = {}  # Vector2i(col, row) -> terrain name
 
 
 func _ready() -> void:
@@ -46,7 +47,16 @@ func _generate_map() -> void:
 	for row in MAP_SIZE:
 		for col in MAP_SIZE:
 			var terrain: String = weighted_terrains[rng.randi_range(0, weighted_terrains.size() - 1)]
+			_tile_grid[Vector2i(col, row)] = terrain
 			_place_tile(col, row, terrain)
+
+
+func get_terrain_at(grid_pos: Vector2i) -> String:
+	return _tile_grid.get(grid_pos, "")
+
+
+func get_map_size() -> int:
+	return MAP_SIZE
 
 
 func _place_tile(col: int, row: int, terrain: String) -> void:

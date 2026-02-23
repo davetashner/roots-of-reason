@@ -15,21 +15,24 @@ const UNIT_POSITIONS: Array[Vector2i] = [
 
 var _camera: Camera2D
 var _input_handler: Node
+var _map_node: Node2D
+var _pathfinder: Node
 
 
 func _ready() -> void:
 	_setup_map()
 	_setup_camera()
+	_setup_pathfinding()
 	_setup_input()
 	_setup_units()
 	_setup_hud()
 
 
 func _setup_map() -> void:
-	var map_node := Node2D.new()
-	map_node.name = "Map"
-	map_node.set_script(load("res://scripts/prototype/prototype_map.gd"))
-	add_child(map_node)
+	_map_node = Node2D.new()
+	_map_node.name = "Map"
+	_map_node.set_script(load("res://scripts/prototype/prototype_map.gd"))
+	add_child(_map_node)
 
 
 func _setup_camera() -> void:
@@ -60,13 +63,21 @@ func _setup_camera() -> void:
 	_camera.setup(bounds)
 
 
+func _setup_pathfinding() -> void:
+	_pathfinder = Node.new()
+	_pathfinder.name = "PathfindingGrid"
+	_pathfinder.set_script(load("res://scripts/prototype/pathfinding_grid.gd"))
+	add_child(_pathfinder)
+	_pathfinder.build(_map_node.get_map_size(), _map_node._tile_grid, {})
+
+
 func _setup_input() -> void:
 	_input_handler = Node.new()
 	_input_handler.name = "InputHandler"
 	_input_handler.set_script(load("res://scripts/prototype/prototype_input.gd"))
 	add_child(_input_handler)
 	if _input_handler.has_method("setup"):
-		_input_handler.setup(_camera)
+		_input_handler.setup(_camera, _pathfinder)
 
 
 func _setup_units() -> void:

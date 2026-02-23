@@ -13,6 +13,7 @@ var _control_groups: Dictionary = {}
 var _last_group_tap: Dictionary = {}
 var _last_recalled_group: int = -1
 var _camera: Camera2D = null
+var _pathfinder: Node = null
 
 
 func _ready() -> void:
@@ -40,8 +41,9 @@ func _load_config() -> void:
 	_double_tap_threshold_ms = int(cfg.get("double_tap_threshold_ms", _double_tap_threshold_ms))
 
 
-func setup(camera: Camera2D) -> void:
+func setup(camera: Camera2D, pathfinder: Node = null) -> void:
 	_camera = camera
+	_pathfinder = pathfinder
 
 
 func _refresh_units() -> void:
@@ -194,13 +196,27 @@ func get_active_group() -> int:
 
 
 func _move_selected(world_pos: Vector2) -> void:
-	var selected: Array[Node] = []
-	for unit in _units:
-		if is_instance_valid(unit) and "selected" in unit and unit.selected:
-			selected.append(unit)
+	var selected := _get_selected_units()
 	if selected.is_empty():
 		return
-	# Spread units around target
+	_show_click_marker(world_pos)
+	# Pathfinder-based movement with formation spread
+	if _pathfinder != null and _pathfinder.has_method("find_path_world"):
+		var target_grid := IsoUtils.snap_to_grid(world_pos)
+		var targets: Array[Vector2i] = _pathfinder.get_formation_targets(target_grid, selected.size())
+		for i in selected.size():
+			var dest_world: Vector2
+			if i < targets.size():
+				dest_world = IsoUtils.grid_to_screen(Vector2(targets[i]))
+			else:
+				dest_world = world_pos
+			var path: Array[Vector2] = _pathfinder.find_path_world(selected[i].global_position, dest_world)
+			if path.size() > 0 and selected[i].has_method("follow_path"):
+				selected[i].follow_path(path)
+			elif selected[i].has_method("move_to"):
+				selected[i].move_to(dest_world)
+		return
+	# Fallback: direct movement with circular spread
 	for i in selected.size():
 		var offset := Vector2.ZERO
 		if selected.size() > 1:
@@ -306,3 +322,32 @@ func load_state(data: Dictionary) -> void:
 			if i >= 0 and i < _units.size():
 				group.append(_units[i])
 		_control_groups[group_index] = group
+
+
+func _show_click_marker(world_pos: Vector2) -> void:
+	var parent := get_parent()
+	if parent == null:
+		return
+	var marker := _ClickMarker.new()
+	marker.position = world_pos
+	marker.z_index = 99
+	parent.add_child(marker)
+
+
+class _ClickMarker:
+	extends Node2D
+	const DURATION: float = 0.5
+	var _elapsed: float = 0.0
+
+	func _process(delta: float) -> void:
+		_elapsed += delta
+		if _elapsed >= DURATION:
+			queue_free()
+			return
+		queue_redraw()
+
+	func _draw() -> void:
+		var t := _elapsed / DURATION
+		var radius := 8.0 + t * 12.0
+		var alpha := 1.0 - t
+		draw_arc(Vector2.ZERO, radius, 0, TAU, 16, Color(1, 1, 0, alpha), 2.0)
