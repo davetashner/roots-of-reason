@@ -12,8 +12,129 @@ const AGE_NAMES: Array[String] = [
 
 var is_paused: bool = false
 var game_speed: float = 1.0
+var game_time: float = 0.0
 var current_age: int = 0  # 0=Stone, 1=Bronze, ..., 6=Singularity
+
+var _speed_steps: Array = [1.0, 1.5, 2.0, 3.0]
+var _speed_index: int = 0
+var _pause_action: String = "ui_pause"
+var _speed_up_action: String = "ui_speed_up"
+var _speed_down_action: String = "ui_speed_down"
+
+
+func _ready() -> void:
+	_load_config()
+
+
+func _load_config() -> void:
+	var config: Dictionary = DataLoader.get_settings("game_clock")
+	if config.is_empty():
+		return
+	if config.has("speed_steps"):
+		_speed_steps = config["speed_steps"]
+		game_speed = _speed_steps[0]
+		_speed_index = 0
+	if config.has("pause_action"):
+		_pause_action = config["pause_action"]
+	if config.has("speed_up_action"):
+		_speed_up_action = config["speed_up_action"]
+	if config.has("speed_down_action"):
+		_speed_down_action = config["speed_down_action"]
+
+
+func _process(delta: float) -> void:
+	if not is_paused:
+		game_time += delta * game_speed
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_pressed():
+		return
+	if InputMap.has_action(_pause_action) and event.is_action_pressed(_pause_action):
+		toggle_pause()
+		get_viewport().set_input_as_handled()
+	elif InputMap.has_action(_speed_up_action) and event.is_action_pressed(_speed_up_action):
+		step_speed(1)
+		get_viewport().set_input_as_handled()
+	elif InputMap.has_action(_speed_down_action) and event.is_action_pressed(_speed_down_action):
+		step_speed(-1)
+		get_viewport().set_input_as_handled()
+
+
+func get_game_delta(delta: float) -> float:
+	if is_paused:
+		return 0.0
+	return delta * game_speed
+
+
+func toggle_pause() -> void:
+	if is_paused:
+		resume()
+	else:
+		pause()
+
+
+func pause() -> void:
+	is_paused = true
+	game_paused.emit()
+
+
+func resume() -> void:
+	is_paused = false
+	game_resumed.emit()
+
+
+func step_speed(direction: int) -> void:
+	var new_index := clampi(_speed_index + direction, 0, _speed_steps.size() - 1)
+	if new_index == _speed_index:
+		return
+	_speed_index = new_index
+	game_speed = _speed_steps[_speed_index]
+	game_speed_changed.emit(game_speed)
+
+
+func set_speed(speed: float) -> void:
+	for i in range(_speed_steps.size()):
+		if is_equal_approx(_speed_steps[i], speed):
+			_speed_index = i
+			game_speed = speed
+			game_speed_changed.emit(game_speed)
+			return
+	push_warning("GameManager: speed %.1f not in speed_steps, ignoring" % speed)
+
+
+func get_clock_display() -> String:
+	var total_seconds: int = int(game_time)
+	@warning_ignore("integer_division")
+	var minutes: int = total_seconds / 60
+	@warning_ignore("integer_division")
+	var seconds: int = total_seconds % 60
+	return "%02d:%02d" % [minutes, seconds]
+
+
+func get_speed_display() -> String:
+	if is_equal_approx(game_speed, floorf(game_speed)):
+		return "%dx" % int(game_speed)
+	return "%sx" % str(game_speed)
 
 
 func get_age_name() -> String:
 	return AGE_NAMES[current_age]
+
+
+func save_state() -> Dictionary:
+	return {
+		"game_time": game_time,
+		"game_speed": game_speed,
+		"speed_index": _speed_index,
+		"is_paused": is_paused,
+		"current_age": current_age,
+	}
+
+
+func load_state(data: Dictionary) -> void:
+	game_time = float(data.get("game_time", 0.0))
+	game_speed = float(data.get("game_speed", 1.0))
+	_speed_index = int(data.get("speed_index", 0))
+	is_paused = bool(data.get("is_paused", false))
+	current_age = int(data.get("current_age", 0))
