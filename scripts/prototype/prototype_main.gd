@@ -26,6 +26,7 @@ var _info_panel: PanelContainer
 var _population_manager: Node
 var _resource_bar: PanelContainer
 var _tech_manager: Node
+var _war_bonus: Node
 
 
 func _ready() -> void:
@@ -242,6 +243,14 @@ func _setup_tech() -> void:
 	_tech_manager.name = "TechManager"
 	_tech_manager.set_script(load("res://scripts/prototype/tech_manager.gd"))
 	add_child(_tech_manager)
+	# War research bonus node — tracks combat state and provides speed multiplier
+	_war_bonus = Node.new()
+	_war_bonus.name = "WarResearchBonus"
+	_war_bonus.set_script(load("res://scripts/prototype/war_research_bonus.gd"))
+	add_child(_war_bonus)
+	_tech_manager.setup_war_bonus(_war_bonus)
+	# Connect tech completion to spillover system
+	_tech_manager.tech_researched.connect(_on_tech_researched_spillover)
 
 
 func _setup_hud() -> void:
@@ -311,6 +320,12 @@ func _setup_resource_bar() -> void:
 		var current: int = _population_manager.get_population(0)
 		var cap: int = _population_manager.get_population_cap(0)
 		_resource_bar.update_population(current, cap)
+
+
+func _on_tech_researched_spillover(player_id: int, tech_id: String, _effects: Dictionary) -> void:
+	if _war_bonus != null:
+		var tech_data: Dictionary = DataLoader.get_tech_data(tech_id)
+		_war_bonus.apply_spillover(player_id, tech_id, tech_data)
 
 
 func _on_population_changed(player_id: int, current: int, cap: int) -> void:

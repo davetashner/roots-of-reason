@@ -34,6 +34,12 @@ var _active_costs: Dictionary = {}
 ## Loaded tech tree array from tech_tree.json
 var _tech_tree: Array = []
 
+## Research speed config loaded from research.json
+var _research_config: Dictionary = {}
+
+## Optional reference to WarResearchBonus node (set via setup_war_bonus)
+var _war_bonus_node: WarResearchBonus = null
+
 ## 1 in-progress + N queued — loaded from data/settings/tech_research.json
 var _max_queue_size: int = 4
 
@@ -70,7 +76,8 @@ func _process(delta: float) -> void:
 			continue
 		var research_time: float = float(tech_data.get("research_time", 0))
 		var current: float = _research_progress.get(player_id, 0.0)
-		current += game_delta
+		var effective_speed: float = _get_effective_speed(player_id)
+		current += game_delta * effective_speed
 		_research_progress[player_id] = current
 		# Emit progress
 		var ratio: float = 0.0
@@ -311,6 +318,11 @@ func load_state(data: Dictionary) -> void:
 		_kb_last_regression_time[int(key)] = float(raw_kb_time[key])
 
 
+func setup_war_bonus(war_bonus_node: WarResearchBonus) -> void:
+	## Connects the war research bonus node for speed multiplier integration.
+	_war_bonus_node = war_bonus_node
+
+
 func _load_config() -> void:
 	var config: Dictionary = DataLoader.get_settings("tech_research")
 	if not config.is_empty():
@@ -322,6 +334,7 @@ func _load_config() -> void:
 		_kb_protect_first_n = int(kb_config.get("protect_first_n_techs", 0))
 		_kb_re_research_multiplier = float(kb_config.get("re_research_cost_multiplier", 1.0))
 		_kb_cooldown = float(kb_config.get("cooldown_seconds", 0))
+	_research_config = DataLoader.get_settings("research")
 
 
 func _load_tech_tree() -> void:
@@ -390,3 +403,14 @@ func _serialize_costs(costs: Dictionary) -> Dictionary:
 
 func _is_regressed_tech(player_id: int, tech_id: String) -> bool:
 	return tech_id in _regressed_techs.get(player_id, [])
+
+
+func _get_effective_speed(player_id: int) -> float:
+	## Computes effective research speed using ResearchSpeed helper.
+	## Backward-compatible: returns 1.0 if no research config is loaded.
+	if _research_config.is_empty():
+		return 1.0
+	var war_bonus: float = 0.0
+	if _war_bonus_node != null:
+		war_bonus = _war_bonus_node.get_war_bonus(player_id)
+	return ResearchSpeed.get_effective_speed(1.0, GameManager.current_age, _research_config, war_bonus)
