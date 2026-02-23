@@ -533,6 +533,12 @@ cmd_gen_sprites() {
     return 0
 }
 
+# ==================== scene-tree ====================
+cmd_scene_tree() {
+    cd "$PROJECT_ROOT"
+    python3 "$SCRIPT_DIR/scene_tree.py" "$@"
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -561,6 +567,10 @@ ${BOLD}COMMANDS${RESET}
   gen-sprites [cat..] Generate placeholder sprite assets
                         ror gen-sprites             — generate all categories
                         ror gen-sprites tiles       — generate only tiles
+  scene-tree <file.tscn> [--depth N]
+                      Print the node tree of a .tscn scene file
+                        ror scene-tree scenes/prototype/prototype_main.tscn
+                        ror scene-tree scenes/game.tscn --depth 2
   help                Show this help message
 
 ${BOLD}ENVIRONMENT${RESET}
@@ -576,6 +586,7 @@ case "${1:-help}" in
     new-test)     shift; cmd_new_test "$@" ;;
     coverage)     shift; cmd_coverage "$@" ;;
     gen-sprites)  shift; cmd_gen_sprites "$@" ;;
+    scene-tree)   shift; cmd_scene_tree "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
         err "Unknown command: $1"
