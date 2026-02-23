@@ -9,5 +9,7 @@
   "population_cost": 1,
   "train_time": 20,
   "train_cost": { "food": 60, "gold": 20 },
-  "bonus_vs": { "archer": 1.5 }
+  "bonus_vs": { "archer": 1.5 },
+  "armor_type": "light",
+  "attack_type": "melee"
 }

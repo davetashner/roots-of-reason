@@ -227,6 +227,16 @@ func test_ages_all_entries_have_required_keys() -> void:
 		assert_bool(age.has("index")).is_true()
 
 
+func test_all_unit_files_have_required_stats() -> void:
+	for unit_name in ["villager", "infantry"]:
+		var stats := DataLoader.get_unit_stats(unit_name)
+		for field in ["hp", "attack", "defense", "speed", "range", "los"]:
+			assert_bool(stats.has(field)).is_true()
+		# Verify new type fields
+		assert_bool(stats.has("armor_type")).is_true()
+		assert_bool(stats.has("attack_type")).is_true()
+
+
 func test_ages_all_have_research_time() -> void:
 	var ages := DataLoader.get_ages_data()
 	for age in ages:

@@ -13,6 +13,7 @@ const SELECTION_RING_RADIUS: float = 16.0
 @export var unit_type: String = "land"
 @export var entity_category: String = ""
 
+var stats: UnitStats = null
 var selected: bool = false
 var _target_pos: Vector2 = Vector2.ZERO
 var _moving: bool = false
@@ -41,8 +42,26 @@ var _pending_gather_target_name: String = ""
 
 func _ready() -> void:
 	_target_pos = position
+	_init_stats()
 	_load_build_config()
 	_load_gather_config()
+
+
+func _init_stats() -> void:
+	var raw: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		raw = DataLoader.get_unit_stats(unit_type)
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_unit_stats"):
+			raw = dl.get_unit_stats(unit_type)
+	stats = UnitStats.new(unit_type, raw)
+
+
+func get_stat(stat_name: String) -> float:
+	if stats == null:
+		return 0.0
+	return stats.get_stat(stat_name)
 
 
 func _load_build_config() -> void:
@@ -431,6 +450,8 @@ func save_state() -> Dictionary:
 		state["build_target_name"] = str(_build_target.name)
 	if _gather_target != null and is_instance_valid(_gather_target):
 		state["gather_target_name"] = str(_gather_target.name)
+	if stats != null:
+		state["stats"] = stats.save_state()
 	return state
 
 
@@ -446,3 +467,7 @@ func load_state(data: Dictionary) -> void:
 	_gather_type = str(data.get("gather_type", ""))
 	_carried_amount = int(data.get("carried_amount", 0))
 	_gather_accumulator = float(data.get("gather_accumulator", 0.0))
+	if data.has("stats"):
+		if stats == null:
+			stats = UnitStats.new()
+		stats.load_state(data["stats"])
