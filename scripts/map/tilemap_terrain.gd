@@ -6,6 +6,9 @@ extends TileMapLayer
 const TILE_SIZE := Vector2i(128, 64)
 const TEXTURE_BASE_PATH := "res://assets/tiles/terrain/prototype/"
 
+const ElevationGenerator := preload("res://scripts/map/elevation_generator.gd")
+const RiverGenerator := preload("res://scripts/map/river_generator.gd")
+
 var _terrain_config: Dictionary = {}
 var _map_gen_config: Dictionary = {}
 var _tile_grid: Dictionary = {}  # Vector2i -> terrain name
@@ -16,6 +19,13 @@ var _map_height: int = 64
 var _seed_value: int = 42
 var _terrain_weights: Dictionary = {}
 var _source_ids: Dictionary = {}  # terrain_name -> source_id
+
+# River/elevation data
+var _elevation_grid: Dictionary = {}  # Vector2i -> float
+var _river_tiles: Dictionary = {}  # Vector2i -> true
+var _flow_directions: Dictionary = {}  # Vector2i -> Vector2i
+var _river_ids: Dictionary = {}  # Vector2i -> int
+var _river_widths: Dictionary = {}  # Vector2i -> int
 
 
 func _ready() -> void:
@@ -30,6 +40,7 @@ func _load_config() -> void:
 
 	_terrain_costs = terrain_cfg.get("terrain_costs", {})
 	_terrain_properties = terrain_cfg.get("terrain_properties", {})
+	_map_gen_config = map_gen_cfg
 
 	var sizes: Dictionary = map_gen_cfg.get("map_sizes", {})
 	var default_size_key: String = map_gen_cfg.get("default_size", "dev")
@@ -59,6 +70,7 @@ func _load_config() -> void:
 			"forest": {"buildable": true, "blocks_los": true},
 			"stone": {"buildable": true, "blocks_los": false},
 			"mountain": {"buildable": false, "blocks_los": true},
+			"river": {"buildable": false, "blocks_los": false},
 		}
 
 
@@ -131,6 +143,27 @@ func _build_tileset() -> void:
 		_source_ids[terrain_name] = source_id
 		source_id += 1
 
+	# Register river tile explicitly (not in terrain_weights — procedurally placed)
+	if not _source_ids.has("river"):
+		var river_tex_path := TEXTURE_BASE_PATH + "river.png"
+		var river_tex: Texture2D = load(river_tex_path)
+		if river_tex != null:
+			var river_source := TileSetAtlasSource.new()
+			river_source.texture = river_tex
+			river_source.texture_region_size = TILE_SIZE
+			ts.add_source(river_source, source_id)
+			river_source.create_tile(Vector2i.ZERO)
+
+			var river_tile_data: TileData = river_source.get_tile_data(Vector2i.ZERO, 0)
+			river_tile_data.set_custom_data("terrain_type", "river")
+			river_tile_data.set_custom_data("movement_cost", float(_terrain_costs.get("river", 3.0)))
+			var river_props: Dictionary = _terrain_properties.get("river", {})
+			river_tile_data.set_custom_data("buildable", river_props.get("buildable", false))
+			river_tile_data.set_custom_data("blocks_los", river_props.get("blocks_los", false))
+
+			_source_ids["river"] = source_id
+			source_id += 1
+
 	tile_set = ts
 
 
@@ -156,6 +189,27 @@ func _generate_map() -> void:
 			var sid: int = _source_ids.get(terrain, -1)
 			if sid >= 0:
 				set_cell(Vector2i(col, row), sid, Vector2i.ZERO)
+
+	# Generate elevation grid
+	var elev_gen := ElevationGenerator.new()
+	elev_gen.configure(_map_gen_config.get("elevation_noise", {}))
+	_elevation_grid = elev_gen.generate(_map_width, _map_height, _seed_value)
+
+	# Generate rivers
+	var river_gen := RiverGenerator.new()
+	river_gen.configure(_map_gen_config.get("river_generation", {}))
+	var river_data: Dictionary = river_gen.generate(_elevation_grid, _tile_grid, _map_width, _map_height, _seed_value)
+	_river_tiles = river_data.get("river_tiles", {})
+	_flow_directions = river_data.get("flow_directions", {})
+	_river_ids = river_data.get("river_ids", {})
+	_river_widths = river_data.get("river_widths", {})
+
+	# Apply river tiles to the map
+	var river_sid: int = _source_ids.get("river", -1)
+	for pos: Vector2i in _river_tiles:
+		_tile_grid[pos] = "river"
+		if river_sid >= 0:
+			set_cell(pos, river_sid, Vector2i.ZERO)
 
 
 # -- Public API (backward-compatible with prototype_map.gd) --
@@ -204,6 +258,29 @@ func get_movement_cost(grid_pos: Vector2i) -> float:
 	return float(_terrain_costs.get(terrain, 1.0))
 
 
+# -- River / Elevation API --
+
+
+func is_river(grid_pos: Vector2i) -> bool:
+	return _river_tiles.has(grid_pos)
+
+
+func get_flow_direction(grid_pos: Vector2i) -> Vector2i:
+	return _flow_directions.get(grid_pos, Vector2i.ZERO)
+
+
+func get_river_id(grid_pos: Vector2i) -> int:
+	return _river_ids.get(grid_pos, -1)
+
+
+func get_river_width(grid_pos: Vector2i) -> int:
+	return _river_widths.get(grid_pos, 0)
+
+
+func get_elevation_at(grid_pos: Vector2i) -> float:
+	return _elevation_grid.get(grid_pos, 0.0)
+
+
 # -- Save / Load --
 
 
@@ -212,11 +289,33 @@ func save_state() -> Dictionary:
 	for pos: Vector2i in _tile_grid:
 		var key := "%d,%d" % [pos.x, pos.y]
 		grid_data[key] = _tile_grid[pos]
+	# Serialize river data
+	var river_data: Dictionary = {}
+	var river_tiles_serialized: Dictionary = {}
+	var flow_dirs_serialized: Dictionary = {}
+	var river_ids_serialized: Dictionary = {}
+	var river_widths_serialized: Dictionary = {}
+	for pos: Vector2i in _river_tiles:
+		var key := "%d,%d" % [pos.x, pos.y]
+		river_tiles_serialized[key] = true
+		if _flow_directions.has(pos):
+			var dir: Vector2i = _flow_directions[pos]
+			flow_dirs_serialized[key] = "%d,%d" % [dir.x, dir.y]
+		if _river_ids.has(pos):
+			river_ids_serialized[key] = _river_ids[pos]
+		if _river_widths.has(pos):
+			river_widths_serialized[key] = _river_widths[pos]
+	river_data["river_tiles"] = river_tiles_serialized
+	river_data["flow_directions"] = flow_dirs_serialized
+	river_data["river_ids"] = river_ids_serialized
+	river_data["river_widths"] = river_widths_serialized
+
 	return {
 		"map_width": _map_width,
 		"map_height": _map_height,
 		"seed": _seed_value,
 		"tile_grid": grid_data,
+		"river_data": river_data,
 	}
 
 
@@ -228,6 +327,10 @@ func load_state(state: Dictionary) -> void:
 	# Clear existing cells
 	clear()
 	_tile_grid.clear()
+	_river_tiles.clear()
+	_flow_directions.clear()
+	_river_ids.clear()
+	_river_widths.clear()
 
 	var grid_data: Dictionary = state.get("tile_grid", {})
 	for key: String in grid_data:
@@ -240,3 +343,32 @@ func load_state(state: Dictionary) -> void:
 		var sid: int = _source_ids.get(terrain, -1)
 		if sid >= 0:
 			set_cell(pos, sid, Vector2i.ZERO)
+
+	# Deserialize river data (backward-compatible — missing key = no rivers)
+	var river_data: Dictionary = state.get("river_data", {})
+	if not river_data.is_empty():
+		var rt: Dictionary = river_data.get("river_tiles", {})
+		for key: String in rt:
+			var parts := key.split(",")
+			if parts.size() == 2:
+				_river_tiles[Vector2i(int(parts[0]), int(parts[1]))] = true
+
+		var fd: Dictionary = river_data.get("flow_directions", {})
+		for key: String in fd:
+			var parts := key.split(",")
+			var dir_parts: PackedStringArray = str(fd[key]).split(",")
+			if parts.size() == 2 and dir_parts.size() == 2:
+				var pos := Vector2i(int(parts[0]), int(parts[1]))
+				_flow_directions[pos] = Vector2i(int(dir_parts[0]), int(dir_parts[1]))
+
+		var ri: Dictionary = river_data.get("river_ids", {})
+		for key: String in ri:
+			var parts := key.split(",")
+			if parts.size() == 2:
+				_river_ids[Vector2i(int(parts[0]), int(parts[1]))] = int(ri[key])
+
+		var rw: Dictionary = river_data.get("river_widths", {})
+		for key: String in rw:
+			var parts := key.split(",")
+			if parts.size() == 2:
+				_river_widths[Vector2i(int(parts[0]), int(parts[1]))] = int(rw[key])
