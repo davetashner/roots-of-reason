@@ -1,5 +1,7 @@
 extends Node
-## Prototype input handler — selection, box-select, control groups, movement commands.
+## Prototype input handler — selection, box-select, control groups, context commands.
+
+signal command_issued(units: Array[Node], command_type: String, target: Node, world_pos: Vector2)
 
 var _units: Array[Node] = []
 var _box_selecting: bool = false
@@ -14,10 +16,14 @@ var _last_group_tap: Dictionary = {}
 var _last_recalled_group: int = -1
 var _camera: Camera2D = null
 var _pathfinder: Node = null
+var _target_detector: Node = null
+var _cursor_overlay: Node = null
+var _command_config: Dictionary = {}
 
 
 func _ready() -> void:
 	_load_config()
+	_load_command_config()
 	# Gather all units from parent scene
 	_refresh_units()
 	# Create a node for drawing selection box
@@ -41,9 +47,28 @@ func _load_config() -> void:
 	_double_tap_threshold_ms = int(cfg.get("double_tap_threshold_ms", _double_tap_threshold_ms))
 
 
-func setup(camera: Camera2D, pathfinder: Node = null) -> void:
+func _load_command_config() -> void:
+	var cfg: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		cfg = DataLoader.get_settings("commands")
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_settings"):
+			cfg = dl.get_settings("commands")
+	if not cfg.is_empty():
+		_command_config = cfg
+
+
+func setup(
+	camera: Camera2D,
+	pathfinder: Node = null,
+	target_detector: Node = null,
+	cursor_overlay: Node = null,
+) -> void:
 	_camera = camera
 	_pathfinder = pathfinder
+	_target_detector = target_detector
+	_cursor_overlay = cursor_overlay
 
 
 func _refresh_units() -> void:
@@ -64,9 +89,12 @@ func register_unit(unit: Node) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		_handle_mouse_button(event as InputEventMouseButton)
-	elif event is InputEventMouseMotion and _box_selecting:
-		_box_end = _get_world_mouse(event as InputEventMouseMotion)
-		_update_selection_rect()
+	elif event is InputEventMouseMotion:
+		if _box_selecting:
+			_box_end = _get_world_mouse(event as InputEventMouseMotion)
+			_update_selection_rect()
+		else:
+			_update_cursor_context(event as InputEventMouseMotion)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		_handle_key(event as InputEventKey)
 
@@ -165,7 +193,7 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 
 	elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
 		var world_pos := _screen_to_world(mb.position, camera)
-		_move_selected(world_pos)
+		_issue_context_command(world_pos)
 
 
 func _unit_at(world_pos: Vector2) -> Node:
@@ -224,6 +252,50 @@ func _move_selected(world_pos: Vector2) -> void:
 			offset = Vector2(cos(angle), sin(angle)) * 20.0
 		if selected[i].has_method("move_to"):
 			selected[i].move_to(world_pos + offset)
+
+
+func _issue_context_command(world_pos: Vector2) -> void:
+	var selected := _get_selected_units()
+	if selected.is_empty():
+		return
+	var target: Node = null
+	if _target_detector != null and _target_detector.has_method("detect"):
+		target = _target_detector.detect(world_pos)
+	var category := CommandResolver.get_target_category(target)
+	var unit_type := CommandResolver.get_primary_unit_type(selected)
+	var cmd := CommandResolver.resolve(unit_type, category, _command_config.get("command_table", {}))
+	command_issued.emit(selected, cmd, target, world_pos)
+	_show_click_marker(world_pos, cmd)
+	_move_selected(world_pos)
+
+
+func _resolve_command_at(world_pos: Vector2) -> String:
+	var selected := _get_selected_units()
+	if selected.is_empty():
+		return ""
+	var target: Node = null
+	if _target_detector != null and _target_detector.has_method("detect"):
+		target = _target_detector.detect(world_pos)
+	var category := CommandResolver.get_target_category(target)
+	var unit_type := CommandResolver.get_primary_unit_type(selected)
+	return CommandResolver.resolve(unit_type, category, _command_config.get("command_table", {}))
+
+
+func _update_cursor_context(motion: InputEventMouseMotion) -> void:
+	if _cursor_overlay == null:
+		return
+	var selected := _get_selected_units()
+	if selected.is_empty():
+		if _cursor_overlay.has_method("clear"):
+			_cursor_overlay.clear()
+		return
+	var camera := get_viewport().get_camera_2d()
+	if camera == null:
+		return
+	var world_pos := _screen_to_world(motion.position, camera)
+	var cmd := _resolve_command_at(world_pos)
+	if cmd != "" and _cursor_overlay.has_method("update_command"):
+		_cursor_overlay.update_command(cmd, _command_config.get("cursor_labels", {}))
 
 
 func _do_box_select() -> void:
@@ -324,19 +396,24 @@ func load_state(data: Dictionary) -> void:
 		_control_groups[group_index] = group
 
 
-func _show_click_marker(world_pos: Vector2) -> void:
+func _show_click_marker(world_pos: Vector2, command_type: String = "move") -> void:
 	var parent := get_parent()
 	if parent == null:
 		return
 	var marker := _ClickMarker.new()
 	marker.position = world_pos
 	marker.z_index = 99
+	var colors: Dictionary = _command_config.get("click_marker_colors", {})
+	if colors.has(command_type):
+		var c: Array = colors[command_type]
+		marker.marker_color = Color(c[0], c[1], c[2], c[3])
 	parent.add_child(marker)
 
 
 class _ClickMarker:
 	extends Node2D
 	const DURATION: float = 0.5
+	var marker_color: Color = Color(1, 1, 0, 1)
 	var _elapsed: float = 0.0
 
 	func _process(delta: float) -> void:
@@ -350,4 +427,5 @@ class _ClickMarker:
 		var t := _elapsed / DURATION
 		var radius := 8.0 + t * 12.0
 		var alpha := 1.0 - t
-		draw_arc(Vector2.ZERO, radius, 0, TAU, 16, Color(1, 1, 0, alpha), 2.0)
+		var color := Color(marker_color.r, marker_color.g, marker_color.b, alpha)
+		draw_arc(Vector2.ZERO, radius, 0, TAU, 16, color, 2.0)

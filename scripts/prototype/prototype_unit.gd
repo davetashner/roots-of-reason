@@ -9,6 +9,7 @@ const SELECTION_RING_RADIUS: float = 16.0
 @export var unit_color: Color = Color(0.2, 0.4, 0.9)
 @export var owner_id: int = 0
 @export var unit_type: String = "land"
+@export var entity_category: String = ""
 
 var selected: bool = false
 var _target_pos: Vector2 = Vector2.ZERO
@@ -97,6 +98,12 @@ func deselect() -> void:
 
 func is_point_inside(point: Vector2) -> bool:
 	return point.distance_to(global_position) <= RADIUS * 1.5
+
+
+func get_entity_category() -> String:
+	if entity_category != "":
+		return entity_category
+	return "enemy_unit" if owner_id != 0 else ""
 
 
 func save_state() -> Dictionary:

@@ -1,0 +1,28 @@
+{
+  "command_table": {
+    "default": {
+      "enemy_unit": "attack",
+      "enemy_building": "attack",
+      "own_building": "garrison",
+      "resource_node": "move"
+    },
+    "villager": {
+      "enemy_unit": "attack",
+      "enemy_building": "attack",
+      "own_building": "garrison",
+      "resource_node": "gather"
+    }
+  },
+  "cursor_labels": {
+    "attack":   { "text": "[ATK]", "color": [1.0, 0.2, 0.2, 1.0] },
+    "gather":   { "text": "[GAT]", "color": [0.2, 0.8, 0.2, 1.0] },
+    "garrison": { "text": "[GAR]", "color": [0.2, 0.5, 1.0, 1.0] },
+    "move":     { "text": "[MOV]", "color": [1.0, 1.0, 0.0, 1.0] }
+  },
+  "click_marker_colors": {
+    "attack":   [1.0, 0.2, 0.2, 1.0],
+    "gather":   [0.2, 0.8, 0.2, 1.0],
+    "garrison": [0.2, 0.5, 1.0, 1.0],
+    "move":     [1.0, 1.0, 0.0, 1.0]
+  }
+}
