@@ -65,6 +65,8 @@ func _setup_input() -> void:
 	_input_handler.name = "InputHandler"
 	_input_handler.set_script(load("res://scripts/prototype/prototype_input.gd"))
 	add_child(_input_handler)
+	if _input_handler.has_method("setup"):
+		_input_handler.setup(_camera)
 
 
 func _setup_units() -> void:
