@@ -11,7 +11,13 @@ static func get_footprint_cells(origin: Vector2i, footprint: Vector2i) -> Array[
 	return cells
 
 
-static func is_placement_valid(origin: Vector2i, footprint: Vector2i, map_node: Node, pathfinder: Node) -> bool:
+static func is_placement_valid(
+	origin: Vector2i,
+	footprint: Vector2i,
+	map_node: Node,
+	pathfinder: Node,
+	placement_constraint: String = "",
+) -> bool:
 	var cells := get_footprint_cells(origin, footprint)
 	var map_size: int = 0
 	if map_node != null and map_node.has_method("get_map_size"):
@@ -22,6 +28,9 @@ static func is_placement_valid(origin: Vector2i, footprint: Vector2i, map_node: 
 		if _is_unbuildable(cell, map_node):
 			return false
 		if _is_solid(cell, pathfinder):
+			return false
+	if placement_constraint != "":
+		if not _check_placement_constraint(cells, map_node, placement_constraint):
 			return false
 	return true
 
@@ -44,3 +53,33 @@ static func _is_solid(cell: Vector2i, pathfinder: Node) -> bool:
 	if pathfinder == null or not pathfinder.has_method("is_cell_solid"):
 		return false
 	return pathfinder.is_cell_solid(cell)
+
+
+static func _check_placement_constraint(cells: Array[Vector2i], map_node: Node, constraint: String) -> bool:
+	match constraint:
+		"adjacent_to_river":
+			return _has_adjacent_river(cells, map_node)
+		_:
+			push_warning("BuildingValidator: unknown placement_constraint '%s'" % constraint)
+			return true
+
+
+static func _has_adjacent_river(cells: Array[Vector2i], map_node: Node) -> bool:
+	if map_node == null or not map_node.has_method("is_river"):
+		return false
+	var directions: Array[Vector2i] = [
+		Vector2i(-1, -1),
+		Vector2i(0, -1),
+		Vector2i(1, -1),
+		Vector2i(-1, 0),
+		Vector2i(1, 0),
+		Vector2i(-1, 1),
+		Vector2i(0, 1),
+		Vector2i(1, 1),
+	]
+	for cell in cells:
+		for dir in directions:
+			var neighbor := cell + dir
+			if map_node.is_river(neighbor):
+				return true
+	return false

@@ -1,0 +1,17 @@
+{
+  "name": "River Dock",
+  "hp": 400,
+  "footprint": [1, 1],
+  "build_time": 30,
+  "build_cost": { "wood": 100 },
+  "population_bonus": 0,
+  "is_drop_off": true,
+  "drop_off_types": ["food", "wood", "stone", "gold", "knowledge"],
+  "units_produced": [],
+  "age_required": 1,
+  "placement_constraint": "adjacent_to_river",
+  "transport_speed_multiplier": 1.5,
+  "max_barge_capacity": 20,
+  "barge_spawn_interval": 60,
+  "barge_hp": 150
+}

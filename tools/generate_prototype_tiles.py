@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw
 
 TILE_W = 128
 TILE_H = 64
+BUILDING_SIZE = 128  # Buildings use 128x128 isometric diamond
 
 # Terrain definitions: name -> (fill_color, border_color)
 TERRAINS = {
@@ -43,6 +44,34 @@ def generate_tile(name: str, fill: str, border: str, out_dir: Path) -> None:
     print(f"  Created {path}")
 
 
+# Building definitions: name -> (fill_color, border_color)
+BUILDINGS = {
+    "river_dock": ("#6B8E9B", "#5A7E8B"),
+}
+
+# Diamond vertices for a 128x128 building tile
+BUILDING_DIAMOND = [
+    (BUILDING_SIZE // 2, 0),
+    (BUILDING_SIZE - 1, BUILDING_SIZE // 2),
+    (BUILDING_SIZE // 2, BUILDING_SIZE - 1),
+    (0, BUILDING_SIZE // 2),
+]
+
+
+def generate_building_tile(name: str, fill: str, border: str, out_dir: Path) -> None:
+    img = Image.new("RGBA", (BUILDING_SIZE, BUILDING_SIZE), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.polygon(BUILDING_DIAMOND, fill=fill, outline=border, width=2)
+    # Dock plank detail lines (horizontal)
+    cx, cy = BUILDING_SIZE // 2, BUILDING_SIZE // 2
+    for offset in (-12, 0, 12):
+        y = cy + offset
+        draw.line([(cx - 20, y), (cx + 20, y)], fill=border, width=1)
+    path = out_dir / f"{name}.png"
+    img.save(path)
+    print(f"  Created {path}")
+
+
 def main() -> None:
     script_dir = Path(__file__).resolve().parent
     project_root = script_dir.parent
@@ -52,6 +81,13 @@ def main() -> None:
     print("Generating prototype isometric tiles...")
     for name, (fill, border) in TERRAINS.items():
         generate_tile(name, fill, border, out_dir)
+
+    # Generate building placeholder sprites
+    building_dir = project_root / "assets" / "sprites" / "buildings" / "placeholder"
+    building_dir.mkdir(parents=True, exist_ok=True)
+    print("Generating prototype building sprites...")
+    for name, (fill, border) in BUILDINGS.items():
+        generate_building_tile(name, fill, border, building_dir)
     print("Done.")
 
 

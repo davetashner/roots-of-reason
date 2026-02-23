@@ -115,7 +115,8 @@ func _update_ghost_position(motion: InputEventMouseMotion) -> void:
 	_current_grid_pos = grid_pos
 	_ghost.position = IsoUtils.grid_to_screen(Vector2(grid_pos))
 	var footprint := _get_footprint()
-	_is_valid = BuildingValidator.is_placement_valid(grid_pos, footprint, _map_node, _pathfinder)
+	var constraint: String = _building_stats.get("placement_constraint", "")
+	_is_valid = BuildingValidator.is_placement_valid(grid_pos, footprint, _map_node, _pathfinder, constraint)
 	_ghost.set_valid(_is_valid)
 
 
