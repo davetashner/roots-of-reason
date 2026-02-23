@@ -13,6 +13,9 @@ var hp: int = 0
 var max_hp: int = 0
 var selected: bool = false
 
+var is_drop_off: bool = false
+var drop_off_types: Array[String] = []
+
 var under_construction: bool = false
 var build_progress: float = 0.0
 var _build_time: float = 1.0
@@ -24,7 +27,27 @@ var _bar_offset_y: float = -30.0
 
 
 func _ready() -> void:
+	_load_building_stats()
 	_load_construction_config()
+
+
+func _load_building_stats() -> void:
+	if building_name == "":
+		return
+	var stats: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		stats = DataLoader.get_building_stats(building_name)
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_building_stats"):
+			stats = dl.get_building_stats(building_name)
+	if stats.is_empty():
+		return
+	is_drop_off = bool(stats.get("is_drop_off", false))
+	var types: Array = stats.get("drop_off_types", [])
+	drop_off_types.clear()
+	for t in types:
+		drop_off_types.append(str(t))
 
 
 func _load_construction_config() -> void:
@@ -169,6 +192,8 @@ func save_state() -> Dictionary:
 		"under_construction": under_construction,
 		"build_progress": build_progress,
 		"build_time": _build_time,
+		"is_drop_off": is_drop_off,
+		"drop_off_types": drop_off_types,
 	}
 
 
@@ -182,4 +207,9 @@ func load_state(data: Dictionary) -> void:
 	under_construction = bool(data.get("under_construction", false))
 	build_progress = float(data.get("build_progress", 0.0))
 	_build_time = float(data.get("build_time", 1.0))
+	is_drop_off = bool(data.get("is_drop_off", false))
+	var types: Array = data.get("drop_off_types", [])
+	drop_off_types.clear()
+	for t in types:
+		drop_off_types.append(str(t))
 	queue_redraw()

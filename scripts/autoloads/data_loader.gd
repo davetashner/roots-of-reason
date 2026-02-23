@@ -41,6 +41,13 @@ func get_civ_data(civ_name: String) -> Dictionary:
 	return data
 
 
+func get_resource_data(resource_name: String) -> Dictionary:
+	var data: Variant = load_json("res://data/resources/%s.json" % resource_name)
+	if data == null:
+		return {}
+	return data
+
+
 func get_settings(settings_name: String) -> Dictionary:
 	var data: Variant = load_json("res://data/settings/%s.json" % settings_name)
 	if data == null:

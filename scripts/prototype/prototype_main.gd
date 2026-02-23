@@ -120,6 +120,7 @@ func _setup_units() -> void:
 		unit.position = IsoUtils.grid_to_screen(Vector2(UNIT_POSITIONS[i]))
 		unit.unit_type = "villager"
 		add_child(unit)
+		unit._scene_root = self
 		# Register with input handler after both are in tree
 		if _input_handler.has_method("register_unit"):
 			_input_handler.register_unit(unit)
@@ -139,14 +140,27 @@ func _setup_demo_entities() -> void:
 		enemy.owner_id = 1
 		add_child(enemy)
 		_target_detector.register_entity(enemy)
-	# Resource nodes (green diamonds)
-	var resource_positions: Array[Vector2i] = [Vector2i(6, 9), Vector2i(8, 11)]
-	for i in resource_positions.size():
+	# Resource nodes — typed and depletable
+	var ResourceNodeScript: GDScript = load("res://scripts/prototype/prototype_resource_node.gd")
+	var berry_positions: Array[Vector2i] = [Vector2i(6, 9), Vector2i(8, 11)]
+	for i in berry_positions.size():
 		var res_node := Node2D.new()
-		res_node.name = "Resource_%d" % i
-		res_node.set_script(load("res://scripts/prototype/prototype_resource_node.gd"))
-		res_node.position = IsoUtils.grid_to_screen(Vector2(resource_positions[i]))
+		res_node.name = "Resource_berry_%d" % i
+		res_node.set_script(ResourceNodeScript)
+		res_node.position = IsoUtils.grid_to_screen(Vector2(berry_positions[i]))
 		add_child(res_node)
+		res_node.setup("berry_bush")
+		res_node.depleted.connect(_on_resource_depleted)
+		_target_detector.register_entity(res_node)
+	var tree_positions: Array[Vector2i] = [Vector2i(12, 6), Vector2i(13, 7), Vector2i(14, 6)]
+	for i in tree_positions.size():
+		var res_node := Node2D.new()
+		res_node.name = "Resource_tree_%d" % i
+		res_node.set_script(ResourceNodeScript)
+		res_node.position = IsoUtils.grid_to_screen(Vector2(tree_positions[i]))
+		add_child(res_node)
+		res_node.setup("tree")
+		res_node.depleted.connect(_on_resource_depleted)
 		_target_detector.register_entity(res_node)
 	# Own building (blue, 3x3 town center) — fully built
 	var building := Node2D.new()
@@ -191,6 +205,11 @@ func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
 			best_dist = dist
 			best = child
 	return best
+
+
+func _on_resource_depleted(node: Node2D) -> void:
+	if _target_detector != null and _target_detector.has_method("unregister_entity"):
+		_target_detector.unregister_entity(node)
 
 
 func _setup_hud() -> void:
