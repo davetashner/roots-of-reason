@@ -26,7 +26,15 @@
     "population_cost": { "type": "integer", "minimum": 0 },
     "train_time": { "type": "number", "minimum": 0 },
     "train_cost": { "type": "object" },
-    "bonus_vs": { "type": "object" }
+    "bonus_vs": { "type": "object" },
+    "armor_type": {
+      "type": "string",
+      "enum": ["none", "light", "heavy", "siege"]
+    },
+    "attack_type": {
+      "type": "string",
+      "enum": ["melee", "ranged", "siege"]
+    }
   },
-  "additionalProperties": false
+  "additionalProperties": true
 }
