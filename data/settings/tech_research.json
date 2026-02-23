@@ -1,0 +1,4 @@
+{
+  "max_queue_size": 4,
+  "queue_description": "1 in-progress + 3 queued"
+}
