@@ -1,0 +1,19 @@
+{
+  "map_sizes": {
+    "dev":    { "width": 64,  "height": 64  },
+    "small":  { "width": 128, "height": 128 },
+    "medium": { "width": 200, "height": 200 },
+    "large":  { "width": 256, "height": 256 }
+  },
+  "default_size": "dev",
+  "seed": 42,
+  "terrain_weights": {
+    "grass":    45,
+    "dirt":     10,
+    "sand":      5,
+    "water":    10,
+    "forest":   15,
+    "stone":    10,
+    "mountain":  5
+  }
+}

@@ -2,11 +2,24 @@
   "terrain_costs": {
     "grass": 1.0,
     "dirt": 1.0,
+    "sand": 1.5,
     "forest": 2.0,
     "desert": 1.5,
+    "stone": 1.5,
+    "mountain": -1,
+    "water": -1,
     "shallows": 3.0,
     "deep_water": -1,
     "river": 3.0
+  },
+  "terrain_properties": {
+    "grass":    { "buildable": true,  "blocks_los": false },
+    "dirt":     { "buildable": true,  "blocks_los": false },
+    "sand":     { "buildable": true,  "blocks_los": false },
+    "water":    { "buildable": false, "blocks_los": false },
+    "forest":   { "buildable": true,  "blocks_los": true  },
+    "stone":    { "buildable": true,  "blocks_los": false },
+    "mountain": { "buildable": false, "blocks_los": true  }
   },
   "unit_type_overrides": {
     "naval": {
@@ -16,7 +29,10 @@
       "grass": -1,
       "dirt": -1,
       "forest": -1,
-      "desert": -1
+      "desert": -1,
+      "sand": -1,
+      "stone": -1,
+      "mountain": -1
     },
     "siege": {
       "forest": -1

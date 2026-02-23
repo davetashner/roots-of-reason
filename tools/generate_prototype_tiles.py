@@ -14,10 +14,14 @@ TILE_H = 64
 
 # Terrain definitions: name -> (fill_color, border_color)
 TERRAINS = {
-    "grass":  ("#4A7C4A", "#3A6C3A"),
-    "desert": ("#D4B87A", "#C4A86A"),
-    "water":  ("#5B9BD5", "#4B8BC5"),
-    "forest": ("#2D5A2D", "#1D4A1D"),
+    "grass":    ("#4A7C4A", "#3A6C3A"),
+    "dirt":     ("#8B7355", "#7B6345"),
+    "sand":     ("#D2B48C", "#C2A47C"),
+    "desert":   ("#D4B87A", "#C4A86A"),
+    "water":    ("#5B9BD5", "#4B8BC5"),
+    "forest":   ("#2D5A2D", "#1D4A1D"),
+    "stone":    ("#808080", "#707070"),
+    "mountain": ("#404050", "#303040"),
 }
 
 # Diamond vertices for a 128x64 tile
