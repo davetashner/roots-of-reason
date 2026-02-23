@@ -15,5 +15,21 @@
     "forest":   15,
     "stone":    10,
     "mountain":  5
+  },
+  "elevation_noise": {
+    "frequency": 0.015,
+    "octaves": 4,
+    "lacunarity": 2.0,
+    "gain": 0.5,
+    "seed_offset": 1000
+  },
+  "river_generation": {
+    "river_count_min": 2,
+    "river_count_max": 4,
+    "source_elevation_threshold": 0.70,
+    "noise_wander_strength": 0.04,
+    "min_river_length": 5,
+    "min_source_spacing": 15,
+    "seed_offset": 2000
   }
 }

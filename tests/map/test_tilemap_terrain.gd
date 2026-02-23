@@ -209,3 +209,133 @@ func test_same_seed_produces_same_map() -> void:
 	var grid2: Dictionary = map2.get_tile_grid()
 	for pos: Vector2i in grid1:
 		assert_str(grid2.get(pos, "")).is_equal(grid1[pos])
+
+
+# -- River integration --
+
+
+func _create_terrain_map_with_rivers() -> TileMapLayer:
+	var map := TileMapLayer.new()
+	map.set_script(TerrainScript)
+	map._map_width = 32
+	map._map_height = 32
+	map._seed_value = 42
+	map._terrain_weights = {
+		"grass": 30,
+		"dirt": 5,
+		"sand": 5,
+		"water": 10,
+		"forest": 10,
+		"stone": 20,
+		"mountain": 20,
+	}
+	map._terrain_properties = {
+		"grass": {"buildable": true, "blocks_los": false},
+		"dirt": {"buildable": true, "blocks_los": false},
+		"sand": {"buildable": true, "blocks_los": false},
+		"water": {"buildable": false, "blocks_los": false},
+		"forest": {"buildable": true, "blocks_los": true},
+		"stone": {"buildable": true, "blocks_los": false},
+		"mountain": {"buildable": false, "blocks_los": true},
+		"river": {"buildable": false, "blocks_los": false},
+	}
+	map._terrain_costs = {
+		"grass": 1.0,
+		"dirt": 1.0,
+		"sand": 1.5,
+		"forest": 2.0,
+		"stone": 1.5,
+		"water": -1,
+		"mountain": -1,
+		"river": 3.0,
+	}
+	map._map_gen_config = {
+		"elevation_noise":
+		{
+			"frequency": 0.015,
+			"octaves": 4,
+			"lacunarity": 2.0,
+			"gain": 0.5,
+			"seed_offset": 1000,
+		},
+		"river_generation":
+		{
+			"river_count_min": 2,
+			"river_count_max": 4,
+			"source_elevation_threshold": 0.70,
+			"noise_wander_strength": 0.04,
+			"min_river_length": 3,
+			"min_source_spacing": 8,
+			"seed_offset": 2000,
+		},
+	}
+	map._build_tileset()
+	map._generate_map()
+	return auto_free(map)
+
+
+func test_save_state_includes_river_data_key() -> void:
+	var map := _create_terrain_map_with_rivers()
+	var state: Dictionary = map.save_state()
+	assert_bool(state.has("river_data")).is_true()
+
+
+func test_save_load_roundtrip_preserves_rivers() -> void:
+	var map := _create_terrain_map_with_rivers()
+	var state: Dictionary = map.save_state()
+
+	var map2 := _create_terrain_map_with_rivers()
+	map2.load_state(state)
+
+	# Check river tiles match
+	for pos: Vector2i in map._river_tiles:
+		assert_bool(map2.is_river(pos)).is_true()
+	# Check flow directions match
+	for pos: Vector2i in map._flow_directions:
+		assert_object(map2.get_flow_direction(pos)).is_equal(map.get_flow_direction(pos))
+
+
+func test_river_tile_is_not_buildable() -> void:
+	var map := _create_terrain_map()
+	map._terrain_properties["river"] = {"buildable": false, "blocks_los": false}
+	map._tile_grid[Vector2i(0, 0)] = "river"
+	assert_bool(map.is_buildable(Vector2i(0, 0))).is_false()
+
+
+func test_river_tile_does_not_block_los() -> void:
+	var map := _create_terrain_map()
+	map._terrain_properties["river"] = {"buildable": false, "blocks_los": false}
+	map._tile_grid[Vector2i(0, 0)] = "river"
+	assert_bool(map.blocks_los(Vector2i(0, 0))).is_false()
+
+
+func test_get_river_id_returns_negative_for_non_river() -> void:
+	var map := _create_terrain_map()
+	assert_int(map.get_river_id(Vector2i(0, 0))).is_equal(-1)
+
+
+func test_get_elevation_at_returns_zero_for_out_of_bounds() -> void:
+	var map := _create_terrain_map()
+	assert_float(map.get_elevation_at(Vector2i(-1, -1))).is_equal(0.0)
+
+
+func test_backward_compat_load_without_river_data() -> void:
+	var map := _create_terrain_map()
+	# Simulate old save format (no river_data key)
+	var old_state := {
+		"map_width": 8,
+		"map_height": 8,
+		"seed": 42,
+		"tile_grid": {"0,0": "grass", "1,0": "dirt"},
+	}
+	map.load_state(old_state)
+	# Should not crash, rivers should be empty
+	assert_bool(map.is_river(Vector2i(0, 0))).is_false()
+	assert_int(map.get_river_id(Vector2i(0, 0))).is_equal(-1)
+
+
+func test_river_movement_cost() -> void:
+	var map := _create_terrain_map()
+	map._terrain_costs["river"] = 3.0
+	map._tile_grid[Vector2i(0, 0)] = "river"
+	assert_float(map.get_movement_cost(Vector2i(0, 0))).is_equal(3.0)

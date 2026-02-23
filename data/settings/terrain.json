@@ -19,7 +19,8 @@
     "water":    { "buildable": false, "blocks_los": false },
     "forest":   { "buildable": true,  "blocks_los": true  },
     "stone":    { "buildable": true,  "blocks_los": false },
-    "mountain": { "buildable": false, "blocks_los": true  }
+    "mountain": { "buildable": false, "blocks_los": true  },
+    "river":    { "buildable": false, "blocks_los": false }
   },
   "unit_type_overrides": {
     "naval": {
