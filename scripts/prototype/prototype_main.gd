@@ -21,6 +21,7 @@ var _map_node: Node2D
 var _pathfinder: Node
 var _target_detector: Node
 var _cursor_overlay: Node
+var _building_placer: Node
 
 
 func _ready() -> void:
@@ -29,6 +30,7 @@ func _ready() -> void:
 	_setup_pathfinding()
 	_setup_target_detection()
 	_setup_input()
+	_setup_building_placer()
 	_setup_units()
 	_setup_demo_entities()
 	_setup_hud()
@@ -93,6 +95,22 @@ func _setup_input() -> void:
 		_input_handler.setup(_camera, _pathfinder, _target_detector)
 
 
+func _setup_building_placer() -> void:
+	_building_placer = Node.new()
+	_building_placer.name = "BuildingPlacer"
+	_building_placer.set_script(load("res://scripts/prototype/building_placer.gd"))
+	add_child(_building_placer)
+	_building_placer.setup(_camera, _pathfinder, _map_node, _target_detector)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		var key := event as InputEventKey
+		if key.pressed and not key.echo and key.keycode == KEY_B:
+			if _building_placer != null and not _building_placer.is_active():
+				_building_placer.start_placement("house", 0)
+
+
 func _setup_units() -> void:
 	for i in UNIT_POSITIONS.size():
 		var unit := Node2D.new()
@@ -128,14 +146,24 @@ func _setup_demo_entities() -> void:
 		res_node.position = IsoUtils.grid_to_screen(Vector2(resource_positions[i]))
 		add_child(res_node)
 		_target_detector.register_entity(res_node)
-	# Own building (blue square)
+	# Own building (blue, 3x3 town center)
 	var building := Node2D.new()
 	building.name = "Building_0"
 	building.set_script(load("res://scripts/prototype/prototype_building.gd"))
-	building.position = IsoUtils.grid_to_screen(Vector2(Vector2i(4, 4)))
+	var bld_pos := Vector2i(4, 4)
+	building.position = IsoUtils.grid_to_screen(Vector2(bld_pos))
 	building.owner_id = 0
+	building.building_name = "town_center"
+	building.footprint = Vector2i(3, 3)
+	building.grid_pos = bld_pos
+	building.hp = 2400
+	building.max_hp = 2400
 	add_child(building)
 	_target_detector.register_entity(building)
+	# Mark footprint cells solid
+	var cells := BuildingValidator.get_footprint_cells(bld_pos, Vector2i(3, 3))
+	for cell in cells:
+		_pathfinder.set_cell_solid(cell, true)
 
 
 func _setup_hud() -> void:
