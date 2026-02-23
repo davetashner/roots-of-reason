@@ -188,6 +188,71 @@ When an enemy destroys a Town Center, the defender **loses their most recently r
 - Visual: burning scroll particles, screen flash, distinctive audio chime
 - Settings tunable via `data/settings/knowledge_burning.json`
 
+### ADR-012: Error Handling Conventions
+Standardized error handling across all GDScript code. Follow these patterns exactly.
+
+**Recoverable errors — `push_warning()` + fallback value:**
+Use when the game can continue with a sensible default. Return an empty container or default value.
+```gdscript
+# WRONG — silent failure, caller gets null and crashes later
+func get_unit_stats(unit_name: String) -> Dictionary:
+	var data = load_json("res://data/units/%s.json" % unit_name)
+	return data
+
+# RIGHT — warn and return empty dict so callers don't null-ref
+func get_unit_stats(unit_name: String) -> Dictionary:
+	var data: Variant = load_json("res://data/units/%s.json" % unit_name)
+	if data == null:
+		push_warning("DataLoader: No stats for unit '%s', returning defaults" % unit_name)
+		return {}
+	return data
+```
+
+**Unrecoverable errors — `push_error()` + `assert()` in debug:**
+Use for logic bugs and invariant violations that should never happen in correct code.
+```gdscript
+# WRONG — silently accepts invalid state, bug hides until later
+func advance_age(player_id: int) -> void:
+	current_age = current_age + 1
+
+# RIGHT — catch the bug immediately in debug, log in release
+func advance_age(player_id: int) -> void:
+	assert(current_age < AGE_NAMES.size() - 1, "Cannot advance past final age")
+	if current_age >= AGE_NAMES.size() - 1:
+		push_error("GameManager: Tried to advance past Singularity Age for player %d" % player_id)
+		return
+	current_age += 1
+```
+
+**Data validation — validate at load time, trust at runtime:**
+- Validate JSON structure and required fields when data is first loaded (in `DataLoader` or system `_ready()`)
+- After validation passes, trust the data at runtime — do not re-check on every access
+- Use `push_error()` for malformed data files (they indicate a build/data bug)
+
+**Missing data files — graceful degradation:**
+- Return empty `Dictionary` or `Array` so callers can use `.is_empty()` checks
+- Use `push_warning()` — missing files are recoverable (the system works with defaults)
+- Never crash on missing optional data; use `push_error()` only for files that must exist (e.g., core settings)
+
+**Signal-based error propagation for gameplay events:**
+- Use signals for expected gameplay failures: `path_not_found`, `resource_depleted`, `build_failed`, `train_blocked`
+- Do NOT use `push_warning`/`push_error` for normal gameplay situations (e.g., player can't afford a unit)
+- Signals let the UI and AI react to failures without coupling systems together
+
+**Logging severity levels:**
+| Level | Function | When to use |
+|-------|----------|-------------|
+| `push_warning()` | Recoverable issues | Missing optional data, config fallback, deprecated usage |
+| `push_error()` | Bugs / invariant violations | Malformed data, impossible state, programmer error |
+| `assert()` | Debug-only invariants | Pre/postconditions, type checks, range checks (stripped in release) |
+| `print()` | Never in production code | Use only in temporary debugging; remove before commit |
+
+**Rules:**
+- Prefix all warning/error messages with the class name: `"DataLoader: ..."`, `"GameManager: ..."`
+- Do not catch errors that indicate code bugs — let `assert()` crash in debug so the bug is found immediately
+- Do not use `push_warning()`/`push_error()` for normal gameplay flow (player out of resources, path blocked, etc.) — use signals instead
+- Every `push_warning()` or `push_error()` call must include enough context to diagnose the issue (what happened, what input caused it)
+
 ### ADR-013: Research Acceleration
 Research speed scales by age, with war bonuses and tech bonuses stacking multiplicatively.
 - **Age multipliers:** 1.0 / 1.0 / 1.1 / 1.2 / 1.5 / 2.5 / 5.0 (Stone → Singularity)
