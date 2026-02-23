@@ -1,0 +1,18 @@
+{
+  "name": "Market",
+  "hp": 1000,
+  "footprint": [3, 3],
+  "build_time": 45,
+  "build_cost": { "wood": 175 },
+  "population_bonus": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": ["trade_cart"],
+  "age_required": 2,
+  "trade_rates": {
+    "food": 100,
+    "wood": 100,
+    "stone": 100,
+    "gold": 100
+  }
+}

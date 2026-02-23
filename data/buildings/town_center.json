@@ -8,5 +8,6 @@
   "is_drop_off": true,
   "drop_off_types": ["food", "wood", "stone", "gold"],
   "units_produced": ["villager"],
-  "age_required": 0
+  "age_required": 0,
+  "garrison_capacity": 15
 }

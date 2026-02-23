@@ -13,7 +13,13 @@
     "villager": [
       {"id": "build_house", "label": "House", "tooltip": "Build House (25 Wood)", "action": "build", "building": "house"},
       {"id": "build_town_center", "label": "TC", "tooltip": "Build Town Center (275 Wood, 100 Stone)", "action": "build", "building": "town_center"},
-      {"id": "build_river_dock", "label": "Dock", "tooltip": "Build River Dock (100 Wood)", "action": "build", "building": "river_dock"}
+      {"id": "build_river_dock", "label": "Dock", "tooltip": "Build River Dock (100 Wood)", "action": "build", "building": "river_dock"},
+      {"id": "build_farm", "label": "Farm", "tooltip": "Build Farm (60 Wood)", "action": "build", "building": "farm"},
+      {"id": "build_barracks", "label": "Barracks", "tooltip": "Build Barracks (175 Wood)", "action": "build", "building": "barracks"},
+      {"id": "build_dock", "label": "Dock", "tooltip": "Build Dock (150 Wood)", "action": "build", "building": "dock"},
+      {"id": "build_market", "label": "Market", "tooltip": "Build Market (175 Wood)", "action": "build", "building": "market"},
+      {"id": "build_library", "label": "Library", "tooltip": "Build Library (150 Wood, 50 Gold)", "action": "build", "building": "library"},
+      {"id": "build_wonder", "label": "Wonder", "tooltip": "Build Wonder (1000 Wood, Stone, Gold)", "action": "build", "building": "wonder"}
     ],
     "default": [
       {"id": "stop", "label": "Stop", "tooltip": "Stop current action", "action": "stop"},
