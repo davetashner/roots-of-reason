@@ -1,0 +1,202 @@
+extends PanelContainer
+## Top-of-screen resource bar showing all resource amounts, population, and age.
+## Reads configuration from data/settings/hud.json.
+
+const PLAYER_ID: int = 0
+const RESOURCE_ORDER: Array[String] = ["Food", "Wood", "Stone", "Gold", "Knowledge"]
+
+var _config: Dictionary = {}
+var _resource_labels: Dictionary = {}
+var _population_label: Label
+var _age_label: Label
+
+
+func _ready() -> void:
+	_load_config()
+	_build_layout()
+	_connect_signals()
+	_refresh_all_resources()
+	_update_age()
+
+
+func _load_config() -> void:
+	var data: Dictionary = DataLoader.get_settings("hud")
+	if data.has("resource_bar"):
+		_config = data["resource_bar"]
+
+
+func _build_layout() -> void:
+	# Panel styling
+	var panel_style := StyleBoxFlat.new()
+	var bg: Array = _config.get("background_color", [0.1, 0.1, 0.15, 0.85])
+	panel_style.bg_color = Color(bg[0], bg[1], bg[2], bg[3])
+	add_theme_stylebox_override("panel", panel_style)
+
+	var bar_height: int = _config.get("height", 32)
+	custom_minimum_size.y = bar_height
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	set_anchors_preset(Control.PRESET_TOP_WIDE)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# Main horizontal container
+	var hbox := HBoxContainer.new()
+	hbox.name = "MainHBox"
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_theme_constant_override("separation", 16)
+	add_child(hbox)
+
+	# Left spacer
+	var left_spacer := Control.new()
+	left_spacer.custom_minimum_size.x = 8
+	left_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(left_spacer)
+
+	# Resource items
+	var icon_size: int = _config.get("icon_size", 20)
+	var font_size: int = _config.get("font_size", 16)
+	var colors: Dictionary = _config.get("resource_colors", {})
+
+	for resource_name in RESOURCE_ORDER:
+		var item := HBoxContainer.new()
+		item.name = "Res_%s" % resource_name
+		item.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		item.add_theme_constant_override("separation", 4)
+
+		var icon := ColorRect.new()
+		icon.name = "Icon"
+		icon.custom_minimum_size = Vector2(icon_size, icon_size)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if colors.has(resource_name):
+			var c: Array = colors[resource_name]
+			icon.color = Color(c[0], c[1], c[2])
+		item.add_child(icon)
+
+		var lbl := Label.new()
+		lbl.name = "Amount"
+		lbl.text = "0"
+		lbl.add_theme_font_size_override("font_size", font_size)
+		lbl.add_theme_color_override("font_color", Color.WHITE)
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		item.add_child(lbl)
+
+		hbox.add_child(item)
+		_resource_labels[resource_name] = lbl
+
+	# Separator
+	var sep1 := VSeparator.new()
+	sep1.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(sep1)
+
+	# Population label
+	_population_label = Label.new()
+	_population_label.name = "PopulationLabel"
+	_population_label.text = "Pop: 0/5"
+	_population_label.add_theme_font_size_override("font_size", font_size)
+	_population_label.add_theme_color_override("font_color", Color.WHITE)
+	_population_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(_population_label)
+
+	# Separator
+	var sep2 := VSeparator.new()
+	sep2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(sep2)
+
+	# Age label
+	_age_label = Label.new()
+	_age_label.name = "AgeLabel"
+	_age_label.text = GameManager.get_age_name()
+	_age_label.add_theme_font_size_override("font_size", font_size)
+	_age_label.add_theme_color_override("font_color", Color.WHITE)
+	_age_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(_age_label)
+
+	# Right spacer to push content left
+	var right_spacer := Control.new()
+	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(right_spacer)
+
+
+func _connect_signals() -> void:
+	ResourceManager.resources_changed.connect(_on_resources_changed)
+
+
+func _refresh_all_resources() -> void:
+	for resource_name in RESOURCE_ORDER:
+		var res_type: int = _resource_name_to_type(resource_name)
+		if res_type >= 0:
+			var amount: int = ResourceManager.get_amount(PLAYER_ID, res_type as ResourceManager.ResourceType)
+			_update_resource_label(resource_name, amount)
+
+
+func _on_resources_changed(player_id: int, resource_type: String, amount: int) -> void:
+	if player_id != PLAYER_ID:
+		return
+	_update_resource_label(resource_type, amount)
+
+
+func _update_resource_label(resource_name: String, amount: int) -> void:
+	if resource_name in _resource_labels:
+		_resource_labels[resource_name].text = format_amount(amount)
+
+
+func flash_resource(resource_name: String) -> void:
+	if resource_name not in _resource_labels:
+		return
+	var lbl: Label = _resource_labels[resource_name]
+	var flash_color_arr: Array = _config.get("flash_color", [1.0, 0.2, 0.2, 1.0])
+	var flash_color := Color(flash_color_arr[0], flash_color_arr[1], flash_color_arr[2], flash_color_arr[3])
+	var duration: float = _config.get("flash_duration", 0.3)
+
+	lbl.add_theme_color_override("font_color", flash_color)
+	var tween := create_tween()
+	tween.tween_method(
+		func(c: Color) -> void: lbl.add_theme_color_override("font_color", c),
+		flash_color,
+		Color.WHITE,
+		duration,
+	)
+
+
+static func format_amount(amount: int) -> String:
+	if amount < 0:
+		return str(amount)
+	if amount < 1000:
+		return str(amount)
+	@warning_ignore("integer_division")
+	var whole: int = amount / 1000
+	@warning_ignore("integer_division")
+	var frac: int = (amount % 1000) / 100
+	if frac > 0:
+		return "%d.%dk" % [whole, frac]
+	return "%dk" % whole
+
+
+func update_population(current: int, cap: int) -> void:
+	if _population_label != null:
+		_population_label.text = "Pop: %d/%d" % [current, cap]
+
+
+func update_age() -> void:
+	_update_age()
+
+
+func _update_age() -> void:
+	if _age_label != null:
+		_age_label.text = GameManager.get_age_name()
+
+
+func _resource_name_to_type(resource_name: String) -> int:
+	match resource_name:
+		"Food":
+			return ResourceManager.ResourceType.FOOD
+		"Wood":
+			return ResourceManager.ResourceType.WOOD
+		"Stone":
+			return ResourceManager.ResourceType.STONE
+		"Gold":
+			return ResourceManager.ResourceType.GOLD
+		"Knowledge":
+			return ResourceManager.ResourceType.KNOWLEDGE
+	return -1
