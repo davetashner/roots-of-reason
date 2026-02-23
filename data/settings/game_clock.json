@@ -1,0 +1,6 @@
+{
+  "speed_steps": [1.0, 1.5, 2.0, 3.0],
+  "pause_action": "ui_pause",
+  "speed_up_action": "ui_speed_up",
+  "speed_down_action": "ui_speed_down"
+}

@@ -37,4 +37,10 @@ func _process(_delta: float) -> void:
 	if _input_handler != null and _input_handler.has_method("get_selected_count"):
 		selected_count = _input_handler.get_selected_count()
 
-	_label.text = "Zoom: %.1fx | Tile: (%d, %d) | Selected: %d" % [zoom_level, grid_pos.x, grid_pos.y, selected_count]
+	var line1 := "Zoom: %.1fx | Tile: (%d, %d) | Selected: %d" % [zoom_level, grid_pos.x, grid_pos.y, selected_count]
+	var clock := GameManager.get_clock_display()
+	var speed := GameManager.get_speed_display()
+	var line2 := "Time: %s | Speed: %s" % [clock, speed]
+	if GameManager.is_paused:
+		line2 += " [PAUSED]"
+	_label.text = line1 + "\n" + line2

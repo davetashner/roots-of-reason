@@ -23,6 +23,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var game_delta := GameManager.get_game_delta(delta)
+	if game_delta == 0.0:
+		return
 	if _moving:
 		var dist := position.distance_to(_target_pos)
 		if dist < 2.0:
@@ -38,7 +41,7 @@ func _process(delta: float) -> void:
 		else:
 			var direction := (_target_pos - position).normalized()
 			_facing = direction
-			position = position.move_toward(_target_pos, MOVE_SPEED * delta)
+			position = position.move_toward(_target_pos, MOVE_SPEED * game_delta)
 		queue_redraw()
 
 
