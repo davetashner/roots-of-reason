@@ -5,6 +5,7 @@ extends Node
 signal game_paused
 signal game_resumed
 signal game_speed_changed(speed: float)
+signal age_advanced(new_age: int)
 
 const AGE_NAMES: Array[String] = [
 	"Stone Age", "Bronze Age", "Iron Age", "Medieval Age", "Industrial Age", "Information Age", "Singularity Age"
@@ -124,6 +125,14 @@ func get_age_name() -> String:
 		push_error("GameManager: current_age %d out of range [0, %d]" % [current_age, AGE_NAMES.size() - 1])
 		return AGE_NAMES[0]
 	return AGE_NAMES[current_age]
+
+
+func advance_age(new_age: int) -> void:
+	if new_age < 0 or new_age >= AGE_NAMES.size():
+		push_error("GameManager: advance_age(%d) out of range [0, %d]" % [new_age, AGE_NAMES.size() - 1])
+		return
+	current_age = new_age
+	age_advanced.emit(new_age)
 
 
 func save_state() -> Dictionary:

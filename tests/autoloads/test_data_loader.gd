@@ -225,3 +225,11 @@ func test_ages_all_entries_have_required_keys() -> void:
 		assert_bool(age.has("id")).is_true()
 		assert_bool(age.has("name")).is_true()
 		assert_bool(age.has("index")).is_true()
+
+
+func test_ages_all_have_research_time() -> void:
+	var ages := DataLoader.get_ages_data()
+	for age in ages:
+		assert_bool(age.has("research_time")).is_true()
+		var rt: float = float(age["research_time"])
+		assert_float(rt).is_greater_equal(0.0)
