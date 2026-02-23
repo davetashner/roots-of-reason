@@ -25,7 +25,11 @@
       "type": "array",
       "items": { "type": "string" }
     },
-    "age_required": { "type": "integer", "minimum": 0 }
+    "age_required": { "type": "integer", "minimum": 0 },
+    "placement_constraint": {
+      "type": "string",
+      "enum": ["", "adjacent_to_river"]
+    }
   },
-  "additionalProperties": false
+  "additionalProperties": true
 }

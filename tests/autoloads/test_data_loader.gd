@@ -190,7 +190,7 @@ func test_all_unit_files_parse() -> void:
 
 
 func test_all_building_files_parse() -> void:
-	for building_name in ["house", "town_center"]:
+	for building_name in ["house", "town_center", "river_dock"]:
 		var stats := DataLoader.get_building_stats(building_name)
 		assert_dict(stats).is_not_empty()
 		assert_bool(stats.has("name")).is_true()

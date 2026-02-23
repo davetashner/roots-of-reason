@@ -98,3 +98,101 @@ func test_valid_placement_at_edge() -> void:
 	var pf := _create_pathfinder(10, grid)
 	# 3x3 at (7,7) extends to (9,9) — just barely fits
 	assert_bool(BuildingValidator.is_placement_valid(Vector2i(7, 7), Vector2i(3, 3), map, pf)).is_true()
+
+
+# -- River-aware mock map --
+
+
+class RiverMockMap:
+	extends Node2D
+	var _tile_grid: Dictionary = {}
+	var _river_tiles: Dictionary = {}
+	var _map_size: int = 20
+
+	func get_terrain_at(grid_pos: Vector2i) -> String:
+		return _tile_grid.get(grid_pos, "")
+
+	func get_map_size() -> int:
+		return _map_size
+
+	func is_river(grid_pos: Vector2i) -> bool:
+		return _river_tiles.has(grid_pos)
+
+	func is_buildable(grid_pos: Vector2i) -> bool:
+		var terrain := get_terrain_at(grid_pos)
+		return terrain != "water" and terrain != "river"
+
+
+func _create_river_map(grid: Dictionary, river_tiles: Array[Vector2i]) -> Node2D:
+	var map := RiverMockMap.new()
+	map._tile_grid = grid
+	for pos in river_tiles:
+		map._river_tiles[pos] = true
+		map._tile_grid[pos] = "river"
+	return auto_free(map)
+
+
+# -- Placement constraint: adjacent_to_river --
+
+
+func test_valid_placement_adjacent_to_river_cardinal() -> void:
+	var grid := _build_grass_grid(20)
+	var river_tiles: Array[Vector2i] = [Vector2i(5, 4)]  # river north of (5,5)
+	var map := _create_river_map(grid, river_tiles)
+	var pf := _create_pathfinder(20, grid)
+	(
+		assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "adjacent_to_river"))
+		. is_true()
+	)
+
+
+func test_valid_placement_adjacent_to_river_diagonal() -> void:
+	var grid := _build_grass_grid(20)
+	var river_tiles: Array[Vector2i] = [Vector2i(6, 6)]  # river SE of (5,5)
+	var map := _create_river_map(grid, river_tiles)
+	var pf := _create_pathfinder(20, grid)
+	(
+		assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "adjacent_to_river"))
+		. is_true()
+	)
+
+
+func test_invalid_placement_no_river_nearby() -> void:
+	var grid := _build_grass_grid(20)
+	var river_tiles: Array[Vector2i] = [Vector2i(0, 0)]  # river far away
+	var map := _create_river_map(grid, river_tiles)
+	var pf := _create_pathfinder(20, grid)
+	(
+		assert_bool(
+			BuildingValidator.is_placement_valid(Vector2i(10, 10), Vector2i(1, 1), map, pf, "adjacent_to_river")
+		)
+		. is_false()
+	)
+
+
+func test_placement_on_river_tile_fails_unbuildable() -> void:
+	var grid := _build_grass_grid(20)
+	var river_tiles: Array[Vector2i] = [Vector2i(5, 5)]
+	var map := _create_river_map(grid, river_tiles)
+	var pf := _create_pathfinder(20, grid)
+	# River tiles are unbuildable — fails before constraint check
+	(
+		assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "adjacent_to_river"))
+		. is_false()
+	)
+
+
+func test_empty_constraint_backward_compatible() -> void:
+	var grid := _build_grass_grid(20)
+	var map := _create_map(grid)
+	var pf := _create_pathfinder(20, grid)
+	# Empty constraint should behave same as no constraint
+	assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "")).is_true()
+
+
+func test_unknown_constraint_passes_with_warning() -> void:
+	var grid := _build_grass_grid(20)
+	var map := _create_map(grid)
+	var pf := _create_pathfinder(20, grid)
+	# Unknown constraint should pass (with a warning)
+	assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "near_volcano")).is_true()

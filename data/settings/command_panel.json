@@ -12,7 +12,8 @@
   "commands": {
     "villager": [
       {"id": "build_house", "label": "House", "tooltip": "Build House (25 Wood)", "action": "build", "building": "house"},
-      {"id": "build_town_center", "label": "TC", "tooltip": "Build Town Center (275 Wood, 100 Stone)", "action": "build", "building": "town_center"}
+      {"id": "build_town_center", "label": "TC", "tooltip": "Build Town Center (275 Wood, 100 Stone)", "action": "build", "building": "town_center"},
+      {"id": "build_river_dock", "label": "Dock", "tooltip": "Build River Dock (100 Wood)", "action": "build", "building": "river_dock"}
     ],
     "default": [
       {"id": "stop", "label": "Stop", "tooltip": "Stop current action", "action": "stop"},
