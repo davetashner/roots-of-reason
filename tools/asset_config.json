@@ -1,0 +1,25 @@
+{
+  "naming": {
+    "pattern": "^[a-z][a-z0-9_]*\\.png$",
+    "description": "snake_case, lowercase, .png extension"
+  },
+  "dimensions": {
+    "units": {"max_width": 64, "max_height": 64},
+    "buildings_1x1": {"max_width": 128, "max_height": 128},
+    "buildings_2x2": {"max_width": 256, "max_height": 192},
+    "buildings_3x3": {"max_width": 384, "max_height": 256},
+    "resources": {"max_width": 80, "max_height": 80},
+    "tiles": {"max_width": 256, "max_height": 256}
+  },
+  "animations": {
+    "required": ["idle", "walk", "attack", "death"],
+    "frame_counts": {
+      "idle": 4,
+      "walk": 8,
+      "attack": 6,
+      "death": 6
+    }
+  },
+  "player_color_mask": "#FF00FF",
+  "excluded_dirs": ["branding", "reference", "ui"]
+}
