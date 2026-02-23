@@ -361,6 +361,105 @@ GDTEST
     ok "Created: $test_file"
 }
 
+# ==================== new-test ====================
+cmd_new_test() {
+    if [[ $# -lt 1 ]]; then
+        err "Usage: ror new-test <script.gd>"
+        echo "  Example: ror new-test scripts/autoloads/resource_manager.gd"
+        exit 1
+    fi
+
+    local source_path="$1"
+
+    # Resolve relative to project root
+    cd "$PROJECT_ROOT"
+
+    # Validate source file exists
+    if [[ ! -f "$source_path" ]]; then
+        err "Source file not found: $source_path"
+        exit 1
+    fi
+
+    # Validate it lives under scripts/
+    if [[ "$source_path" != scripts/* ]]; then
+        err "Source file must be under scripts/ (got: $source_path)"
+        exit 1
+    fi
+
+    # Derive test path: scripts/foo/bar.gd -> tests/foo/test_bar.gd
+    local rel_path="${source_path#scripts/}"
+    local dir_part base test_dir test_path
+    dir_part="$(dirname "$rel_path")"
+    base="$(basename "$rel_path")"
+
+    if [[ "$dir_part" == "." ]]; then
+        test_dir="tests"
+    else
+        test_dir="tests/$dir_part"
+    fi
+    test_path="${test_dir}/test_${base}"
+
+    # Refuse to overwrite existing test files
+    if [[ -f "$test_path" ]]; then
+        err "Test file already exists: $test_path"
+        exit 1
+    fi
+
+    # Extract class_name (if declared) or derive PascalCase from filename
+    local class_name=""
+    class_name=$(grep -m1 '^class_name ' "$source_path" | sed 's/^class_name //' | tr -d '[:space:]' || true)
+    if [[ -z "$class_name" ]]; then
+        # Convert snake_case filename to PascalCase
+        local name_no_ext="${base%.gd}"
+        class_name=""
+        IFS='_' read -ra parts <<< "$name_no_ext"
+        for part in "${parts[@]}"; do
+            class_name+="$(tr '[:lower:]' '[:upper:]' <<< "${part:0:1}")${part:1}"
+        done
+    fi
+
+    # Extract public function names (lines starting with "func " where the
+    # function name does NOT begin with "_")
+    local -a funcs=()
+    while IFS= read -r line; do
+        # Extract function name from "func name(..." pattern
+        local fname
+        fname=$(echo "$line" | sed -n 's/^func \([a-zA-Z][a-zA-Z0-9_]*\).*/\1/p')
+        if [[ -n "$fname" ]]; then
+            funcs+=("$fname")
+        fi
+    done < <(grep '^func [^_]' "$source_path")
+
+    # Create intermediate directories
+    mkdir -p "$test_dir"
+
+    # Write the test file
+    {
+        printf 'extends GdUnitTestSuite\n'
+        printf '## Tests for %s.\n' "$class_name"
+
+        if [[ ${#funcs[@]} -eq 0 ]]; then
+            printf '\n\n'
+            printf 'func test_placeholder() -> void:\n'
+            printf '\tassert_bool(true).is_true()\n'
+        else
+            for fname in "${funcs[@]}"; do
+                printf '\n\n'
+                printf 'func test_%s() -> void:\n' "$fname"
+                printf '\tassert_bool(true).is_true()\n'
+            done
+        fi
+    } > "$test_path"
+
+    ok "Created: $test_path"
+    info "Found ${#funcs[@]} public function(s) in $source_path"
+    if [[ ${#funcs[@]} -gt 0 ]]; then
+        for fname in "${funcs[@]}"; do
+            printf "  test_%s\n" "$fname"
+        done
+    fi
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -380,6 +479,8 @@ ${BOLD}COMMANDS${RESET}
                       Create scene + script + test boilerplate
                         ror scaffold map/pathfinder
                         ror scaffold ui/minimap --type Control
+  new-test <script.gd> Generate a GdUnit4 test file for a source script
+                        ror new-test scripts/autoloads/resource_manager.gd
   coverage [options]  Test-file coverage gate
                         ror coverage                — check at 90% threshold
                         ror coverage --threshold 90 — custom threshold
@@ -396,6 +497,7 @@ case "${1:-help}" in
     test)     shift; cmd_test "$@" ;;
     lint)     shift; cmd_lint "$@" ;;
     scaffold) shift; cmd_scaffold "$@" ;;
+    new-test) shift; cmd_new_test "$@" ;;
     coverage) shift; cmd_coverage "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
