@@ -19,6 +19,11 @@
   },
   "war_bonus_activation": "at_least_1_military_unit_in_combat",
   "war_bonus_linger_seconds": 30,
+  "military_tech_spillovers": {
+    "rifling": {"mining_efficiency": 0.15},
+    "steel_working": {"construction_speed": 0.10},
+    "gunpowder": {"mining_efficiency": 0.10, "demolition_speed": 0.20}
+  },
   "formula": "effective_speed = base_speed * age_multiplier * (1 + sum(tech_bonuses)) * (1 + war_bonus)",
   "effective_time_formula": "base_time / effective_speed"
 }
