@@ -177,7 +177,7 @@ func test_deposit_adds_to_resource_manager() -> void:
 	var u := _create_unit(Vector2(-50, 0))
 	var res := _create_resource(Vector2(50, 0))
 	var drop := _create_drop_off(Vector2(-50, 0))
-	ResourceManager.init_player(0)
+	ResourceManager.init_player(0, {})
 	u.assign_gather_target(res)
 	u._gather_state = UnitScript.GatherState.MOVING_TO_DROP_OFF
 	u._carried_amount = 10
@@ -200,7 +200,7 @@ func test_deposit_returns_to_resource() -> void:
 	var u := _create_unit(Vector2(-50, 0))
 	var res := _create_resource(Vector2(50, 0))
 	var drop := _create_drop_off(Vector2(-50, 0))
-	ResourceManager.init_player(0)
+	ResourceManager.init_player(0, {})
 	u._gather_target = res
 	u._gather_type = "food"
 	u._gather_state = UnitScript.GatherState.DEPOSITING
@@ -355,7 +355,7 @@ func test_load_state_restores_gather_fields() -> void:
 
 
 func test_integration_gather_100_food() -> void:
-	ResourceManager.init_player(0)
+	ResourceManager.init_player(0, {})
 	var res := _create_resource(Vector2(30, 0), "food", 200)
 	var drop := _create_drop_off(Vector2(-30, 0))
 	var u := _create_unit(Vector2(30, 0))

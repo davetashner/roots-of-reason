@@ -130,10 +130,10 @@ func _refresh_all_resources() -> void:
 			_update_resource_label(resource_name, amount)
 
 
-func _on_resources_changed(player_id: int, resource_type: String, amount: int) -> void:
+func _on_resources_changed(player_id: int, resource_type: String, _old_amount: int, new_amount: int) -> void:
 	if player_id != PLAYER_ID:
 		return
-	_update_resource_label(resource_type, amount)
+	_update_resource_label(resource_type, new_amount)
 
 
 func _update_resource_label(resource_name: String, amount: int) -> void:

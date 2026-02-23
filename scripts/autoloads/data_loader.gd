@@ -80,6 +80,13 @@ func get_resource_config() -> Dictionary:
 	return config
 
 
+func get_resource_config_data() -> Dictionary:
+	var data: Variant = load_json("res://data/resources/resource_config.json")
+	if data == null:
+		return {}
+	return data
+
+
 func get_settings(settings_name: String) -> Dictionary:
 	var data: Variant = load_json("res://data/settings/%s.json" % settings_name)
 	if data == null:

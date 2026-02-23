@@ -336,19 +336,7 @@ func _setup_hud() -> void:
 
 
 func _setup_resource_bar() -> void:
-	(
-		ResourceManager
-		. init_player(
-			0,
-			{
-				ResourceManager.ResourceType.FOOD: 200,
-				ResourceManager.ResourceType.WOOD: 200,
-				ResourceManager.ResourceType.STONE: 100,
-				ResourceManager.ResourceType.GOLD: 100,
-				ResourceManager.ResourceType.KNOWLEDGE: 0,
-			}
-		)
-	)
+	ResourceManager.init_player(0)
 	var resource_bar_layer := CanvasLayer.new()
 	resource_bar_layer.name = "ResourceBar"
 	resource_bar_layer.layer = 10
