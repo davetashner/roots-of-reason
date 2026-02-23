@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "trigger": "town_center_destroyed",
+  "tech_loss_count": 1,
+  "protect_age_advancements": true,
+  "protect_first_n_techs": 0,
+  "re_research_cost_multiplier": 1.0,
+  "cooldown_seconds": 0
+}
