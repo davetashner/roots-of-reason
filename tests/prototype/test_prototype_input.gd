@@ -1,8 +1,28 @@
 extends GdUnitTestSuite
-## Tests for prototype_input.gd — selection, control groups, save/load.
+## Tests for prototype_input.gd — selection, control groups, context commands, save/load.
 
 const InputScript := preload("res://scripts/prototype/prototype_input.gd")
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
+const DetectorScript := preload("res://scripts/prototype/target_detector.gd")
+const ResourceScript := preload("res://scripts/prototype/prototype_resource_node.gd")
+const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
+
+var _context_table: Dictionary = {
+	"default":
+	{
+		"enemy_unit": "attack",
+		"enemy_building": "attack",
+		"own_building": "garrison",
+		"resource_node": "move",
+	},
+	"villager":
+	{
+		"enemy_unit": "attack",
+		"enemy_building": "attack",
+		"own_building": "garrison",
+		"resource_node": "gather",
+	},
+}
 
 
 func _create_handler() -> Node:
@@ -266,3 +286,72 @@ func test_deselect_all() -> void:
 	assert_int(handler.get_selected_count()).is_equal(0)
 	assert_bool(u1.selected).is_false()
 	assert_bool(u2.selected).is_false()
+
+
+# -- Context commands --
+
+
+func _create_detector() -> Node:
+	var detector := Node.new()
+	detector.set_script(DetectorScript)
+	return auto_free(detector)
+
+
+func _setup_context_handler(command_table: Dictionary) -> Node:
+	var handler := _create_handler()
+	var detector := _create_detector()
+	handler._target_detector = detector
+	handler._command_config = {"command_table": command_table}
+	return handler
+
+
+func test_context_command_resolve_attack() -> void:
+	var handler := _setup_context_handler(_context_table)
+	var unit := _create_unit(Vector2(50, 50))
+	_register_units(handler, [unit])
+	unit.select()
+	var enemy := _create_unit(Vector2(100, 100), 1)
+	handler._target_detector.register_entity(enemy)
+	var cmd: String = handler._resolve_command_at(Vector2(105, 100))
+	assert_str(cmd).is_equal("attack")
+
+
+func test_context_command_resolve_move() -> void:
+	var handler := _setup_context_handler(_context_table)
+	var unit := _create_unit(Vector2(50, 50))
+	_register_units(handler, [unit])
+	unit.select()
+	var cmd: String = handler._resolve_command_at(Vector2(500, 500))
+	assert_str(cmd).is_equal("move")
+
+
+func test_context_command_resolve_gather() -> void:
+	var handler := _setup_context_handler(_context_table)
+	var unit := _create_unit(Vector2(50, 50))
+	unit.unit_type = "villager"
+	_register_units(handler, [unit])
+	unit.select()
+	var resource := Node2D.new()
+	resource.set_script(ResourceScript)
+	resource.position = Vector2(200, 200)
+	resource.global_position = Vector2(200, 200)
+	auto_free(resource)
+	handler._target_detector.register_entity(resource)
+	var cmd: String = handler._resolve_command_at(Vector2(205, 200))
+	assert_str(cmd).is_equal("gather")
+
+
+func test_context_command_resolve_garrison() -> void:
+	var handler := _setup_context_handler(_context_table)
+	var unit := _create_unit(Vector2(50, 50))
+	_register_units(handler, [unit])
+	unit.select()
+	var building := Node2D.new()
+	building.set_script(BuildingScript)
+	building.position = Vector2(300, 300)
+	building.global_position = Vector2(300, 300)
+	building.owner_id = 0
+	auto_free(building)
+	handler._target_detector.register_entity(building)
+	var cmd: String = handler._resolve_command_at(Vector2(305, 300))
+	assert_str(cmd).is_equal("garrison")
