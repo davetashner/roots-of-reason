@@ -1,0 +1,6 @@
+{
+  "hard_cap": 200,
+  "starting_cap": 5,
+  "house_limit": 20,
+  "garrison_counts_toward_cap": true
+}
