@@ -25,7 +25,8 @@
     "build_speed": { "type": "number", "minimum": 0 },
     "population_cost": { "type": "integer", "minimum": 0 },
     "train_time": { "type": "number", "minimum": 0 },
-    "train_cost": { "type": "object" }
+    "train_cost": { "type": "object" },
+    "bonus_vs": { "type": "object" }
   },
   "additionalProperties": false
 }
