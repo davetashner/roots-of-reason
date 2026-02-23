@@ -1,0 +1,17 @@
+{
+  "name": "Archer",
+  "hp": 30,
+  "attack": 5,
+  "defense": 0,
+  "speed": 1.3,
+  "range": 5,
+  "min_range": 1,
+  "los": 6,
+  "population_cost": 1,
+  "train_time": 25,
+  "train_cost": { "food": 30, "wood": 45, "gold": 10 },
+  "bonus_vs": { "cavalry": 1.5 },
+  "armor_type": "none",
+  "attack_type": "ranged",
+  "unit_category": "military"
+}

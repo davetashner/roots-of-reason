@@ -34,6 +34,17 @@
     "attack_type": {
       "type": "string",
       "enum": ["melee", "ranged", "siege"]
+    },
+    "min_range": { "type": "number", "minimum": 0 },
+    "movement_type": {
+      "type": "string",
+      "enum": ["land", "water"]
+    },
+    "transport_capacity": { "type": "integer", "minimum": 0 },
+    "building_damage_ignore_reduction": { "type": "number", "minimum": 0, "maximum": 1 },
+    "unit_category": {
+      "type": "string",
+      "enum": ["civilian", "military"]
     }
   },
   "additionalProperties": true

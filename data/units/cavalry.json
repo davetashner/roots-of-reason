@@ -1,0 +1,16 @@
+{
+  "name": "Cavalry",
+  "hp": 50,
+  "attack": 8,
+  "defense": 1,
+  "speed": 2.2,
+  "range": 0,
+  "los": 5,
+  "population_cost": 2,
+  "train_time": 30,
+  "train_cost": { "food": 80, "gold": 60 },
+  "bonus_vs": { "infantry": 1.5 },
+  "armor_type": "light",
+  "attack_type": "melee",
+  "unit_category": "military"
+}
