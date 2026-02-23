@@ -231,6 +231,16 @@ func _setup_hud() -> void:
 	_info_panel.set_script(load("res://scripts/ui/info_panel.gd"))
 	info_panel_layer.add_child(_info_panel)
 	_info_panel.setup(_input_handler)
+	# Command panel
+	var cmd_panel_layer := CanvasLayer.new()
+	cmd_panel_layer.name = "CommandPanel"
+	cmd_panel_layer.layer = 10
+	add_child(cmd_panel_layer)
+	var cmd_panel := PanelContainer.new()
+	cmd_panel.name = "CommandPanelWidget"
+	cmd_panel.set_script(load("res://scripts/ui/command_panel.gd"))
+	cmd_panel_layer.add_child(cmd_panel)
+	cmd_panel.setup(_input_handler, _building_placer)
 	# Cursor overlay for command context labels
 	_cursor_overlay = CanvasLayer.new()
 	_cursor_overlay.name = "CursorOverlay"
