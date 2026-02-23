@@ -1,0 +1,18 @@
+{
+  "aggro_scan_radius": 6,
+  "scan_interval": 0.5,
+  "attack_cooldown": 1.0,
+  "leash_range": 8,
+  "building_damage_reduction": 0.80,
+  "stances": {
+    "aggressive": { "auto_scan": true, "pursue": true, "retaliate": true },
+    "defensive": { "auto_scan": false, "pursue": false, "retaliate": true },
+    "stand_ground": { "auto_scan": false, "pursue": false, "retaliate": false }
+  },
+  "target_priority": {
+    "melee": ["military", "civilian", "building"],
+    "ranged": ["military", "civilian", "building"],
+    "siege": ["building", "military", "civilian"],
+    "civilian": ["military", "civilian", "building"]
+  }
+}
