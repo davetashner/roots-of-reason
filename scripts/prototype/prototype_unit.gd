@@ -7,6 +7,7 @@ const MOVE_SPEED: float = 150.0
 const SELECTION_RING_RADIUS: float = 16.0
 
 @export var unit_color: Color = Color(0.2, 0.4, 0.9)
+@export var owner_id: int = 0
 
 var selected: bool = false
 var _target_pos: Vector2 = Vector2.ZERO
