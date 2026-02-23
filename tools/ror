@@ -460,6 +460,79 @@ cmd_new_test() {
     fi
 }
 
+# ==================== gen-sprites ====================
+
+# Registry of sprite categories → generator scripts.
+# Add new entries here as generators are created.
+ALL_SPRITE_CATEGORIES="tiles"
+
+generator_for() {
+    case "$1" in
+        tiles) echo "tools/generate_prototype_tiles.py" ;;
+        *)     return 1 ;;
+    esac
+}
+
+cmd_gen_sprites() {
+    cd "$PROJECT_ROOT"
+
+    # Determine which categories to run
+    local -a categories=()
+    if [[ $# -eq 0 ]]; then
+        # No argument — run all generators
+        for cat in $ALL_SPRITE_CATEGORIES; do
+            categories+=("$cat")
+        done
+    else
+        for cat in "$@"; do
+            if ! generator_for "$cat" >/dev/null 2>&1; then
+                err "Unknown sprite category: $cat"
+                echo "  Available categories: $ALL_SPRITE_CATEGORIES"
+                exit 1
+            fi
+            categories+=("$cat")
+        done
+    fi
+
+    local total=${#categories[@]}
+    local passed=0
+    local failed=0
+    local overall_start=$SECONDS
+
+    local label="categories"
+    [[ $total -eq 1 ]] && label="category"
+    printf "${BOLD}Generating sprites (%d %s) …${RESET}\n" "$total" "$label"
+
+    for cat in "${categories[@]}"; do
+        local script
+        script="$(generator_for "$cat")"
+        local start=$SECONDS
+
+        info "[$cat] Running $script ..."
+        if python3 "$script"; then
+            local elapsed=$(( SECONDS - start ))
+            ok "[$cat] Done (${elapsed}s)"
+            passed=$((passed + 1))
+        else
+            local elapsed=$(( SECONDS - start ))
+            err "[$cat] Failed (${elapsed}s)"
+            failed=$((failed + 1))
+        fi
+    done
+
+    local overall_elapsed=$(( SECONDS - overall_start ))
+    echo ""
+    printf "${BOLD}Sprite generation complete${RESET} — %d passed, %d failed (%ds total)\n" \
+        "$passed" "$failed" "$overall_elapsed"
+
+    if [[ $failed -gt 0 ]]; then
+        err "Some generators failed"
+        return 1
+    fi
+    ok "All sprites generated"
+    return 0
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -485,6 +558,9 @@ ${BOLD}COMMANDS${RESET}
                         ror coverage                — check at 90% threshold
                         ror coverage --threshold 90 — custom threshold
                         ror coverage --json         — machine-readable output
+  gen-sprites [cat..] Generate placeholder sprite assets
+                        ror gen-sprites             — generate all categories
+                        ror gen-sprites tiles       — generate only tiles
   help                Show this help message
 
 ${BOLD}ENVIRONMENT${RESET}
@@ -497,8 +573,9 @@ case "${1:-help}" in
     test)     shift; cmd_test "$@" ;;
     lint)     shift; cmd_lint "$@" ;;
     scaffold) shift; cmd_scaffold "$@" ;;
-    new-test) shift; cmd_new_test "$@" ;;
-    coverage) shift; cmd_coverage "$@" ;;
+    new-test)     shift; cmd_new_test "$@" ;;
+    coverage)     shift; cmd_coverage "$@" ;;
+    gen-sprites)  shift; cmd_gen_sprites "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
         err "Unknown command: $1"
