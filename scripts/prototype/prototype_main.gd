@@ -17,7 +17,7 @@ const UNIT_POSITIONS: Array[Vector2i] = [
 
 var _camera: Camera2D
 var _input_handler: Node
-var _map_node: Node2D
+var _map_node: Node
 var _pathfinder: Node
 var _target_detector: Node
 var _cursor_overlay: Node
@@ -38,23 +38,24 @@ func _ready() -> void:
 
 
 func _setup_map() -> void:
-	_map_node = Node2D.new()
-	_map_node.name = "Map"
-	_map_node.set_script(load("res://scripts/prototype/prototype_map.gd"))
-	add_child(_map_node)
+	var map_layer := TileMapLayer.new()
+	map_layer.name = "Map"
+	map_layer.set_script(load("res://scripts/map/tilemap_terrain.gd"))
+	add_child(map_layer)
+	_map_node = map_layer
 
 
 func _setup_camera() -> void:
 	_camera = Camera2D.new()
 	_camera.name = "Camera"
 	_camera.set_script(load("res://scripts/prototype/prototype_camera.gd"))
-	# Center on middle of 20x20 map
-	var center := IsoUtils.grid_to_screen(Vector2(10, 10))
+	var map_size: int = _map_node.get_map_size()
+	var half_size := map_size / 2
+	var center := IsoUtils.grid_to_screen(Vector2(half_size, half_size))
 	_camera.position = center
 	_camera.enabled = true
 	add_child(_camera)
 	# Compute map bounds from corner grid positions and pass to camera
-	var map_size := 20
 	var corners: Array[Vector2] = [
 		IsoUtils.grid_to_screen(Vector2(0, 0)),
 		IsoUtils.grid_to_screen(Vector2(map_size, 0)),
@@ -77,7 +78,7 @@ func _setup_pathfinding() -> void:
 	_pathfinder.name = "PathfindingGrid"
 	_pathfinder.set_script(load("res://scripts/prototype/pathfinding_grid.gd"))
 	add_child(_pathfinder)
-	_pathfinder.build(_map_node.get_map_size(), _map_node._tile_grid, {})
+	_pathfinder.build(_map_node.get_map_size(), _map_node.get_tile_grid(), {})
 
 
 func _setup_target_detection() -> void:
