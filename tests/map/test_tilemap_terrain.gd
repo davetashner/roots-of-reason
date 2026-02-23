@@ -38,6 +38,36 @@ func _create_terrain_map() -> TileMapLayer:
 		"water": -1,
 		"mountain": -1,
 	}
+	map._map_gen_config = {
+		"elevation_noise":
+		{
+			"frequency": 0.015,
+			"octaves": 4,
+			"lacunarity": 2.0,
+			"gain": 0.5,
+			"seed_offset": 1000,
+		},
+		"moisture_noise":
+		{
+			"frequency": 0.02,
+			"octaves": 3,
+			"lacunarity": 2.0,
+			"gain": 0.5,
+			"seed_offset": 3000,
+		},
+		"terrain_thresholds":
+		{
+			"water": 0.30,
+			"sand": 0.40,
+			"grass": 0.70,
+			"stone": 0.85,
+			"mountain": 1.0,
+		},
+		"forest_moisture_threshold": 0.55,
+		"dirt_moisture_threshold": 0.30,
+		"island_edge_width": 1,
+		"island_falloff_width": 2,
+	}
 	# Build tileset and generate map without _ready (avoid DataLoader dependency)
 	map._build_tileset()
 	map._generate_map()
@@ -258,6 +288,26 @@ func _create_terrain_map_with_rivers() -> TileMapLayer:
 			"gain": 0.5,
 			"seed_offset": 1000,
 		},
+		"moisture_noise":
+		{
+			"frequency": 0.02,
+			"octaves": 3,
+			"lacunarity": 2.0,
+			"gain": 0.5,
+			"seed_offset": 3000,
+		},
+		"terrain_thresholds":
+		{
+			"water": 0.30,
+			"sand": 0.40,
+			"grass": 0.70,
+			"stone": 0.85,
+			"mountain": 1.0,
+		},
+		"forest_moisture_threshold": 0.55,
+		"dirt_moisture_threshold": 0.30,
+		"island_edge_width": 2,
+		"island_falloff_width": 4,
 		"river_generation":
 		{
 			"river_count_min": 2,
