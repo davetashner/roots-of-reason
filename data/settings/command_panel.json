@@ -1,0 +1,22 @@
+{
+  "grid_columns": 3,
+  "grid_rows": 4,
+  "button_size": 48,
+  "button_margin": 4,
+  "hotkeys": [
+    ["Q", "W", "E"],
+    ["A", "S", "D"],
+    ["Z", "X", "C"],
+    ["R", "F", "V"]
+  ],
+  "commands": {
+    "villager": [
+      {"id": "build_house", "label": "House", "tooltip": "Build House (25 Wood)", "action": "build", "building": "house"},
+      {"id": "build_town_center", "label": "TC", "tooltip": "Build Town Center (275 Wood, 100 Stone)", "action": "build", "building": "town_center"}
+    ],
+    "default": [
+      {"id": "stop", "label": "Stop", "tooltip": "Stop current action", "action": "stop"},
+      {"id": "hold", "label": "Hold", "tooltip": "Hold Position", "action": "hold"}
+    ]
+  }
+}
