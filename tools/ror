@@ -553,6 +553,13 @@ cmd_validate_assets() {
     return $exit_code
 }
 
+# ==================== data-check ====================
+cmd_data_check() {
+    cd "$PROJECT_ROOT"
+    printf "${BOLD}Validating data files against schemas …${RESET}\n"
+    python3 "$SCRIPT_DIR/data_check.py" "$@"
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -588,6 +595,9 @@ ${BOLD}COMMANDS${RESET}
   validate-assets [-v] Validate assets against ADR-008 rules (alias: va)
                         ror validate-assets         — check all assets
                         ror validate-assets -v      — verbose output
+  data-check [opts]   Validate JSON data files against schemas
+                        ror data-check              — check all data files
+                        ror data-check --verbose    — show per-file detail
   help                Show this help message
 
 ${BOLD}ENVIRONMENT${RESET}
@@ -605,6 +615,7 @@ case "${1:-help}" in
     gen-sprites)        shift; cmd_gen_sprites "$@" ;;
     scene-tree)         shift; cmd_scene_tree "$@" ;;
     validate-assets|va) shift; cmd_validate_assets "$@" ;;
+    data-check)         shift; cmd_data_check "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
         err "Unknown command: $1"
