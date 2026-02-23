@@ -1,7 +1,10 @@
 extends Node
 ## Loads and caches game data from JSON files in data/.
 
+const RESOURCE_NAMES := ["berry_bush", "tree", "stone_mine", "gold_mine"]
+
 var _cache: Dictionary = {}
+var _tech_index: Dictionary = {}
 
 
 func load_json(path: String) -> Variant:
@@ -9,12 +12,12 @@ func load_json(path: String) -> Variant:
 		return _cache[path]
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		push_error("DataLoader: Failed to open %s" % path)
+		push_warning("DataLoader: Failed to open %s" % path)
 		return null
 	var json := JSON.new()
 	var error := json.parse(file.get_as_text())
 	if error != OK:
-		push_error("DataLoader: JSON parse error in %s: %s" % [path, json.get_error_message()])
+		push_warning("DataLoader: JSON parse error in %s: %s" % [path, json.get_error_message()])
 		return null
 	_cache[path] = json.data
 	return json.data
@@ -34,6 +37,26 @@ func get_building_stats(building_name: String) -> Dictionary:
 	return data
 
 
+func get_building_data(building_name: String) -> Dictionary:
+	return get_building_stats(building_name)
+
+
+func get_tech_data(tech_id: String) -> Dictionary:
+	if _tech_index.is_empty():
+		_build_tech_index()
+	if tech_id in _tech_index:
+		return _tech_index[tech_id]
+	push_warning("DataLoader: Tech '%s' not found" % tech_id)
+	return {}
+
+
+func get_ages_data() -> Array:
+	var data: Variant = load_json("res://data/tech/ages.json")
+	if data == null:
+		return []
+	return data
+
+
 func get_civ_data(civ_name: String) -> Dictionary:
 	var data: Variant = load_json("res://data/civilizations/%s.json" % civ_name)
 	if data == null:
@@ -48,6 +71,15 @@ func get_resource_data(resource_name: String) -> Dictionary:
 	return data
 
 
+func get_resource_config() -> Dictionary:
+	var config: Dictionary = {}
+	for resource_name in RESOURCE_NAMES:
+		var data := get_resource_data(resource_name)
+		if not data.is_empty():
+			config[resource_name] = data
+	return config
+
+
 func get_settings(settings_name: String) -> Dictionary:
 	var data: Variant = load_json("res://data/settings/%s.json" % settings_name)
 	if data == null:
@@ -55,5 +87,23 @@ func get_settings(settings_name: String) -> Dictionary:
 	return data
 
 
+func get_setting(settings_name: String) -> Dictionary:
+	return get_settings(settings_name)
+
+
 func clear_cache() -> void:
 	_cache.clear()
+
+
+func reload() -> void:
+	_cache.clear()
+	_tech_index.clear()
+
+
+func _build_tech_index() -> void:
+	var data: Variant = load_json("res://data/tech/tech_tree.json")
+	if data == null:
+		return
+	for entry in data:
+		if entry is Dictionary and "id" in entry:
+			_tech_index[entry["id"]] = entry

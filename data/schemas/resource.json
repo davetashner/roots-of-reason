@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Resource",
+  "description": "Harvestable resource definition",
+  "type": "object",
+  "required": ["resource_type", "total_yield", "color"],
+  "properties": {
+    "resource_type": { "type": "string" },
+    "total_yield": { "type": "number", "minimum": 0 },
+    "color": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Unit",
+  "description": "Unit stats definition",
+  "type": "object",
+  "required": ["name", "hp", "attack", "defense", "speed"],
+  "properties": {
+    "name": { "type": "string" },
+    "hp": { "type": "number", "minimum": 1 },
+    "attack": { "type": "number", "minimum": 0 },
+    "defense": { "type": "number", "minimum": 0 },
+    "speed": { "type": "number", "minimum": 0 },
+    "range": { "type": "number", "minimum": 0 },
+    "los": { "type": "number", "minimum": 0 },
+    "carry_capacity": { "type": "number", "minimum": 0 },
+    "gather_rates": {
+      "type": "object",
+      "properties": {
+        "food": { "type": "number" },
+        "wood": { "type": "number" },
+        "stone": { "type": "number" },
+        "gold": { "type": "number" }
+      }
+    },
+    "build_speed": { "type": "number", "minimum": 0 },
+    "population_cost": { "type": "integer", "minimum": 0 },
+    "train_time": { "type": "number", "minimum": 0 },
+    "train_cost": { "type": "object" }
+  },
+  "additionalProperties": false
+}
