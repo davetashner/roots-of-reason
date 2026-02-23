@@ -25,6 +25,7 @@ var _building_placer: Node
 var _info_panel: PanelContainer
 var _population_manager: Node
 var _resource_bar: PanelContainer
+var _tech_manager: Node
 
 
 func _ready() -> void:
@@ -37,6 +38,7 @@ func _ready() -> void:
 	_setup_population()
 	_setup_units()
 	_setup_demo_entities()
+	_setup_tech()
 	_setup_hud()
 
 
@@ -233,6 +235,13 @@ func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
 func _on_resource_depleted(node: Node2D) -> void:
 	if _target_detector != null and _target_detector.has_method("unregister_entity"):
 		_target_detector.unregister_entity(node)
+
+
+func _setup_tech() -> void:
+	_tech_manager = Node.new()
+	_tech_manager.name = "TechManager"
+	_tech_manager.set_script(load("res://scripts/prototype/tech_manager.gd"))
+	add_child(_tech_manager)
 
 
 func _setup_hud() -> void:
