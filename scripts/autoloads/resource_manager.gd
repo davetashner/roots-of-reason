@@ -49,4 +49,13 @@ func spend(player_id: int, costs: Dictionary) -> bool:
 func init_player(player_id: int, starting_resources: Dictionary = {}) -> void:
 	_stockpiles[player_id] = {}
 	for resource_type: ResourceType in ResourceType.values():
-		_stockpiles[player_id][resource_type] = starting_resources.get(resource_type, 0)
+		var amount: int = starting_resources.get(resource_type, 0)
+		if amount < 0:
+			push_warning(
+				(
+					"ResourceManager: Negative starting %s (%d) for player %d, using 0"
+					% [RESOURCE_NAMES[resource_type], amount, player_id]
+				)
+			)
+			amount = 0
+		_stockpiles[player_id][resource_type] = amount

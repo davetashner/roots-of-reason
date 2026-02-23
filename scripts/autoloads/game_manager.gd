@@ -119,6 +119,10 @@ func get_speed_display() -> String:
 
 
 func get_age_name() -> String:
+	assert(current_age >= 0 and current_age < AGE_NAMES.size(), "current_age %d out of range" % current_age)
+	if current_age < 0 or current_age >= AGE_NAMES.size():
+		push_error("GameManager: current_age %d out of range [0, %d]" % [current_age, AGE_NAMES.size() - 1])
+		return AGE_NAMES[0]
 	return AGE_NAMES[current_age]
 
 
@@ -137,4 +141,8 @@ func load_state(data: Dictionary) -> void:
 	game_speed = float(data.get("game_speed", 1.0))
 	_speed_index = int(data.get("speed_index", 0))
 	is_paused = bool(data.get("is_paused", false))
-	current_age = int(data.get("current_age", 0))
+	var age: int = int(data.get("current_age", 0))
+	if age < 0 or age >= AGE_NAMES.size():
+		push_warning("GameManager: Invalid current_age %d in save data, defaulting to 0" % age)
+		age = 0
+	current_age = age
