@@ -19,5 +19,6 @@
   "train_cost": { "food": 50 },
   "armor_type": "none",
   "attack_type": "melee",
-  "unit_category": "civilian"
+  "unit_category": "civilian",
+  "default_stance": "defensive"
 }

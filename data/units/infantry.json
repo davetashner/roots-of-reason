@@ -12,5 +12,6 @@
   "bonus_vs": { "archer": 1.5 },
   "armor_type": "light",
   "attack_type": "melee",
-  "unit_category": "military"
+  "unit_category": "military",
+  "default_stance": "aggressive"
 }

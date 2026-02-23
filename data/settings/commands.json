@@ -20,13 +20,17 @@
     "gather":   { "text": "[GAT]", "color": [0.2, 0.8, 0.2, 1.0] },
     "garrison": { "text": "[GAR]", "color": [0.2, 0.5, 1.0, 1.0] },
     "move":     { "text": "[MOV]", "color": [1.0, 1.0, 0.0, 1.0] },
-    "build":    { "text": "[BLD]", "color": [0.9, 0.6, 0.1, 1.0] }
+    "build":       { "text": "[BLD]",   "color": [0.9, 0.6, 0.1, 1.0] },
+    "attack_move": { "text": "[A-MOV]", "color": [1.0, 0.4, 0.0, 1.0] },
+    "patrol":      { "text": "[PAT]",   "color": [0.4, 0.4, 1.0, 1.0] }
   },
   "click_marker_colors": {
     "attack":   [1.0, 0.2, 0.2, 1.0],
     "gather":   [0.2, 0.8, 0.2, 1.0],
     "garrison": [0.2, 0.5, 1.0, 1.0],
     "move":     [1.0, 1.0, 0.0, 1.0],
-    "build":    [0.9, 0.6, 0.1, 1.0]
+    "build":       [0.9, 0.6, 0.1, 1.0],
+    "attack_move": [1.0, 0.4, 0.0, 1.0],
+    "patrol":      [0.4, 0.4, 1.0, 1.0]
   }
 }
