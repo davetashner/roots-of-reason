@@ -8,6 +8,7 @@ const TEXTURE_BASE_PATH := "res://assets/tiles/terrain/prototype/"
 
 const ElevationGenerator := preload("res://scripts/map/elevation_generator.gd")
 const RiverGenerator := preload("res://scripts/map/river_generator.gd")
+const TerrainMapperScript := preload("res://scripts/map/terrain_mapper.gd")
 
 var _terrain_config: Dictionary = {}
 var _map_gen_config: Dictionary = {}
@@ -168,34 +169,36 @@ func _build_tileset() -> void:
 
 
 func _generate_map() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = _seed_value
-
-	# Build weighted lookup
-	var weighted_terrains: Array[String] = []
-	for terrain_name: String in _terrain_weights:
-		var weight: int = int(_terrain_weights[terrain_name])
-		for i in weight:
-			weighted_terrains.append(terrain_name)
-
-	if weighted_terrains.is_empty():
-		push_warning("TilemapTerrain: No terrain weights configured")
-		return
-
-	for row in _map_height:
-		for col in _map_width:
-			var terrain: String = weighted_terrains[rng.randi_range(0, weighted_terrains.size() - 1)]
-			_tile_grid[Vector2i(col, row)] = terrain
-			var sid: int = _source_ids.get(terrain, -1)
-			if sid >= 0:
-				set_cell(Vector2i(col, row), sid, Vector2i.ZERO)
-
-	# Generate elevation grid
+	# 1. Generate elevation grid
 	var elev_gen := ElevationGenerator.new()
 	elev_gen.configure(_map_gen_config.get("elevation_noise", {}))
 	_elevation_grid = elev_gen.generate(_map_width, _map_height, _seed_value)
 
-	# Generate rivers
+	# 2. Apply island mask (edges become water)
+	var edge_width: int = int(_map_gen_config.get("island_edge_width", 3))
+	var falloff_width: int = int(_map_gen_config.get("island_falloff_width", 8))
+	TerrainMapperScript.apply_island_mask(_elevation_grid, _map_width, _map_height, edge_width, falloff_width)
+
+	# 3. Generate moisture grid (reuse ElevationGenerator with different config)
+	var moisture_gen := ElevationGenerator.new()
+	moisture_gen.configure(_map_gen_config.get("moisture_noise", {}))
+	var moisture_grid: Dictionary = moisture_gen.generate(_map_width, _map_height, _seed_value)
+
+	# 4. Map elevation + moisture to terrain type
+	var mapper := TerrainMapperScript.new()
+	mapper.configure(_map_gen_config)
+	for row in _map_height:
+		for col in _map_width:
+			var pos := Vector2i(col, row)
+			var elevation: float = _elevation_grid.get(pos, 0.0)
+			var moisture: float = moisture_grid.get(pos, 0.0)
+			var terrain: String = mapper.get_terrain(elevation, moisture)
+			_tile_grid[pos] = terrain
+			var sid: int = _source_ids.get(terrain, -1)
+			if sid >= 0:
+				set_cell(pos, sid, Vector2i.ZERO)
+
+	# 5. Generate rivers (existing system, unchanged)
 	var river_gen := RiverGenerator.new()
 	river_gen.configure(_map_gen_config.get("river_generation", {}))
 	var river_data: Dictionary = river_gen.generate(_elevation_grid, _tile_grid, _map_width, _map_height, _seed_value)
@@ -204,7 +207,7 @@ func _generate_map() -> void:
 	_river_ids = river_data.get("river_ids", {})
 	_river_widths = river_data.get("river_widths", {})
 
-	# Apply river tiles to the map
+	# 6. Apply river tiles to the map
 	var river_sid: int = _source_ids.get("river", -1)
 	for pos: Vector2i in _river_tiles:
 		_tile_grid[pos] = "river"
