@@ -539,6 +539,20 @@ cmd_scene_tree() {
     python3 "$SCRIPT_DIR/scene_tree.py" "$@"
 }
 
+# ==================== validate-assets ====================
+cmd_validate_assets() {
+    cd "$PROJECT_ROOT"
+    info "Validating assets against ADR-008 rules ..."
+    python3 "$SCRIPT_DIR/validate_assets.py" "$@"
+    local exit_code=$?
+    if [[ $exit_code -eq 0 ]]; then
+        ok "Asset validation passed"
+    else
+        err "Asset validation failed"
+    fi
+    return $exit_code
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -571,6 +585,9 @@ ${BOLD}COMMANDS${RESET}
                       Print the node tree of a .tscn scene file
                         ror scene-tree scenes/prototype/prototype_main.tscn
                         ror scene-tree scenes/game.tscn --depth 2
+  validate-assets [-v] Validate assets against ADR-008 rules (alias: va)
+                        ror validate-assets         — check all assets
+                        ror validate-assets -v      — verbose output
   help                Show this help message
 
 ${BOLD}ENVIRONMENT${RESET}
@@ -585,8 +602,9 @@ case "${1:-help}" in
     scaffold) shift; cmd_scaffold "$@" ;;
     new-test)     shift; cmd_new_test "$@" ;;
     coverage)     shift; cmd_coverage "$@" ;;
-    gen-sprites)  shift; cmd_gen_sprites "$@" ;;
-    scene-tree)   shift; cmd_scene_tree "$@" ;;
+    gen-sprites)        shift; cmd_gen_sprites "$@" ;;
+    scene-tree)         shift; cmd_scene_tree "$@" ;;
+    validate-assets|va) shift; cmd_validate_assets "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
         err "Unknown command: $1"
