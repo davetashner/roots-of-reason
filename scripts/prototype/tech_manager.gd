@@ -6,6 +6,7 @@ extends Node
 ## spends resources, and emits signals on completion.
 
 signal tech_researched(player_id: int, tech_id: String, effects: Dictionary)
+signal tech_regressed(player_id: int, tech_id: String, tech_data: Dictionary)
 signal tech_research_started(player_id: int, tech_id: String)
 signal research_progress(player_id: int, tech_id: String, progress: float)
 signal research_queue_changed(player_id: int)
@@ -35,6 +36,19 @@ var _tech_tree: Array = []
 
 ## 1 in-progress + N queued — loaded from data/settings/tech_research.json
 var _max_queue_size: int = 4
+
+## {player_id: Array[String]} — techs that were regressed (for re-research cost multiplier)
+var _regressed_techs: Dictionary = {}
+
+## Knowledge burning config
+var _kb_enabled: bool = true
+var _kb_tech_loss_count: int = 1
+var _kb_protect_first_n: int = 0
+var _kb_re_research_multiplier: float = 1.0
+var _kb_cooldown: float = 0.0
+
+## {player_id: float} — game_time of last regression per player
+var _kb_last_regression_time: Dictionary = {}
 
 
 func _ready() -> void:
@@ -82,8 +96,13 @@ func can_research(player_id: int, tech_id: String) -> bool:
 	var required_age: int = int(tech_data.get("age", 0))
 	if required_age > GameManager.current_age or not _check_prerequisites(player_id, tech_id):
 		return false
-	# Cost check
+	# Cost check (apply re-research multiplier if previously regressed)
 	var costs: Dictionary = _parse_costs(tech_data.get("cost", {}))
+	if _is_regressed_tech(player_id, tech_id) and not is_equal_approx(_kb_re_research_multiplier, 1.0):
+		var scaled: Dictionary = {}
+		for res_type: ResourceManager.ResourceType in costs:
+			scaled[res_type] = int(costs[res_type] * _kb_re_research_multiplier)
+		costs = scaled
 	return ResourceManager.can_afford(player_id, costs)
 
 
@@ -96,9 +115,14 @@ func start_research(player_id: int, tech_id: String) -> bool:
 	var queue: Array = _research_queue.get(player_id, [])
 	if queue.size() >= _max_queue_size:
 		return false
-	# Spend resources
+	# Spend resources (apply re-research multiplier if previously regressed)
 	var tech_data: Dictionary = get_tech_data(tech_id)
 	var costs: Dictionary = _parse_costs(tech_data.get("cost", {}))
+	if _is_regressed_tech(player_id, tech_id) and not is_equal_approx(_kb_re_research_multiplier, 1.0):
+		var scaled: Dictionary = {}
+		for res_type: ResourceManager.ResourceType in costs:
+			scaled[res_type] = int(costs[res_type] * _kb_re_research_multiplier)
+		costs = scaled
 	if not ResourceManager.spend(player_id, costs):
 		return false
 	# Add to queue
@@ -187,6 +211,64 @@ func get_research_queue(player_id: int = 0) -> Array:
 	return _research_queue.get(player_id, []).duplicate()
 
 
+func regress_latest_tech(player_id: int) -> Dictionary:
+	## Pops the most recently researched tech from the player's history.
+	## Returns the tech data dictionary, or empty dict if nothing to regress.
+	if not _kb_enabled:
+		return {}
+	# Cooldown check
+	var last_time: float = _kb_last_regression_time.get(player_id, -INF)
+	if _kb_cooldown > 0.0 and (GameManager.game_time - last_time) < _kb_cooldown:
+		return {}
+	var history: Array = _researched_techs.get(player_id, [])
+	if history.is_empty() or history.size() <= _kb_protect_first_n:
+		return {}
+	var tech_id: String = history[-1]
+	history.remove_at(history.size() - 1)
+	# Track as regressed for re-research cost multiplier
+	if player_id not in _regressed_techs:
+		_regressed_techs[player_id] = []
+	if tech_id not in _regressed_techs[player_id]:
+		_regressed_techs[player_id].append(tech_id)
+	var tech_data: Dictionary = get_tech_data(tech_id)
+	_kb_last_regression_time[player_id] = GameManager.game_time
+	tech_regressed.emit(player_id, tech_id, tech_data)
+	return tech_data
+
+
+func revert_tech_effects(player_id: int, tech_id: String) -> void:
+	## Removes a specific tech from the player's researched list and emits
+	## tech_regressed so listeners can revert stat changes.
+	var history: Array = _researched_techs.get(player_id, [])
+	var idx: int = history.find(tech_id)
+	if idx == -1:
+		return
+	history.remove_at(idx)
+	if player_id not in _regressed_techs:
+		_regressed_techs[player_id] = []
+	if tech_id not in _regressed_techs[player_id]:
+		_regressed_techs[player_id].append(tech_id)
+	var tech_data: Dictionary = get_tech_data(tech_id)
+	tech_regressed.emit(player_id, tech_id, tech_data)
+
+
+func trigger_knowledge_burning(player_id: int) -> Array:
+	## Regresses up to _kb_tech_loss_count techs from the player.
+	## Returns an array of regressed tech data dictionaries.
+	var results: Array = []
+	for i in _kb_tech_loss_count:
+		var tech_data: Dictionary = regress_latest_tech(player_id)
+		if tech_data.is_empty():
+			break
+		results.append(tech_data)
+	return results
+
+
+func get_regressed_techs(player_id: int = 0) -> Array:
+	## Returns the list of tech IDs that have been regressed for the player.
+	return _regressed_techs.get(player_id, []).duplicate()
+
+
 func save_state() -> Dictionary:
 	var serialized_costs: Dictionary = {}
 	for player_id: int in _active_costs:
@@ -199,6 +281,8 @@ func save_state() -> Dictionary:
 		"research_progress": _research_progress.duplicate(),
 		"active_costs": serialized_costs,
 		"max_queue_size": _max_queue_size,
+		"regressed_techs": _regressed_techs.duplicate(true),
+		"kb_last_regression_time": _kb_last_regression_time.duplicate(),
 	}
 
 
@@ -219,13 +303,25 @@ func load_state(data: Dictionary) -> void:
 		for tech_id: String in raw_costs[player_key]:
 			_active_costs[pid][tech_id] = _parse_costs(raw_costs[player_key][tech_id])
 	_max_queue_size = int(data.get("max_queue_size", 4))
+	_regressed_techs = data.get("regressed_techs", {}).duplicate(true)
+	# Deserialize kb_last_regression_time (JSON round-trip gives string keys)
+	_kb_last_regression_time = {}
+	var raw_kb_time: Dictionary = data.get("kb_last_regression_time", {})
+	for key: Variant in raw_kb_time:
+		_kb_last_regression_time[int(key)] = float(raw_kb_time[key])
 
 
 func _load_config() -> void:
 	var config: Dictionary = DataLoader.get_settings("tech_research")
-	if config.is_empty():
-		return
-	_max_queue_size = int(config.get("max_queue_size", 4))
+	if not config.is_empty():
+		_max_queue_size = int(config.get("max_queue_size", 4))
+	var kb_config: Dictionary = DataLoader.get_settings("knowledge_burning")
+	if not kb_config.is_empty():
+		_kb_enabled = bool(kb_config.get("enabled", true))
+		_kb_tech_loss_count = int(kb_config.get("tech_loss_count", 1))
+		_kb_protect_first_n = int(kb_config.get("protect_first_n_techs", 0))
+		_kb_re_research_multiplier = float(kb_config.get("re_research_cost_multiplier", 1.0))
+		_kb_cooldown = float(kb_config.get("cooldown_seconds", 0))
 
 
 func _load_tech_tree() -> void:
@@ -290,3 +386,7 @@ func _serialize_costs(costs: Dictionary) -> Dictionary:
 				result[res_name] = costs[resource_type]
 				break
 	return result
+
+
+func _is_regressed_tech(player_id: int, tech_id: String) -> bool:
+	return tech_id in _regressed_techs.get(player_id, [])
