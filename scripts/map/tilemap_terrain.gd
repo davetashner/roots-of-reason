@@ -8,6 +8,7 @@ const TEXTURE_BASE_PATH := "res://assets/tiles/terrain/prototype/"
 
 const ElevationGenerator := preload("res://scripts/map/elevation_generator.gd")
 const RiverGenerator := preload("res://scripts/map/river_generator.gd")
+const ResourceGenerator := preload("res://scripts/map/resource_generator.gd")
 const TerrainMapperScript := preload("res://scripts/map/terrain_mapper.gd")
 
 var _terrain_config: Dictionary = {}
@@ -27,6 +28,9 @@ var _river_tiles: Dictionary = {}  # Vector2i -> true
 var _flow_directions: Dictionary = {}  # Vector2i -> Vector2i
 var _river_ids: Dictionary = {}  # Vector2i -> int
 var _river_widths: Dictionary = {}  # Vector2i -> int
+
+# Resource positions
+var _resource_positions: Dictionary = {}  # resource_name -> Array[Vector2i]
 
 
 func _ready() -> void:
@@ -214,6 +218,11 @@ func _generate_map() -> void:
 		if river_sid >= 0:
 			set_cell(pos, river_sid, Vector2i.ZERO)
 
+	# 7. Generate resource positions
+	var res_gen := ResourceGenerator.new()
+	res_gen.configure(_map_gen_config.get("resource_generation", {}))
+	_resource_positions = res_gen.generate(_tile_grid, _map_width, _map_height, _seed_value)
+
 
 # -- Public API (backward-compatible with prototype_map.gd) --
 
@@ -284,6 +293,21 @@ func get_elevation_at(grid_pos: Vector2i) -> float:
 	return _elevation_grid.get(grid_pos, 0.0)
 
 
+# -- Resource API --
+
+
+func get_resource_positions() -> Dictionary:
+	return _resource_positions
+
+
+func get_resource_positions_for(resource_name: String) -> Array[Vector2i]:
+	var positions: Array[Vector2i] = []
+	var raw: Array = _resource_positions.get(resource_name, [])
+	for pos in raw:
+		positions.append(pos as Vector2i)
+	return positions
+
+
 # -- Save / Load --
 
 
@@ -313,12 +337,21 @@ func save_state() -> Dictionary:
 	river_data["river_ids"] = river_ids_serialized
 	river_data["river_widths"] = river_widths_serialized
 
+	# Serialize resource positions
+	var res_data: Dictionary = {}
+	for res_name: String in _resource_positions:
+		var positions: Array = []
+		for pos: Vector2i in _resource_positions[res_name]:
+			positions.append("%d,%d" % [pos.x, pos.y])
+		res_data[res_name] = positions
+
 	return {
 		"map_width": _map_width,
 		"map_height": _map_height,
 		"seed": _seed_value,
 		"tile_grid": grid_data,
 		"river_data": river_data,
+		"resource_positions": res_data,
 	}
 
 
@@ -334,6 +367,7 @@ func load_state(state: Dictionary) -> void:
 	_flow_directions.clear()
 	_river_ids.clear()
 	_river_widths.clear()
+	_resource_positions.clear()
 
 	var grid_data: Dictionary = state.get("tile_grid", {})
 	for key: String in grid_data:
@@ -375,3 +409,13 @@ func load_state(state: Dictionary) -> void:
 			var parts := key.split(",")
 			if parts.size() == 2:
 				_river_widths[Vector2i(int(parts[0]), int(parts[1]))] = int(rw[key])
+
+	# Deserialize resource positions (backward-compatible)
+	var res_data: Dictionary = state.get("resource_positions", {})
+	for res_name: String in res_data:
+		var positions: Array[Vector2i] = []
+		for pos_str in res_data[res_name]:
+			var parts := str(pos_str).split(",")
+			if parts.size() == 2:
+				positions.append(Vector2i(int(parts[0]), int(parts[1])))
+		_resource_positions[res_name] = positions
