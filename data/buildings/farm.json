@@ -1,0 +1,14 @@
+{
+  "name": "Farm",
+  "hp": 300,
+  "footprint": [2, 2],
+  "build_time": 20,
+  "build_cost": { "wood": 60 },
+  "population_bonus": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 0,
+  "food_rate": 0.4,
+  "max_food": 300
+}

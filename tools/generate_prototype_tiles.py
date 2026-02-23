@@ -47,6 +47,12 @@ def generate_tile(name: str, fill: str, border: str, out_dir: Path) -> None:
 # Building definitions: name -> (fill_color, border_color)
 BUILDINGS = {
     "river_dock": ("#6B8E9B", "#5A7E8B"),
+    "farm": ("#8B9B4A", "#7B8B3A"),
+    "barracks": ("#8B4A4A", "#7B3A3A"),
+    "dock": ("#4A6B8B", "#3A5B7B"),
+    "market": ("#B8860B", "#A8760B"),
+    "library": ("#6A5ACD", "#5A4ABD"),
+    "wonder": ("#DAA520", "#CA9510"),
 }
 
 # Diamond vertices for a 128x128 building tile

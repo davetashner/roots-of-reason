@@ -28,7 +28,7 @@
     "age_required": { "type": "integer", "minimum": 0 },
     "placement_constraint": {
       "type": "string",
-      "enum": ["", "adjacent_to_river"]
+      "enum": ["", "adjacent_to_river", "adjacent_to_water"]
     }
   },
   "additionalProperties": true
