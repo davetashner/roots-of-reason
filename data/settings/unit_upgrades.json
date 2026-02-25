@@ -1,0 +1,44 @@
+{
+  "modifier_map": {
+    "melee_attack": {
+      "stat": "attack",
+      "type": "flat",
+      "unit_types": ["infantry", "cavalry", "villager"]
+    },
+    "ranged_attack": {
+      "stat": "attack",
+      "type": "percent",
+      "unit_types": ["archer", "hand_cannoneer", "artillery"]
+    },
+    "defense": {
+      "stat": "defense",
+      "type": "flat",
+      "unit_types": ["infantry", "cavalry", "archer", "villager"]
+    },
+    "naval_los": {
+      "stat": "los",
+      "type": "flat",
+      "unit_types": ["naval"]
+    },
+    "naval_hp": {
+      "stat": "hp",
+      "type": "percent",
+      "unit_types": ["naval"]
+    },
+    "military_max_hp": {
+      "stat": "hp",
+      "type": "percent",
+      "unit_types": ["infantry", "cavalry", "archer", "hand_cannoneer", "artillery"]
+    },
+    "siege_damage": {
+      "stat": "attack",
+      "type": "percent",
+      "unit_types": ["siege"]
+    },
+    "unit_speed": {
+      "stat": "speed",
+      "type": "percent",
+      "unit_types": ["infantry", "cavalry", "archer", "villager", "hand_cannoneer", "artillery"]
+    }
+  }
+}
