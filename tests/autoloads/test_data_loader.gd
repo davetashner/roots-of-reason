@@ -123,7 +123,8 @@ func test_get_resource_config_returns_all_resources() -> void:
 	assert_bool(config.has("tree")).is_true()
 	assert_bool(config.has("stone_mine")).is_true()
 	assert_bool(config.has("gold_mine")).is_true()
-	assert_int(config.size()).is_equal(4)
+	assert_bool(config.has("fish")).is_true()
+	assert_int(config.size()).is_equal(5)
 
 
 # --- get_settings / get_setting tests ---
