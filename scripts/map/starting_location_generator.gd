@@ -28,6 +28,13 @@ var _elevation_ideal_min: float = 0.3
 var _elevation_ideal_max: float = 0.6
 var _seed_offset: int = 5000
 var _villager_offsets: Array = [[-1, 0], [0, -1], [-1, -1], [1, -1], [-1, 1]]
+var _river_scoring_weights: Dictionary = {
+	"river_proximity": 0.15,
+	"river_direction_diversity": 0.05,
+	"river_adjacent_buildable": 0.10,
+}
+var _river_proximity_radius: int = 12
+var _max_river_score_variance: float = 0.3
 
 
 func configure(config: Dictionary) -> void:
@@ -50,6 +57,11 @@ func configure(config: Dictionary) -> void:
 	var vo = config.get("villager_offsets", null)
 	if vo is Array and not vo.is_empty():
 		_villager_offsets = vo
+	var rsw = config.get("river_scoring_weights", null)
+	if rsw is Dictionary and not rsw.is_empty():
+		_river_scoring_weights = rsw
+	_river_proximity_radius = int(config.get("river_proximity_radius", _river_proximity_radius))
+	_max_river_score_variance = float(config.get("max_river_score_variance", _max_river_score_variance))
 
 
 func generate(
@@ -59,7 +71,11 @@ func generate(
 	map_width: int,
 	map_height: int,
 	base_seed: int,
+	river_tiles: Dictionary = {},
+	flow_directions: Dictionary = {},
 ) -> Dictionary:
+	var has_rivers := not river_tiles.is_empty()
+
 	# Step 1: Build candidates
 	var candidates: Array[Vector2i] = _build_candidates(
 		terrain_grid, elevation_grid, terrain_properties, map_width, map_height
@@ -72,7 +88,15 @@ func generate(
 	var scores: Dictionary = {}  # Vector2i -> float
 	for candidate: Vector2i in candidates:
 		scores[candidate] = _score_candidate(
-			candidate, terrain_grid, elevation_grid, terrain_properties, map_width, map_height
+			candidate,
+			terrain_grid,
+			elevation_grid,
+			terrain_properties,
+			map_width,
+			map_height,
+			river_tiles,
+			flow_directions,
+			has_rivers,
 		)
 
 	# Step 3: Select positions
@@ -87,7 +111,21 @@ func generate(
 		var result_scores: Array[float] = [best_score]
 		return {"starting_positions": positions, "scores": result_scores}
 
-	var result := _select_pair(candidates, scores, base_seed)
+	# Step 3b: Precompute per-candidate river scores for variance check
+	var river_scores: Dictionary = {}  # Vector2i -> float
+	if has_rivers:
+		for candidate: Vector2i in candidates:
+			river_scores[candidate] = _compute_river_score(
+				candidate,
+				terrain_grid,
+				terrain_properties,
+				river_tiles,
+				flow_directions,
+				map_width,
+				map_height,
+			)
+
+	var result := _select_pair(candidates, scores, base_seed, river_scores, has_rivers)
 	return result
 
 
@@ -189,6 +227,9 @@ func _score_candidate(
 	terrain_properties: Dictionary,
 	map_width: int,
 	map_height: int,
+	river_tiles: Dictionary = {},
+	flow_directions: Dictionary = {},
+	has_rivers: bool = false,
 ) -> float:
 	var radius := _scoring_radius
 	var buildable_count := 0
@@ -238,26 +279,134 @@ func _score_candidate(
 	var w_elevation: float = float(_scoring_weights.get("elevation_midrange", 0.25))
 	var w_center: float = float(_scoring_weights.get("center_proximity", 0.25))
 
-	return (
-		buildable_ratio * w_buildable + diversity * w_diversity + midrange_ratio * w_elevation + center_score * w_center
+	if not has_rivers:
+		return (
+			buildable_ratio * w_buildable
+			+ diversity * w_diversity
+			+ midrange_ratio * w_elevation
+			+ center_score * w_center
+		)
+
+	# River sub-scores
+	var river_scores := _score_river_access(
+		pos, terrain_grid, terrain_properties, river_tiles, flow_directions, map_width, map_height
 	)
+
+	var w_river_prox: float = float(_river_scoring_weights.get("river_proximity", 0.15))
+	var w_river_dir: float = float(_river_scoring_weights.get("river_direction_diversity", 0.05))
+	var w_river_build: float = float(_river_scoring_weights.get("river_adjacent_buildable", 0.10))
+	var river_weight_total: float = w_river_prox + w_river_dir + w_river_build
+
+	# Scale original weights down to make room for river weights
+	var original_total: float = w_buildable + w_diversity + w_elevation + w_center
+	var scale: float = (1.0 - river_weight_total) / original_total if original_total > 0.0 else 0.7
+
+	return (
+		buildable_ratio * w_buildable * scale
+		+ diversity * w_diversity * scale
+		+ midrange_ratio * w_elevation * scale
+		+ center_score * w_center * scale
+		+ river_scores.proximity * w_river_prox
+		+ river_scores.direction_diversity * w_river_dir
+		+ river_scores.adjacent_buildable * w_river_build
+	)
+
+
+func _score_river_access(
+	pos: Vector2i,
+	terrain_grid: Dictionary,
+	terrain_properties: Dictionary,
+	river_tiles: Dictionary,
+	flow_directions: Dictionary,
+	map_width: int,
+	map_height: int,
+) -> Dictionary:
+	var radius := _river_proximity_radius
+	var river_count := 0
+	var total_tiles := 0
+	var flow_dirs: Dictionary = {}  # Vector2i -> true (distinct directions)
+	var river_adjacent_buildable_count := 0
+
+	for dy in range(-radius, radius + 1):
+		for dx in range(-radius, radius + 1):
+			var cell := Vector2i(pos.x + dx, pos.y + dy)
+			if cell.x < 0 or cell.x >= map_width:
+				continue
+			if cell.y < 0 or cell.y >= map_height:
+				continue
+			var terrain: String = terrain_grid.get(cell, "")
+			if terrain.is_empty():
+				continue
+			total_tiles += 1
+
+			if river_tiles.has(cell):
+				river_count += 1
+				var flow_dir: Vector2i = flow_directions.get(cell, Vector2i.ZERO)
+				if flow_dir != Vector2i.ZERO:
+					flow_dirs[flow_dir] = true
+				# Check 4-adjacent tiles for buildable
+				for dir: Vector2i in DIRECTIONS_4:
+					var adj := cell + dir
+					var adj_terrain: String = terrain_grid.get(adj, "")
+					if adj_terrain.is_empty():
+						continue
+					var props: Dictionary = terrain_properties.get(adj_terrain, {})
+					if props.get("buildable", true):
+						river_adjacent_buildable_count += 1
+						break  # Count this river tile once
+
+	var proximity: float = 0.5  # neutral when no rivers nearby
+	if total_tiles > 0 and river_count > 0:
+		proximity = clampf(float(river_count) / float(total_tiles) * 10.0, 0.0, 1.0)
+
+	var direction_diversity: float = clampf(float(flow_dirs.size()) / 4.0, 0.0, 1.0)
+
+	var adjacent_buildable: float = 0.0
+	if total_tiles > 0:
+		adjacent_buildable = clampf(float(river_adjacent_buildable_count) / float(total_tiles) * 10.0, 0.0, 1.0)
+
+	return {
+		"proximity": proximity,
+		"direction_diversity": direction_diversity,
+		"adjacent_buildable": adjacent_buildable,
+	}
+
+
+func _compute_river_score(
+	pos: Vector2i,
+	terrain_grid: Dictionary,
+	terrain_properties: Dictionary,
+	river_tiles: Dictionary,
+	flow_directions: Dictionary,
+	map_width: int,
+	map_height: int,
+) -> float:
+	var rs := _score_river_access(
+		pos, terrain_grid, terrain_properties, river_tiles, flow_directions, map_width, map_height
+	)
+	var w_prox: float = float(_river_scoring_weights.get("river_proximity", 0.15))
+	var w_dir: float = float(_river_scoring_weights.get("river_direction_diversity", 0.05))
+	var w_build: float = float(_river_scoring_weights.get("river_adjacent_buildable", 0.10))
+	return rs.proximity * w_prox + rs.direction_diversity * w_dir + rs.adjacent_buildable * w_build
 
 
 func _select_pair(
 	candidates: Array[Vector2i],
 	scores: Dictionary,
 	_base_seed: int,
+	river_scores: Dictionary = {},
+	has_rivers: bool = false,
 ) -> Dictionary:
-	var best_value: float = -1.0
-	var best_a := Vector2i(-1, -1)
-	var best_b := Vector2i(-1, -1)
+	# Collect top pairs sorted by value (distance * balance)
+	var top_pairs: Array[Dictionary] = []  # [{a, b, value}]
+	var max_pairs := 4 if has_rivers else 1
 
 	# Try with configured min_distance, then relax
 	@warning_ignore("integer_division")
 	var distances_to_try: Array[int] = [_min_distance, _min_distance / 2, 15, 0]
 
 	for min_dist: int in distances_to_try:
-		best_value = -1.0
+		top_pairs.clear()
 		for i in candidates.size():
 			for j in range(i + 1, candidates.size()):
 				var a := candidates[i]
@@ -272,21 +421,27 @@ func _select_pair(
 					continue
 				var balance: float = minf(s1, s2) / max_s
 				var value: float = float(dist) * balance
-				if value > best_value:
-					best_value = value
-					best_a = a
-					best_b = b
+				# Insert into top_pairs maintaining sorted order (descending)
+				var inserted := false
+				for k in top_pairs.size():
+					if value > float(top_pairs[k].value):
+						top_pairs.insert(k, {"a": a, "b": b, "value": value})
+						inserted = true
+						break
+				if not inserted and top_pairs.size() < max_pairs:
+					top_pairs.append({"a": a, "b": b, "value": value})
+				if top_pairs.size() > max_pairs:
+					top_pairs.resize(max_pairs)
 
-		if best_value > 0.0:
+		if not top_pairs.is_empty():
 			break
 
-	if best_value <= 0.0:
+	if top_pairs.is_empty():
 		# Absolute fallback: pick two best-scoring candidates
 		var sorted_candidates := candidates.duplicate()
 		sorted_candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return scores[a] > scores[b])
 		if sorted_candidates.size() >= 2:
-			best_a = sorted_candidates[0]
-			best_b = sorted_candidates[1]
+			top_pairs.append({"a": sorted_candidates[0], "b": sorted_candidates[1], "value": 0.0})
 		elif sorted_candidates.size() == 1:
 			var single_pos: Array[Vector2i] = [sorted_candidates[0]]
 			var single_scores: Array[float] = [scores[sorted_candidates[0]]]
@@ -294,8 +449,27 @@ func _select_pair(
 		else:
 			return {"starting_positions": [] as Array[Vector2i], "scores": [] as Array[float]}
 
-	var positions: Array[Vector2i] = [best_a, best_b]
-	var result_scores: Array[float] = [scores[best_a], scores[best_b]]
+	# Apply river variance constraint if rivers exist
+	if has_rivers and not river_scores.is_empty():
+		for pair: Dictionary in top_pairs:
+			var rs_a: float = river_scores.get(pair.a, 0.0)
+			var rs_b: float = river_scores.get(pair.b, 0.0)
+			var max_rs := maxf(rs_a, rs_b)
+			if max_rs <= 0.0:
+				# Both have zero river score — acceptable (equally river-poor)
+				var positions: Array[Vector2i] = [pair.a, pair.b]
+				var result_scores: Array[float] = [scores[pair.a], scores[pair.b]]
+				return {"starting_positions": positions, "scores": result_scores}
+			var variance: float = absf(rs_a - rs_b) / max_rs
+			if variance <= _max_river_score_variance:
+				var positions: Array[Vector2i] = [pair.a, pair.b]
+				var result_scores: Array[float] = [scores[pair.a], scores[pair.b]]
+				return {"starting_positions": positions, "scores": result_scores}
+		# Fallback: use best pair anyway if none pass variance check
+
+	var best: Dictionary = top_pairs[0]
+	var positions: Array[Vector2i] = [best.a, best.b]
+	var result_scores: Array[float] = [scores[best.a], scores[best.b]]
 	return {"starting_positions": positions, "scores": result_scores}
 
 
