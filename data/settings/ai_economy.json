@@ -1,0 +1,8 @@
+{
+  "tick_interval": 2.0,
+  "rebalance_threshold": 2.0,
+  "near_cap_house_buffer": 3,
+  "max_villagers": 30,
+  "building_search_radius": 15,
+  "resource_search_radius": 20
+}

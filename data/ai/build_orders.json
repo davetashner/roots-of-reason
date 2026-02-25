@@ -1,0 +1,49 @@
+{
+  "easy": {
+    "steps": [
+      { "action": "train", "unit": "villager", "count": 4 },
+      { "action": "build", "building": "house" },
+      { "action": "train", "unit": "villager", "count": 3 },
+      { "action": "build", "building": "house" },
+      { "action": "advance_age" },
+      { "action": "train", "unit": "villager", "count": 3 },
+      { "action": "build", "building": "barracks" }
+    ],
+    "villager_allocation": {
+      "0": { "food": 0.60, "wood": 0.30, "stone": 0.05, "gold": 0.05 },
+      "1": { "food": 0.45, "wood": 0.30, "stone": 0.10, "gold": 0.15 }
+    }
+  },
+  "normal": {
+    "steps": [
+      { "action": "train", "unit": "villager", "count": 4 },
+      { "action": "build", "building": "house" },
+      { "action": "train", "unit": "villager", "count": 4 },
+      { "action": "build", "building": "house" },
+      { "action": "advance_age" },
+      { "action": "train", "unit": "villager", "count": 5 },
+      { "action": "build", "building": "barracks" },
+      { "action": "build", "building": "house" }
+    ],
+    "villager_allocation": {
+      "0": { "food": 0.55, "wood": 0.30, "stone": 0.05, "gold": 0.10 },
+      "1": { "food": 0.40, "wood": 0.25, "stone": 0.15, "gold": 0.20 }
+    }
+  },
+  "hard": {
+    "steps": [
+      { "action": "train", "unit": "villager", "count": 5 },
+      { "action": "build", "building": "house" },
+      { "action": "train", "unit": "villager", "count": 5 },
+      { "action": "build", "building": "house" },
+      { "action": "advance_age" },
+      { "action": "train", "unit": "villager", "count": 6 },
+      { "action": "build", "building": "barracks" },
+      { "action": "build", "building": "house" }
+    ],
+    "villager_allocation": {
+      "0": { "food": 0.50, "wood": 0.30, "stone": 0.05, "gold": 0.15 },
+      "1": { "food": 0.35, "wood": 0.25, "stone": 0.15, "gold": 0.25 }
+    }
+  }
+}
