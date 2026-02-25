@@ -3,8 +3,8 @@ extends RefCounted
 ## Takes an elevation grid and terrain grid, produces river overlay data including
 ## flow directions, river IDs, and widths. Rivers merge and widen at confluences.
 ##
-## TODO (ovr.4): Starting position proximity constraints — 8-tile exclusion zone,
-## 10-tile access requirement.
+## Starting position proximity constraints are handled by starting_location_generator.gd
+## which uses reachability flood-fill to ensure river crossings don't isolate spawns.
 
 const DIRECTIONS_8 := [
 	Vector2i(1, 0),
