@@ -24,10 +24,13 @@ var _war_bonus: Node
 var _ai_economy: Node = null
 var _ai_military: Node = null
 var _ai_tech: Node = null
+var _visibility_manager: Node = null
+var _fog_layer: Node = null
 
 
 func _ready() -> void:
 	_setup_map()
+	_setup_fog_of_war()
 	_setup_camera()
 	_setup_pathfinding()
 	_setup_target_detection()
@@ -40,6 +43,8 @@ func _ready() -> void:
 	_setup_tech()
 	_setup_ai()
 	_setup_hud()
+	# Initial visibility update after all units are placed
+	_update_fog_of_war()
 
 
 func _setup_map() -> void:
@@ -48,6 +53,55 @@ func _setup_map() -> void:
 	map_layer.set_script(load("res://scripts/map/tilemap_terrain.gd"))
 	add_child(map_layer)
 	_map_node = map_layer
+
+
+func _setup_fog_of_war() -> void:
+	var dims: Vector2i = _map_node.get_map_dimensions()
+	var blocks_fn := func(pos: Vector2i) -> bool: return _map_node.blocks_los(pos)
+
+	_visibility_manager = Node.new()
+	_visibility_manager.name = "VisibilityManager"
+	_visibility_manager.set_script(load("res://scripts/prototype/visibility_manager.gd"))
+	add_child(_visibility_manager)
+	_visibility_manager.setup(dims.x, dims.y, blocks_fn)
+
+	_fog_layer = TileMapLayer.new()
+	_fog_layer.name = "FogOfWar"
+	_fog_layer.set_script(load("res://scripts/map/fog_of_war_layer.gd"))
+	add_child(_fog_layer)
+	_fog_layer.setup(dims.x, dims.y, 0)
+
+	_visibility_manager.visibility_changed.connect(_on_visibility_changed)
+
+
+func _update_fog_of_war() -> void:
+	if _visibility_manager == null:
+		return
+	var player_units: Array = []
+	for child in get_children():
+		if not (child is Node2D):
+			continue
+		if "owner_id" not in child:
+			continue
+		if child.owner_id != 0:
+			continue
+		if "hp" in child and child.hp <= 0:
+			continue
+		player_units.append(child)
+	_visibility_manager.update_visibility(0, player_units)
+
+
+func _on_visibility_changed(player_id: int) -> void:
+	if player_id != 0 or _fog_layer == null or _visibility_manager == null:
+		return
+	(
+		_fog_layer
+		. update_fog(
+			_visibility_manager.get_visible_tiles(0),
+			_visibility_manager.get_explored_tiles(0),
+			_visibility_manager.get_prev_visible_tiles(0),
+		)
+	)
 
 
 func _setup_camera() -> void:
@@ -91,6 +145,8 @@ func _setup_target_detection() -> void:
 	_target_detector.name = "TargetDetector"
 	_target_detector.set_script(load("res://scripts/prototype/target_detector.gd"))
 	add_child(_target_detector)
+	if _visibility_manager != null:
+		_target_detector.set_visibility_manager(_visibility_manager)
 
 
 func _setup_input() -> void:
@@ -139,6 +195,8 @@ func _setup_units() -> void:
 		unit.unit_type = "villager"
 		add_child(unit)
 		unit._scene_root = self
+		if _visibility_manager != null:
+			unit._visibility_manager = _visibility_manager
 		# Register with input handler after both are in tree
 		if _input_handler.has_method("register_unit"):
 			_input_handler.register_unit(unit)
@@ -376,6 +434,8 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 	unit.position = IsoUtils.grid_to_screen(Vector2(spawn_grid))
 	add_child(unit)
 	unit._scene_root = self
+	if _visibility_manager != null:
+		unit._visibility_manager = _visibility_manager
 	if _input_handler != null and _input_handler.has_method("register_unit"):
 		_input_handler.register_unit(unit)
 	if _target_detector != null:
