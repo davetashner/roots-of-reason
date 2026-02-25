@@ -3,6 +3,7 @@ extends Node2D
 ## Supports construction state: starts translucent, built by villagers over time.
 
 signal construction_complete(building: Node2D)
+signal building_destroyed(building: Node2D)
 
 @export var owner_id: int = 0
 var entity_category: String = "own_building"
@@ -20,6 +21,7 @@ var under_construction: bool = false
 var build_progress: float = 0.0
 var _build_time: float = 1.0
 
+var _combat_config: Dictionary = {}
 var _construction_alpha: float = 0.4
 var _bar_width: float = 40.0
 var _bar_height: float = 5.0
@@ -29,6 +31,7 @@ var _bar_offset_y: float = -30.0
 func _ready() -> void:
 	_load_building_stats()
 	_load_construction_config()
+	_load_combat_config()
 
 
 func _load_building_stats() -> void:
@@ -64,6 +67,37 @@ func _load_construction_config() -> void:
 	_bar_width = float(cfg.get("progress_bar_width", _bar_width))
 	_bar_height = float(cfg.get("progress_bar_height", _bar_height))
 	_bar_offset_y = float(cfg.get("progress_bar_offset_y", _bar_offset_y))
+
+
+func _load_combat_config() -> void:
+	var cfg: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		cfg = DataLoader.get_settings("combat")
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_settings"):
+			cfg = dl.get_settings("combat")
+	if not cfg.is_empty():
+		_combat_config = cfg
+
+
+func take_damage(amount: int, _attacker: Node2D) -> void:
+	hp -= amount
+	if hp < 0:
+		hp = 0
+	queue_redraw()
+	if hp <= 0:
+		_on_destroyed()
+
+
+func _on_destroyed() -> void:
+	building_destroyed.emit(self)
+	set_process(false)
+	var tween := CombatVisual.play_death_animation(self, _combat_config)
+	if tween != null:
+		tween.finished.connect(queue_free)
+	else:
+		queue_free()
 
 
 func get_entity_category() -> String:
@@ -134,6 +168,9 @@ func _draw() -> void:
 	# Progress bar during construction
 	if under_construction:
 		_draw_progress_bar()
+	# HP bar when damaged (not under construction)
+	elif max_hp > 0 and hp < max_hp:
+		_draw_hp_bar()
 
 
 func _draw_progress_bar() -> void:
@@ -144,6 +181,23 @@ func _draw_progress_bar() -> void:
 	# Fill
 	var fill_width := _bar_width * build_progress
 	draw_rect(Rect2(bar_x, bar_y, fill_width, _bar_height), Color(0.2, 0.8, 0.2, 0.9))
+	# Border
+	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(1, 1, 1, 0.5), false)
+
+
+func _draw_hp_bar() -> void:
+	var bar_x := -_bar_width / 2.0
+	var bar_y := _bar_offset_y
+	var ratio: float = float(hp) / float(max_hp)
+	# Background
+	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(0.1, 0.1, 0.1, 0.8))
+	# Fill
+	var hp_color: Color
+	if ratio > 0.5:
+		hp_color = Color(0.2, 0.8, 0.2, 0.9)
+	else:
+		hp_color = Color(0.9, 0.2, 0.2, 0.9)
+	draw_rect(Rect2(bar_x, bar_y, _bar_width * ratio, _bar_height), hp_color)
 	# Border
 	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(1, 1, 1, 0.5), false)
 

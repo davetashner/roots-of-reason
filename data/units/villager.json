@@ -18,6 +18,7 @@
   "train_time": 25,
   "train_cost": { "food": 50 },
   "armor_type": "none",
+  "attack_speed": 2.0,
   "attack_type": "melee",
   "unit_category": "civilian",
   "default_stance": "defensive"

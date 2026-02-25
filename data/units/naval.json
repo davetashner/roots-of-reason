@@ -11,6 +11,7 @@
   "train_cost": { "wood": 150, "gold": 50 },
   "bonus_vs": {},
   "armor_type": "heavy",
+  "attack_speed": 2.5,
   "attack_type": "ranged",
   "movement_type": "water",
   "transport_capacity": 5,
