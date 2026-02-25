@@ -1,0 +1,21 @@
+{
+  "wolf": {
+    "patrol_radius_tiles": 8,
+    "patrol_idle_min": 3.0,
+    "patrol_idle_max": 5.0,
+    "aggro_radius_tiles": 3,
+    "aggro_unit_categories": ["civilian"],
+    "flee_military_radius_tiles": 5,
+    "flee_military_count_threshold": 3,
+    "flee_military_radius_during_attack_tiles": 4,
+    "flee_military_during_attack_count": 2,
+    "flee_duration": 5.0,
+    "flee_distance_tiles": 10,
+    "chase_abandon_distance_tiles": 6,
+    "pack_cohesion_max_tiles": 4,
+    "attack_speed_pixels": 192.0,
+    "patrol_speed_pixels": 96.0,
+    "scan_interval": 0.5,
+    "carcass_resource_name": "wolf_carcass"
+  }
+}
