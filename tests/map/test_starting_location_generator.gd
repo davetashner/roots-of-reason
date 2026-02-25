@@ -338,3 +338,266 @@ func test_villager_offsets_from_config() -> void:
 	var offsets: Array = [[-1, 0], [0, -1], [-1, -1], [1, -1], [-1, 1]]
 	gen.configure(_make_config({"villager_offsets": offsets}))
 	assert_int(gen.get_villager_offsets().size()).is_equal(5)
+
+
+# -- River scoring tests --
+
+
+func _make_river_tiles(positions: Array[Vector2i]) -> Dictionary:
+	var tiles: Dictionary = {}
+	for pos: Vector2i in positions:
+		tiles[pos] = true
+	return tiles
+
+
+func _make_flow_directions(tiles: Dictionary, dir: Vector2i = Vector2i(1, 0)) -> Dictionary:
+	var dirs: Dictionary = {}
+	for pos: Vector2i in tiles:
+		dirs[pos] = dir
+	return dirs
+
+
+func test_river_proximity_increases_score() -> void:
+	var gen := StartingLocationGenerator.new()
+	gen.configure(_make_config())
+	var terrain := _make_terrain_grid(MAP_W, MAP_H)
+	var elevation := _make_elevation_grid(MAP_W, MAP_H, 0.45)
+	var props := _make_terrain_properties()
+
+	# Place river tiles near candidate at (20, 20)
+	var river_positions: Array[Vector2i] = []
+	for x in range(18, 25):
+		river_positions.append(Vector2i(x, 22))
+		terrain[Vector2i(x, 22)] = "river"
+	var river_tiles := _make_river_tiles(river_positions)
+	var flow_dirs := _make_flow_directions(river_tiles, Vector2i(1, 0))
+
+	var score_with_river: float = (
+		gen
+		. _score_candidate(
+			Vector2i(20, 20),
+			terrain,
+			elevation,
+			props,
+			MAP_W,
+			MAP_H,
+			river_tiles,
+			flow_dirs,
+			true,
+		)
+	)
+
+	# Score without rivers (same position, no river data)
+	var terrain_no_river := _make_terrain_grid(MAP_W, MAP_H)
+	var score_without_river: float = (
+		gen
+		. _score_candidate(
+			Vector2i(20, 20),
+			terrain_no_river,
+			elevation,
+			props,
+			MAP_W,
+			MAP_H,
+		)
+	)
+
+	# With rivers nearby, score should differ (river contributes)
+	assert_bool(score_with_river != score_without_river).is_true()
+
+
+func test_no_rivers_scores_neutrally() -> void:
+	var gen := StartingLocationGenerator.new()
+	gen.configure(_make_config())
+	var terrain := _make_terrain_grid(MAP_W, MAP_H)
+	var elevation := _make_elevation_grid(MAP_W, MAP_H, 0.45)
+	var props := _make_terrain_properties()
+
+	# Without river args — original behavior
+	var result_no_args := gen.generate(terrain, elevation, props, MAP_W, MAP_H, SEED)
+	# With empty river dicts — same behavior
+	var result_empty := gen.generate(terrain, elevation, props, MAP_W, MAP_H, SEED, {}, {})
+
+	assert_array(result_no_args["starting_positions"]).is_equal(result_empty["starting_positions"])
+	assert_array(result_no_args["scores"]).is_equal(result_empty["scores"])
+
+
+func test_river_variance_constraint() -> void:
+	var gen := StartingLocationGenerator.new()
+	(
+		gen
+		. configure(
+			_make_config(
+				{
+					"min_distance": 10,
+					"max_river_score_variance": 0.3,
+				}
+			)
+		)
+	)
+	var terrain := _make_terrain_grid(MAP_W, MAP_H)
+	var elevation := _make_elevation_grid(MAP_W, MAP_H, 0.45)
+	var props := _make_terrain_properties()
+
+	# Place a big river only near one corner (imbalanced)
+	var river_positions: Array[Vector2i] = []
+	for x in range(8, 20):
+		for y in range(8, 12):
+			river_positions.append(Vector2i(x, y))
+			terrain[Vector2i(x, y)] = "river"
+	var river_tiles := _make_river_tiles(river_positions)
+	var flow_dirs := _make_flow_directions(river_tiles)
+
+	var result := gen.generate(terrain, elevation, props, MAP_W, MAP_H, SEED, river_tiles, flow_dirs)
+	# Should still produce valid positions (graceful fallback)
+	assert_int(result["starting_positions"].size()).is_greater_equal(1)
+
+
+func test_river_direction_diversity_scored() -> void:
+	var gen := StartingLocationGenerator.new()
+	gen.configure(_make_config())
+	var terrain := _make_terrain_grid(MAP_W, MAP_H)
+	var elevation := _make_elevation_grid(MAP_W, MAP_H, 0.45)
+	var props := _make_terrain_properties()
+
+	# River with varied flow directions near (30, 30)
+	var river_diverse: Dictionary = {}
+	var flow_diverse: Dictionary = {}
+	var dirs: Array[Vector2i] = [Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1)]
+	for i in 4:
+		var pos := Vector2i(30 + i, 30)
+		river_diverse[pos] = true
+		flow_diverse[pos] = dirs[i]
+		terrain[pos] = "river"
+
+	var score_diverse: float = (
+		gen
+		. _score_candidate(
+			Vector2i(30, 30),
+			terrain,
+			elevation,
+			props,
+			MAP_W,
+			MAP_H,
+			river_diverse,
+			flow_diverse,
+			true,
+		)
+	)
+
+	# River with uniform flow direction near (30, 40)
+	var terrain2 := _make_terrain_grid(MAP_W, MAP_H)
+	var river_uniform: Dictionary = {}
+	var flow_uniform: Dictionary = {}
+	for i in 4:
+		var pos := Vector2i(30 + i, 40)
+		river_uniform[pos] = true
+		flow_uniform[pos] = Vector2i(1, 0)
+		terrain2[pos] = "river"
+
+	var score_uniform: float = (
+		gen
+		. _score_candidate(
+			Vector2i(30, 40),
+			terrain2,
+			elevation,
+			props,
+			MAP_W,
+			MAP_H,
+			river_uniform,
+			flow_uniform,
+			true,
+		)
+	)
+
+	# Diverse directions should score higher (direction diversity component)
+	assert_float(score_diverse).is_greater_equal(score_uniform)
+
+
+func test_river_adjacent_buildable_scored() -> void:
+	var gen := StartingLocationGenerator.new()
+	gen.configure(_make_config())
+	var elevation := _make_elevation_grid(MAP_W, MAP_H, 0.45)
+	var props := _make_terrain_properties()
+
+	# River next to grass (buildable)
+	var terrain1 := _make_terrain_grid(MAP_W, MAP_H)  # all grass
+	var river1: Dictionary = {Vector2i(20, 20): true}
+	var flow1: Dictionary = {Vector2i(20, 20): Vector2i(1, 0)}
+	terrain1[Vector2i(20, 20)] = "river"
+
+	var score_buildable: float = (
+		gen
+		. _score_candidate(
+			Vector2i(20, 20),
+			terrain1,
+			elevation,
+			props,
+			MAP_W,
+			MAP_H,
+			river1,
+			flow1,
+			true,
+		)
+	)
+
+	# River surrounded by mountain (not buildable)
+	var terrain2 := _make_terrain_grid(MAP_W, MAP_H, "mountain")
+	terrain2[Vector2i(20, 20)] = "river"
+	# Need some buildable area for the candidate to exist, put grass far away
+	for y in range(15, 25):
+		for x in range(15, 25):
+			if Vector2i(x, y) != Vector2i(20, 20):
+				terrain2[Vector2i(x, y)] = "grass"
+	# Surround river with mountain
+	for dir: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		terrain2[Vector2i(20, 20) + dir] = "mountain"
+
+	var score_mountain: float = (
+		gen
+		. _score_candidate(
+			Vector2i(20, 20),
+			terrain2,
+			elevation,
+			props,
+			MAP_W,
+			MAP_H,
+			river1,
+			flow1,
+			true,
+		)
+	)
+
+	# River next to grass should score higher for adjacent_buildable
+	assert_float(score_buildable).is_greater(score_mountain)
+
+
+func test_backward_compatible_without_river_args() -> void:
+	var gen := StartingLocationGenerator.new()
+	gen.configure(_make_config())
+	var terrain := _make_terrain_grid(MAP_W, MAP_H)
+	var elevation := _make_elevation_grid(MAP_W, MAP_H, 0.45)
+	var props := _make_terrain_properties()
+
+	# Call without river args (original signature)
+	var result := gen.generate(terrain, elevation, props, MAP_W, MAP_H, SEED)
+	assert_int(result["starting_positions"].size()).is_equal(2)
+	assert_int(result["scores"].size()).is_equal(2)
+
+
+func test_few_rivers_graceful() -> void:
+	var gen := StartingLocationGenerator.new()
+	gen.configure(_make_config())
+	var terrain := _make_terrain_grid(MAP_W, MAP_H)
+	var elevation := _make_elevation_grid(MAP_W, MAP_H, 0.45)
+	var props := _make_terrain_properties()
+
+	# Only 2 river tiles
+	var river_tiles: Dictionary = {Vector2i(32, 32): true, Vector2i(33, 32): true}
+	var flow_dirs: Dictionary = {Vector2i(32, 32): Vector2i(1, 0), Vector2i(33, 32): Vector2i(1, 0)}
+	terrain[Vector2i(32, 32)] = "river"
+	terrain[Vector2i(33, 32)] = "river"
+
+	var result := gen.generate(terrain, elevation, props, MAP_W, MAP_H, SEED, river_tiles, flow_dirs)
+	assert_int(result["starting_positions"].size()).is_greater_equal(1)
+	for score in result["scores"]:
+		assert_float(score as float).is_greater(0.0)

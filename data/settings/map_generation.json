@@ -65,6 +65,13 @@
       "elevation_midrange": 0.25,
       "center_proximity": 0.25
     },
+    "river_scoring_weights": {
+      "river_proximity": 0.15,
+      "river_direction_diversity": 0.05,
+      "river_adjacent_buildable": 0.10
+    },
+    "river_proximity_radius": 12,
+    "max_river_score_variance": 0.3,
     "elevation_ideal_min": 0.3,
     "elevation_ideal_max": 0.6,
     "seed_offset": 5000,
