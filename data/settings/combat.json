@@ -21,5 +21,17 @@
     "ranged": ["military", "civilian", "building"],
     "siege": ["building", "military", "civilian"],
     "civilian": ["military", "civilian", "building"]
+  },
+  "armor_effectiveness": {
+    "melee":  { "none": 1.0, "light": 1.0, "heavy": 0.75, "siege": 1.5 },
+    "ranged": { "none": 1.0, "light": 1.2, "heavy": 0.5,  "siege": 1.0 },
+    "siege":  { "none": 1.0, "light": 1.0, "heavy": 1.0,  "siege": 0.5 }
+  },
+  "garrison": {
+    "damage_reduction": 0.5,
+    "arrow_damage": 5,
+    "arrow_range_tiles": 6,
+    "arrow_interval": 2.0,
+    "ungarrison_radius_tiles": 2
   }
 }

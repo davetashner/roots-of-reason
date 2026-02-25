@@ -28,6 +28,14 @@ static func calculate_damage(
 
 	raw *= bonus
 
+	# Armor effectiveness multiplier
+	var attack_type: String = str(attacker_stats.get("attack_type", "melee"))
+	var armor_type: String = str(defender_stats.get("armor_type", ""))
+	var armor_matrix: Dictionary = combat_config.get("armor_effectiveness", {})
+	var type_row: Dictionary = armor_matrix.get(attack_type, {})
+	var armor_mult: float = float(type_row.get(armor_type, 1.0))
+	raw *= armor_mult
+
 	# Building damage reduction
 	if defender_category == "building":
 		var reduction: float = float(combat_config.get("building_damage_reduction", 0.80))

@@ -658,7 +658,6 @@ func _build_stats_dict() -> Dictionary:
 		"unit_type": unit_type,
 		"attack_type": _get_attack_type(),
 	}
-	# Include bonus_vs and building_damage_ignore_reduction from base stats
 	if stats != null:
 		var raw: Dictionary = stats._base_stats
 		if raw.has("bonus_vs"):
@@ -684,6 +683,8 @@ func _build_target_stats_dict(target: Node2D) -> Dictionary:
 		result["unit_category"] = target.entity_category
 	if "unit_type" in target:
 		result["unit_type"] = target.unit_type
+	if "stats" in target and target.stats and target.stats._base_stats.has("armor_type"):
+		result["armor_type"] = target.stats._base_stats["armor_type"]
 	return result
 
 
