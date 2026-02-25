@@ -243,6 +243,7 @@ func _setup_demo_entities() -> void:
 	_target_detector.register_entity(building)
 	if _population_manager != null:
 		_population_manager.register_building(building, building.owner_id)
+	building.building_destroyed.connect(_on_building_destroyed)
 	_try_attach_production_queue(building)
 	# Mark footprint cells solid
 	var cells := BuildingValidator.get_footprint_cells(bld_pos, Vector2i(3, 3))
@@ -280,6 +281,8 @@ func _setup_fauna() -> void:
 func _on_building_placed(building: Node2D) -> void:
 	if building.has_signal("construction_complete"):
 		building.construction_complete.connect(_on_building_construction_complete)
+	if building.has_signal("building_destroyed"):
+		building.building_destroyed.connect(_on_building_destroyed)
 	var idle_unit := _find_nearest_idle_unit(building.global_position)
 	if idle_unit != null and idle_unit.has_method("assign_build_target"):
 		idle_unit.assign_build_target(building)
@@ -289,6 +292,19 @@ func _on_building_construction_complete(building: Node2D) -> void:
 	if _population_manager != null and "owner_id" in building:
 		_population_manager.register_building(building, building.owner_id)
 	_try_attach_production_queue(building)
+
+
+func _on_building_destroyed(building: Node2D) -> void:
+	if _population_manager != null and "owner_id" in building:
+		_population_manager.unregister_building(building, building.owner_id)
+	if _target_detector != null:
+		_target_detector.unregister_entity(building)
+	# Release footprint cells from pathfinder
+	if _pathfinder != null and "grid_pos" in building and "footprint" in building:
+		var cells := BuildingValidator.get_footprint_cells(building.grid_pos, building.footprint)
+		for cell in cells:
+			_pathfinder.set_cell_solid(cell, false)
+	_update_fog_of_war()
 
 
 func _setup_ai() -> void:
@@ -352,6 +368,7 @@ func _create_ai_town_center() -> Node2D:
 	_target_detector.register_entity(building)
 	if _population_manager != null:
 		_population_manager.register_building(building, building.owner_id)
+	building.building_destroyed.connect(_on_building_destroyed)
 	_try_attach_production_queue(building)
 	# Mark footprint cells solid
 	var cells := BuildingValidator.get_footprint_cells(tc_pos, Vector2i(3, 3))

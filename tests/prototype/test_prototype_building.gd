@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Tests for prototype_building.gd — construction state and build progress.
+## Tests for prototype_building.gd — construction, damage states, and ruins.
 
 const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 
@@ -113,3 +113,91 @@ func test_multiple_increments_accumulate() -> void:
 	assert_bool(b.under_construction).is_true()
 	b.apply_build_work(0.1)
 	assert_bool(b.under_construction).is_false()
+
+
+# -- take_damage / damage states --
+
+
+func test_take_damage_reduces_hp() -> void:
+	var b := _create_building(false)
+	b.take_damage(100, null)
+	assert_int(b.hp).is_equal(450)
+
+
+func test_take_damage_clamps_to_zero() -> void:
+	var b := _create_building(false)
+	b.take_damage(9999, null)
+	assert_int(b.hp).is_equal(0)
+
+
+func test_take_damage_emits_building_destroyed_at_zero() -> void:
+	var b := _create_building(false)
+	var monitor := monitor_signals(b)
+	b.take_damage(550, null)
+	await assert_signal(monitor).is_emitted("building_destroyed", [b])
+
+
+func test_get_damage_state_intact() -> void:
+	var b := _create_building(false)
+	# Full HP — above 66%
+	assert_str(b.get_damage_state()).is_equal("intact")
+
+
+func test_get_damage_state_damaged() -> void:
+	var b := _create_building(false)
+	# Set to 50% HP — between 33% and 66%
+	b.hp = 275
+	assert_str(b.get_damage_state()).is_equal("damaged")
+
+
+func test_get_damage_state_critical() -> void:
+	var b := _create_building(false)
+	# Set to 10% HP — below 33%
+	b.hp = 55
+	assert_str(b.get_damage_state()).is_equal("critical")
+
+
+# -- Ruins --
+
+
+func test_destroyed_becomes_ruins() -> void:
+	var b := _create_building(false)
+	b.take_damage(550, null)
+	assert_bool(b._is_ruins).is_true()
+
+
+func test_ruins_category_is_ruins() -> void:
+	var b := _create_building(false)
+	b.take_damage(550, null)
+	assert_str(b.get_entity_category()).is_equal("ruins")
+
+
+# -- save_state / load_state with ruins --
+
+
+func test_save_state_includes_ruins_fields() -> void:
+	var b := _create_building(false)
+	b.take_damage(550, null)
+	var state: Dictionary = b.save_state()
+	assert_bool(state["is_ruins"]).is_true()
+	assert_float(float(state["ruins_timer"])).is_equal_approx(0.0, 0.001)
+
+
+func test_backward_compat_load_no_ruins_fields() -> void:
+	var b := _create_building(false)
+	# Old save data without ruins fields
+	var old_state := {
+		"building_name": "house",
+		"grid_pos": [5, 5],
+		"owner_id": 0,
+		"hp": 550,
+		"max_hp": 550,
+		"under_construction": false,
+		"build_progress": 1.0,
+		"build_time": 25.0,
+		"is_drop_off": false,
+		"drop_off_types": [],
+	}
+	b.load_state(old_state)
+	assert_bool(b._is_ruins).is_false()
+	assert_float(b._ruins_timer).is_equal_approx(0.0, 0.001)

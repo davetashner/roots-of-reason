@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 
 const InfoPanelScript := preload("res://scripts/ui/info_panel.gd")
 const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
+const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 
 
 func _create_panel() -> PanelContainer:
@@ -124,3 +125,40 @@ func test_show_resource_node_no_regen_text_for_non_regen() -> void:
 	var node := _create_resource_node("gold_mine", "gold", 800, false)
 	panel.show_resource_node(node)
 	assert_str(panel._stats_label.text).is_equal("Gold")
+
+
+# -- Building helpers --
+
+
+func _create_building(hp_val: int = 550, max_hp_val: int = 550) -> Node2D:
+	var b := Node2D.new()
+	b.set_script(BuildingScript)
+	b.building_name = "house"
+	b.max_hp = max_hp_val
+	b.hp = hp_val
+	b.under_construction = false
+	b.build_progress = 1.0
+	b.footprint = Vector2i(2, 2)
+	b.grid_pos = Vector2i(5, 5)
+	b.owner_id = 0
+	add_child(b)
+	auto_free(b)
+	return b
+
+
+# -- show_building damage state --
+
+
+func test_show_building_displays_damage_state() -> void:
+	var panel := _create_panel()
+	var b := _create_building(275, 550)  # 50% HP — damaged
+	panel.show_building(b)
+	assert_str(panel._stats_label.text).is_equal("Damaged")
+
+
+func test_show_building_ruins_label() -> void:
+	var panel := _create_panel()
+	var b := _create_building(550, 550)
+	b.take_damage(550, null)  # Destroy it
+	panel.show_building(b)
+	assert_str(panel._name_label.text).is_equal("Ruins")
