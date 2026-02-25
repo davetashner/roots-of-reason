@@ -110,15 +110,24 @@
         "min_spacing": 2,
         "noise_weight": 0.5,
         "noise_seed_offset": 4300
+      },
+      "fish": {
+        "density_per_1000_tiles": 4,
+        "terrain_affinity": { "water": 1.0, "river": 0.6 },
+        "forbidden_terrain": ["mountain", "stone", "forest", "grass", "dirt", "sand", "desert"],
+        "min_spacing": 5,
+        "noise_weight": 0.4,
+        "noise_seed_offset": 4400
       }
     },
-    "placement_order": ["gold_mine", "stone_mine", "berry_bush", "tree"],
+    "placement_order": ["gold_mine", "stone_mine", "berry_bush", "tree", "fish"],
     "starting_zone_radius": 15,
     "starting_zone_guarantees": {
       "gold_mine": 1,
       "stone_mine": 2,
       "berry_bush": 2,
-      "tree": 4
+      "tree": 4,
+      "fish": 0
     }
   },
   "fauna_generation": {

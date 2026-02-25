@@ -1,15 +1,19 @@
 extends PanelContainer
 ## Bottom-center info panel showing selected unit/building details.
 ## Polls InputHandler selection each frame; updates HP in real-time.
+## When nothing is selected, shows resource node info on hover.
 
 const PANEL_WIDTH: float = 400.0
 const PANEL_HEIGHT: float = 120.0
 const PORTRAIT_SIZE: float = 64.0
 
 var _input_handler: Node = null
+var _target_detector: Node = null
 var _tracked_entity: Node = null
 var _tracked_entities: Array = []
 var _is_multi: bool = false
+var _hovered_entity: Node = null
+var _is_hovering_resource: bool = false
 
 # Config loaded from data/settings/info_panel.json
 var _hp_green_threshold: float = 0.6
@@ -126,14 +130,16 @@ func _build_ui() -> void:
 	vbox.add_child(_stats_label)
 
 
-func setup(input_handler: Node) -> void:
+func setup(input_handler: Node, target_detector: Node = null) -> void:
 	_input_handler = input_handler
+	_target_detector = target_detector
 
 
 func show_unit(unit: Node2D) -> void:
 	_tracked_entity = unit
 	_tracked_entities.clear()
 	_is_multi = false
+	_clear_hover()
 	visible = true
 	# Portrait color
 	if "unit_color" in unit:
@@ -156,6 +162,7 @@ func show_building(building: Node2D) -> void:
 	_tracked_entity = building
 	_tracked_entities.clear()
 	_is_multi = false
+	_clear_hover()
 	visible = true
 	# Portrait color
 	if building.owner_id == 0:
@@ -178,6 +185,7 @@ func show_multi_select(units: Array) -> void:
 	_tracked_entity = null
 	_tracked_entities = units.duplicate()
 	_is_multi = true
+	_clear_hover()
 	visible = true
 	# Portrait: use first unit's color
 	if not units.is_empty() and "unit_color" in units[0]:
@@ -192,11 +200,44 @@ func show_multi_select(units: Array) -> void:
 	_update_multi_hp(units)
 
 
+func show_resource_node(node: Node2D) -> void:
+	_hovered_entity = node
+	_is_hovering_resource = true
+	visible = true
+	# Portrait color from node
+	if "_node_color" in node:
+		_portrait.color = node._node_color
+	else:
+		_portrait.color = Color(0.5, 0.5, 0.5)
+	# Name — capitalize and clean underscores
+	var display_name: String = str(node.resource_name).replace("_", " ").capitalize()
+	_name_label.text = display_name
+	# Regen status text
+	var regen_text := ""
+	if "regenerates" in node and node.regenerates:
+		if "_is_regrowing" in node and node._is_regrowing:
+			regen_text = " — Regrowing..."
+		else:
+			regen_text = " — Regenerates"
+	var type_label: String = str(node.resource_type).capitalize()
+	_stats_label.text = type_label + regen_text
+	# Yield bar
+	var cur: int = int(node.current_yield)
+	var tot: int = int(node.total_yield)
+	_set_yield_bar(float(cur) / float(tot) if tot > 0 else 0.0, cur, tot)
+
+
 func clear() -> void:
 	_tracked_entity = null
 	_tracked_entities.clear()
 	_is_multi = false
+	_clear_hover()
 	visible = false
+
+
+func _clear_hover() -> void:
+	_hovered_entity = null
+	_is_hovering_resource = false
 
 
 func _get_hp_color(ratio: float) -> Color:
@@ -207,15 +248,27 @@ func _get_hp_color(ratio: float) -> Color:
 	return Color(0.9, 0.2, 0.2, 0.9)
 
 
+func _get_yield_color(ratio: float) -> Color:
+	if ratio > 0.6:
+		return Color(0.2, 0.7, 0.3, 0.9)
+	if ratio > 0.3:
+		return Color(0.6, 0.5, 0.2, 0.9)
+	return Color(0.5, 0.3, 0.1, 0.9)
+
+
 func _process(_delta: float) -> void:
 	if _input_handler == null:
 		return
 	# Poll selection from InputHandler
 	var selected: Array[Node] = _input_handler._get_selected_units()
 	if selected.is_empty():
-		if visible:
-			clear()
+		if not _is_hovering_resource:
+			_check_resource_hover()
+		elif _is_hovering_resource:
+			_check_resource_hover()
 		return
+	# Clear hover when selection exists
+	_clear_hover()
 	# Determine what to show
 	if selected.size() == 1:
 		var entity: Node = selected[0]
@@ -232,6 +285,48 @@ func _process(_delta: float) -> void:
 			show_multi_select(selected)
 		else:
 			_update()
+
+
+func _check_resource_hover() -> void:
+	if _target_detector == null:
+		if visible and not _is_hovering_resource:
+			clear()
+		return
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	var mouse_pos := viewport.get_mouse_position()
+	# Convert screen position to world position using camera transform
+	var canvas_transform := viewport.get_canvas_transform()
+	var world_pos := canvas_transform.affine_inverse() * mouse_pos
+	var found: Node = _target_detector.detect(world_pos)
+	if found != null and "entity_category" in found and found.entity_category == "resource_node":
+		if found != _hovered_entity:
+			show_resource_node(found as Node2D)
+		else:
+			_update_resource_hover()
+	else:
+		if _is_hovering_resource or visible:
+			clear()
+
+
+func _update_resource_hover() -> void:
+	if _hovered_entity == null or not is_instance_valid(_hovered_entity):
+		clear()
+		return
+	var node: Node2D = _hovered_entity as Node2D
+	var cur: int = int(node.current_yield)
+	var tot: int = int(node.total_yield)
+	_set_yield_bar(float(cur) / float(tot) if tot > 0 else 0.0, cur, tot)
+	# Update regen status
+	var regen_text := ""
+	if "regenerates" in node and node.regenerates:
+		if "_is_regrowing" in node and node._is_regrowing:
+			regen_text = " — Regrowing..."
+		else:
+			regen_text = " — Regenerates"
+	var type_label: String = str(node.resource_type).capitalize()
+	_stats_label.text = type_label + regen_text
 
 
 func _update() -> void:
@@ -294,6 +389,16 @@ func _set_hp_bar(ratio: float, current: int, maximum: int) -> void:
 	if fill_style != null:
 		fill_style.bg_color = _get_hp_color(ratio)
 	_hp_label.text = "HP: %d/%d" % [current, maximum]
+
+
+func _set_yield_bar(ratio: float, current: int, maximum: int) -> void:
+	ratio = clampf(ratio, 0.0, 1.0)
+	var bar_width: float = _hp_bar_bg.custom_minimum_size.x
+	_hp_bar_fill.size = Vector2(bar_width * ratio, _hp_bar_fill.size.y)
+	var fill_style: StyleBoxFlat = _hp_bar_fill.get_theme_stylebox("panel") as StyleBoxFlat
+	if fill_style != null:
+		fill_style.bg_color = _get_yield_color(ratio)
+	_hp_label.text = "Yield: %d/%d" % [current, maximum]
 
 
 func _get_unit_stats(unit: Node2D) -> Dictionary:

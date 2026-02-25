@@ -1,5 +1,8 @@
 {
   "resource_type": "wood",
   "total_yield": 200,
-  "color": [0.2, 0.6, 0.1]
+  "color": [0.2, 0.6, 0.1],
+  "regenerates": true,
+  "regen_rate": 0.5,
+  "regen_delay": 60.0
 }

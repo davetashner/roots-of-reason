@@ -1,5 +1,6 @@
 {
   "resource_type": "food",
   "total_yield": 150,
-  "color": [0.8, 0.2, 0.4]
+  "color": [0.8, 0.2, 0.4],
+  "regenerates": false
 }
