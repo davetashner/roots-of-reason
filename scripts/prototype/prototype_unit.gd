@@ -61,6 +61,7 @@ var _patrol_heading_to_b: bool = true
 var _leash_origin: Vector2 = Vector2.ZERO
 var _combat_config: Dictionary = {}
 var _pending_combat_target_name: String = ""
+var _visibility_manager: Node = null
 
 
 func _ready() -> void:
@@ -592,6 +593,11 @@ func _scan_for_targets() -> Node2D:
 		var dist: float = position.distance_to(child.global_position)
 		if dist > scan_radius:
 			continue
+		# Skip enemies on tiles not visible to this unit's owner
+		if _visibility_manager != null and "owner_id" in child and child.owner_id != owner_id:
+			var grid_pos := _screen_to_grid(child.global_position)
+			if not _visibility_manager.is_visible(owner_id, grid_pos):
+				continue
 		candidates.append(child)
 	if candidates.is_empty():
 		return null
@@ -788,6 +794,10 @@ func _get_attack_range() -> int:
 	return 0
 
 
+func _screen_to_grid(p: Vector2) -> Vector2i:
+	return Vector2i(roundi(p.x / 128.0 + p.y / 64.0), roundi(p.y / 64.0 - p.x / 128.0))
+
+
 func _get_min_range() -> int:
 	if stats != null and stats._base_stats.has("min_range"):
 		return int(stats._base_stats["min_range"])
@@ -804,24 +814,18 @@ func _get_stance_config() -> Dictionary:
 
 
 func _stance_to_string(s: Stance) -> String:
-	match s:
-		Stance.AGGRESSIVE:
-			return "aggressive"
-		Stance.DEFENSIVE:
-			return "defensive"
-		Stance.STAND_GROUND:
-			return "stand_ground"
+	if s == Stance.DEFENSIVE:
+		return "defensive"
+	if s == Stance.STAND_GROUND:
+		return "stand_ground"
 	return "aggressive"
 
 
 func _stance_from_string(s: String) -> Stance:
-	match s:
-		"aggressive":
-			return Stance.AGGRESSIVE
-		"defensive":
-			return Stance.DEFENSIVE
-		"stand_ground":
-			return Stance.STAND_GROUND
+	if s == "defensive":
+		return Stance.DEFENSIVE
+	if s == "stand_ground":
+		return Stance.STAND_GROUND
 	return Stance.AGGRESSIVE
 
 

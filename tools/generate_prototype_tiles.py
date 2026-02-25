@@ -44,6 +44,16 @@ def generate_tile(name: str, fill: str, border: str, out_dir: Path) -> None:
     print(f"  Created {path}")
 
 
+def generate_fog_tile(name: str, alpha: int, out_dir: Path) -> None:
+    """Generate a fog tile — solid black diamond at given alpha (0-255)."""
+    img = Image.new("RGBA", (TILE_W, TILE_H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.polygon(DIAMOND, fill=(0, 0, 0, alpha))
+    path = out_dir / f"{name}.png"
+    img.save(path)
+    print(f"  Created {path}")
+
+
 # Building definitions: name -> (fill_color, border_color)
 BUILDINGS = {
     "river_dock": ("#6B8E9B", "#5A7E8B"),
@@ -120,6 +130,9 @@ def main() -> None:
     print("Generating prototype isometric tiles...")
     for name, (fill, border) in TERRAINS.items():
         generate_tile(name, fill, border, out_dir)
+    # Fog of war tiles
+    generate_fog_tile("fog_black", 255, out_dir)
+    generate_fog_tile("fog_dim", 128, out_dir)
 
     # Generate building placeholder sprites
     building_dir = project_root / "assets" / "sprites" / "buildings" / "placeholder"
