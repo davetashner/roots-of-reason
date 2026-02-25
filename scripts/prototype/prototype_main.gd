@@ -9,17 +9,6 @@ const AIMilitaryScript := preload("res://scripts/ai/ai_military.gd")
 const AITechScript := preload("res://scripts/ai/ai_tech.gd")
 const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 
-const UNIT_POSITIONS: Array[Vector2i] = [
-	Vector2i(3, 3),
-	Vector2i(5, 2),
-	Vector2i(4, 6),
-	Vector2i(7, 4),
-	Vector2i(10, 10),
-	Vector2i(8, 12),
-	Vector2i(15, 8),
-	Vector2i(12, 14),
-]
-
 var _camera: Camera2D
 var _input_handler: Node
 var _map_node: Node
@@ -137,11 +126,15 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _setup_units() -> void:
-	for i in UNIT_POSITIONS.size():
+	var offsets := _get_villager_offsets()
+	var tc_pos := _get_player_start_position()
+	for i in offsets.size():
 		var unit := Node2D.new()
 		unit.name = "Unit_%d" % i
 		unit.set_script(UnitScript)
-		unit.position = IsoUtils.grid_to_screen(Vector2(UNIT_POSITIONS[i]))
+		var offset: Vector2i = offsets[i]
+		var spawn_pos: Vector2i = tc_pos + offset
+		unit.position = IsoUtils.grid_to_screen(Vector2(spawn_pos))
 		unit.unit_type = "villager"
 		add_child(unit)
 		unit._scene_root = self
@@ -176,7 +169,7 @@ func _setup_demo_entities() -> void:
 	var building := Node2D.new()
 	building.name = "Building_0"
 	building.set_script(BuildingScript)
-	var bld_pos := Vector2i(4, 4)
+	var bld_pos := _get_player_start_position()
 	building.position = IsoUtils.grid_to_screen(Vector2(bld_pos))
 	building.owner_id = 0
 	building.building_name = "town_center"
@@ -254,8 +247,7 @@ func _load_ai_tier_config(difficulty: String) -> Dictionary:
 
 
 func _create_ai_town_center() -> Node2D:
-	var map_size: int = _map_node.get_map_size()
-	var tc_pos := Vector2i(map_size - 7, map_size - 7)
+	var tc_pos := _get_ai_start_position()
 	var building := Node2D.new()
 	building.name = "AI_TownCenter"
 	building.set_script(BuildingScript)
@@ -282,7 +274,7 @@ func _create_ai_town_center() -> Node2D:
 
 
 func _create_ai_starting_villagers(tc: Node2D, count: int) -> void:
-	var offsets: Array[Vector2i] = [Vector2i(-1, 0), Vector2i(0, -1), Vector2i(-1, -1)]
+	var offsets := _get_villager_offsets()
 	for i in count:
 		var unit := Node2D.new()
 		unit.name = "AIVillager_%d" % i
@@ -450,3 +442,29 @@ func _on_tech_researched_spillover(player_id: int, tech_id: String, _effects: Di
 func _on_population_changed(player_id: int, current: int, cap: int) -> void:
 	if player_id == 0 and _resource_bar != null:
 		_resource_bar.update_population(current, cap)
+
+
+func _get_player_start_position() -> Vector2i:
+	var positions: Array = _map_node.get_starting_positions()
+	if positions.size() >= 1:
+		return positions[0] as Vector2i
+	return Vector2i(4, 4)
+
+
+func _get_ai_start_position() -> Vector2i:
+	var positions: Array = _map_node.get_starting_positions()
+	if positions.size() >= 2:
+		return positions[1] as Vector2i
+	var map_size: int = _map_node.get_map_size()
+	return Vector2i(map_size - 7, map_size - 7)
+
+
+func _get_villager_offsets() -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	var map_gen_cfg: Dictionary = DataLoader.load_json("res://data/settings/map_generation.json")
+	var start_cfg: Dictionary = map_gen_cfg.get("starting_locations", {})
+	var raw_offsets: Array = start_cfg.get("villager_offsets", [[-1, 0], [0, -1], [-1, -1], [1, -1], [-1, 1]])
+	for offset in raw_offsets:
+		if offset is Array and offset.size() == 2:
+			result.append(Vector2i(int(offset[0]), int(offset[1])))
+	return result

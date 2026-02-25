@@ -50,6 +50,26 @@
     "min_source_spacing": 15,
     "seed_offset": 2000
   },
+  "starting_locations": {
+    "player_count": 2,
+    "min_distance": 30,
+    "map_margin": 8,
+    "candidate_grid_step": 4,
+    "tc_footprint": [3, 3],
+    "reachability_radius": 10,
+    "min_reachable_tiles": 120,
+    "scoring_radius": 12,
+    "scoring_weights": {
+      "buildable_ratio": 0.3,
+      "terrain_diversity": 0.2,
+      "elevation_midrange": 0.25,
+      "center_proximity": 0.25
+    },
+    "elevation_ideal_min": 0.3,
+    "elevation_ideal_max": 0.6,
+    "seed_offset": 5000,
+    "villager_offsets": [[-1, 0], [0, -1], [-1, -1], [1, -1], [-1, 1]]
+  },
   "resource_generation": {
     "resources": {
       "gold_mine": {
