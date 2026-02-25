@@ -1,0 +1,9 @@
+{
+  "tiers": {
+    "easy": { "gather_rate_multiplier": 0.7, "starting_villagers": 3, "personality": "economic" },
+    "normal": { "gather_rate_multiplier": 1.0, "starting_villagers": 3, "personality": "balanced" },
+    "hard": { "gather_rate_multiplier": 1.2, "starting_villagers": 4, "personality": "balanced" },
+    "expert": { "gather_rate_multiplier": 1.5, "starting_villagers": 5, "personality": "aggressive" }
+  },
+  "default": "normal"
+}

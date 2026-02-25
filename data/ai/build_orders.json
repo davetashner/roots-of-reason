@@ -45,5 +45,22 @@
       "0": { "food": 0.50, "wood": 0.30, "stone": 0.05, "gold": 0.15 },
       "1": { "food": 0.35, "wood": 0.25, "stone": 0.15, "gold": 0.25 }
     }
+  },
+  "expert": {
+    "steps": [
+      { "action": "train", "unit": "villager", "count": 6 },
+      { "action": "build", "building": "house" },
+      { "action": "train", "unit": "villager", "count": 6 },
+      { "action": "build", "building": "house" },
+      { "action": "advance_age" },
+      { "action": "train", "unit": "villager", "count": 8 },
+      { "action": "build", "building": "barracks" },
+      { "action": "build", "building": "house" },
+      { "action": "build", "building": "barracks" }
+    ],
+    "villager_allocation": {
+      "0": { "food": 0.50, "wood": 0.30, "stone": 0.05, "gold": 0.15 },
+      "1": { "food": 0.30, "wood": 0.25, "stone": 0.15, "gold": 0.30 }
+    }
   }
 }

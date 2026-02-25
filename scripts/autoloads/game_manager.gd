@@ -15,6 +15,7 @@ var is_paused: bool = false
 var game_speed: float = 1.0
 var game_time: float = 0.0
 var current_age: int = 0  # 0=Stone, 1=Bronze, ..., 6=Singularity
+var ai_difficulty: String = "normal"
 
 var _speed_steps: Array = [1.0, 1.5, 2.0, 3.0]
 var _speed_index: int = 0
@@ -142,6 +143,7 @@ func save_state() -> Dictionary:
 		"speed_index": _speed_index,
 		"is_paused": is_paused,
 		"current_age": current_age,
+		"ai_difficulty": ai_difficulty,
 	}
 
 
@@ -155,3 +157,4 @@ func load_state(data: Dictionary) -> void:
 		push_warning("GameManager: Invalid current_age %d in save data, defaulting to 0" % age)
 		age = 0
 	current_age = age
+	ai_difficulty = str(data.get("ai_difficulty", "normal"))
