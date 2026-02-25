@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Tests for prototype_resource_node.gd — yield math, depletion, save/load.
+## Tests for prototype_resource_node.gd — yield math, depletion, regen, save/load.
 
 const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
 
@@ -13,6 +13,15 @@ func _create_node(res_type: String = "food", yield_amt: int = 100) -> Node2D:
 	n.current_yield = yield_amt
 	add_child(n)
 	auto_free(n)
+	return n
+
+
+func _create_regen_node(yield_amt: int = 100, rate: float = 1.0, delay: float = 0.0) -> Node2D:
+	var n := _create_node("wood", yield_amt)
+	n.resource_name = "tree"
+	n.regenerates = true
+	n.regen_rate = rate
+	n.regen_delay = delay
 	return n
 
 
@@ -61,6 +70,95 @@ func test_apply_gather_work_truncates_float() -> void:
 	assert_int(n.current_yield).is_equal(98)
 
 
+# -- Regen property defaults --
+
+
+func test_regenerates_defaults_false() -> void:
+	var n := _create_node("food", 100)
+	assert_bool(n.regenerates).is_false()
+	assert_float(n.regen_rate).is_equal(0.0)
+	assert_float(n.regen_delay).is_equal(0.0)
+
+
+# -- Regen signal behavior --
+
+
+func test_regen_node_emits_regen_started_not_depleted() -> void:
+	var n := _create_regen_node(5)
+	var monitor := monitor_signals(n)
+	n.apply_gather_work(5.0)
+	await assert_signal(monitor).is_emitted("regen_started", [n])
+	await assert_signal(monitor).is_not_emitted("depleted")
+
+
+func test_non_regen_node_emits_depleted_not_regen_started() -> void:
+	var n := _create_node("food", 5)
+	var monitor := monitor_signals(n)
+	n.apply_gather_work(5.0)
+	await assert_signal(monitor).is_emitted("depleted", [n])
+	await assert_signal(monitor).is_not_emitted("regen_started")
+
+
+func test_regen_node_sets_is_regrowing() -> void:
+	var n := _create_regen_node(5)
+	n.apply_gather_work(5.0)
+	assert_bool(n._is_regrowing).is_true()
+	assert_int(n.current_yield).is_equal(0)
+
+
+# -- Regen delay --
+
+
+func test_regen_delay_prevents_early_restore() -> void:
+	var n := _create_regen_node(5, 10.0, 5.0)
+	n.apply_gather_work(5.0)
+	assert_int(n.current_yield).is_equal(0)
+	# Process with small delta — should still be in delay
+	n._process(1.0)
+	assert_int(n.current_yield).is_equal(0)
+	assert_bool(n._is_regrowing).is_true()
+
+
+func test_regen_starts_after_delay() -> void:
+	var n := _create_regen_node(5, 10.0, 2.0)
+	n.apply_gather_work(5.0)
+	# Process past the delay
+	n._process(3.0)
+	# Now yield should have been restored (10.0 rate * 1.0 remaining delta = 10)
+	assert_int(n.current_yield).is_greater(0)
+
+
+# -- Regen accumulator --
+
+
+func test_regen_accumulator_restores_yield() -> void:
+	var n := _create_regen_node(100, 2.0, 0.0)
+	n.apply_gather_work(100.0)
+	# Process 1 second — should restore 2 yield
+	n._process(1.0)
+	assert_int(n.current_yield).is_equal(2)
+
+
+func test_regen_yield_caps_at_total() -> void:
+	var n := _create_regen_node(10, 100.0, 0.0)
+	n.current_yield = 8
+	n.regenerates = true
+	n._is_regrowing = false
+	# Process — should cap at total_yield
+	n._process(1.0)
+	assert_int(n.current_yield).is_equal(10)
+
+
+func test_is_regrowing_clears_when_yield_positive() -> void:
+	var n := _create_regen_node(100, 5.0, 0.0)
+	n.apply_gather_work(100.0)
+	assert_bool(n._is_regrowing).is_true()
+	# Process enough to get yield > 0
+	n._process(1.0)
+	assert_int(n.current_yield).is_greater(0)
+	assert_bool(n._is_regrowing).is_false()
+
+
 # -- save_state / load_state --
 
 
@@ -91,3 +189,44 @@ func test_save_load_round_trip() -> void:
 	assert_int(n2.current_yield).is_equal(150)
 	assert_float(n2.position.x).is_equal_approx(30.0, 0.01)
 	assert_float(n2.position.y).is_equal_approx(40.0, 0.01)
+
+
+func test_save_state_includes_regen_fields() -> void:
+	var n := _create_regen_node(100, 2.0, 5.0)
+	n.apply_gather_work(100.0)
+	n._regen_delay_timer = 3.0
+	n._regen_accum = 0.5
+	var state: Dictionary = n.save_state()
+	assert_bool(bool(state["is_regrowing"])).is_true()
+	assert_float(float(state["regen_delay_timer"])).is_equal_approx(3.0, 0.01)
+	assert_float(float(state["regen_accum"])).is_equal_approx(0.5, 0.01)
+
+
+func test_load_state_restores_regen_fields() -> void:
+	var n := _create_regen_node(100)
+	n.apply_gather_work(100.0)
+	n._regen_delay_timer = 2.5
+	n._regen_accum = 0.7
+	var state: Dictionary = n.save_state()
+	var n2 := _create_node()
+	n2.load_state(state)
+	assert_bool(n2._is_regrowing).is_true()
+	assert_float(n2._regen_delay_timer).is_equal_approx(2.5, 0.01)
+	assert_float(n2._regen_accum).is_equal_approx(0.7, 0.01)
+
+
+func test_backward_compat_load_no_regen_fields() -> void:
+	# Simulate old save data without regen fields
+	var state := {
+		"resource_name": "berry_bush",
+		"resource_type": "food",
+		"total_yield": 100,
+		"current_yield": 50,
+		"position_x": 10.0,
+		"position_y": 20.0,
+	}
+	var n := _create_node()
+	n.load_state(state)
+	assert_bool(n._is_regrowing).is_false()
+	assert_float(n._regen_delay_timer).is_equal(0.0)
+	assert_float(n._regen_accum).is_equal(0.0)

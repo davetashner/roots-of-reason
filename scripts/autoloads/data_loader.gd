@@ -1,7 +1,7 @@
 extends Node
 ## Loads and caches game data from JSON files in data/.
 
-const RESOURCE_NAMES := ["berry_bush", "tree", "stone_mine", "gold_mine"]
+const RESOURCE_NAMES := ["berry_bush", "tree", "stone_mine", "gold_mine", "fish"]
 
 var _cache: Dictionary = {}
 var _tech_index: Dictionary = {}

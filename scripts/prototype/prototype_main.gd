@@ -222,6 +222,7 @@ func _setup_demo_entities() -> void:
 			add_child(res_node)
 			res_node.setup(res_name)
 			res_node.depleted.connect(_on_resource_depleted)
+			res_node.regen_started.connect(_on_resource_regen_started)
 			_target_detector.register_entity(res_node)
 			res_index += 1
 	# Own building (blue, 3x3 town center) — fully built
@@ -449,6 +450,10 @@ func _on_resource_depleted(node: Node2D) -> void:
 		_target_detector.unregister_entity(node)
 
 
+func _on_resource_regen_started(_node: Node2D) -> void:
+	pass
+
+
 func _setup_tech() -> void:
 	_tech_manager = Node.new()
 	_tech_manager.name = "TechManager"
@@ -481,7 +486,7 @@ func _setup_hud() -> void:
 	_info_panel.name = "InfoPanelWidget"
 	_info_panel.set_script(load("res://scripts/ui/info_panel.gd"))
 	info_panel_layer.add_child(_info_panel)
-	_info_panel.setup(_input_handler)
+	_info_panel.setup(_input_handler, _target_detector)
 	# Command panel
 	var cmd_panel_layer := CanvasLayer.new()
 	cmd_panel_layer.name = "CommandPanel"

@@ -1,5 +1,6 @@
 {
   "resource_type": "gold",
   "total_yield": 800,
-  "color": [0.9, 0.8, 0.1]
+  "color": [0.9, 0.8, 0.1],
+  "regenerates": false
 }

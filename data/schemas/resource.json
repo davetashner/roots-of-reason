@@ -12,7 +12,10 @@
       "items": { "type": "number" },
       "minItems": 3,
       "maxItems": 3
-    }
+    },
+    "regenerates": { "type": "boolean" },
+    "regen_rate": { "type": "number", "minimum": 0 },
+    "regen_delay": { "type": "number", "minimum": 0 }
   },
   "additionalProperties": false
 }
