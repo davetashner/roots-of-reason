@@ -225,9 +225,18 @@ func _generate_map() -> void:
 	# 7. Select starting locations
 	var start_gen := StartingLocationGenerator.new()
 	start_gen.configure(_map_gen_config.get("starting_locations", {}))
-	var start_result: Dictionary = start_gen.generate(
-		_tile_grid, _elevation_grid, _terrain_properties, _map_width, _map_height, _seed_value,
-		_river_tiles, _flow_directions,
+	var start_result: Dictionary = (
+		start_gen
+		. generate(
+			_tile_grid,
+			_elevation_grid,
+			_terrain_properties,
+			_map_width,
+			_map_height,
+			_seed_value,
+			_river_tiles,
+			_flow_directions,
+		)
 	)
 	_starting_positions = []
 	for pos in start_result.get("starting_positions", []):
