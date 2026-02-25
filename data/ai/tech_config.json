@@ -1,0 +1,34 @@
+{
+  "easy": { "tick_interval": 5.0, "max_queue_size": 1 },
+  "normal": { "tick_interval": 3.0, "max_queue_size": 2 },
+  "hard": { "tick_interval": 2.0, "max_queue_size": 3 },
+  "personalities": {
+    "balanced": {
+      "0": ["stone_tools", "fire_mastery", "animal_husbandry", "basket_weaving"],
+      "1": ["bronze_working", "writing", "pottery", "irrigation", "masonry", "sailing"],
+      "2": ["iron_working", "philosophy", "mathematics", "currency", "engineering", "code_of_laws", "trireme", "herbalism"],
+      "3": ["steel_working", "feudalism", "printing_press", "guilds", "gunpowder", "castle_architecture", "compass", "banking", "shipbuilding", "crop_rotation"],
+      "4": ["steam_power", "rifling", "electricity", "chemistry", "railroad", "steel_production", "assembly_line", "sanitation", "ballistics", "civil_service", "dynamite", "pasteurization", "vaccines"],
+      "5": ["computing_theory", "transistors", "atomic_theory", "statistics", "machine_learning", "semiconductor_fab", "nuclear_fission", "rocketry", "internet", "satellite", "radar", "guided_missiles", "antibiotics", "genetics", "cybersecurity"],
+      "6": ["neural_networks", "big_data", "parallel_computing", "deep_learning", "robotics", "quantum_computing", "transformer_architecture", "alignment_research"]
+    },
+    "economic": {
+      "0": ["stone_tools", "fire_mastery", "basket_weaving", "animal_husbandry"],
+      "1": ["writing", "pottery", "bronze_working", "irrigation", "sailing", "masonry"],
+      "2": ["philosophy", "mathematics", "currency", "code_of_laws", "iron_working", "engineering", "herbalism", "trireme"],
+      "3": ["printing_press", "guilds", "crop_rotation", "feudalism", "banking", "compass", "shipbuilding", "steel_working", "castle_architecture", "gunpowder"],
+      "4": ["steam_power", "electricity", "railroad", "assembly_line", "chemistry", "sanitation", "civil_service", "steel_production", "pasteurization", "rifling", "ballistics", "dynamite", "vaccines"],
+      "5": ["computing_theory", "transistors", "statistics", "semiconductor_fab", "atomic_theory", "machine_learning", "internet", "nuclear_fission", "rocketry", "satellite", "antibiotics", "genetics", "cybersecurity", "radar", "guided_missiles"],
+      "6": ["big_data", "neural_networks", "parallel_computing", "deep_learning", "robotics", "quantum_computing", "transformer_architecture", "alignment_research"]
+    },
+    "aggressive": {
+      "0": ["stone_tools", "fire_mastery", "animal_husbandry", "basket_weaving"],
+      "1": ["bronze_working", "writing", "masonry", "pottery", "sailing", "irrigation"],
+      "2": ["iron_working", "mathematics", "engineering", "currency", "philosophy", "code_of_laws", "trireme", "herbalism"],
+      "3": ["gunpowder", "steel_working", "castle_architecture", "compass", "feudalism", "printing_press", "guilds", "banking", "shipbuilding", "crop_rotation"],
+      "4": ["rifling", "steam_power", "ballistics", "electricity", "dynamite", "chemistry", "steel_production", "assembly_line", "railroad", "sanitation", "civil_service", "pasteurization", "vaccines"],
+      "5": ["computing_theory", "transistors", "rocketry", "guided_missiles", "radar", "atomic_theory", "semiconductor_fab", "machine_learning", "statistics", "satellite", "nuclear_fission", "internet", "antibiotics", "genetics", "cybersecurity"],
+      "6": ["parallel_computing", "neural_networks", "big_data", "deep_learning", "robotics", "quantum_computing", "transformer_architecture", "alignment_research"]
+    }
+  }
+}
