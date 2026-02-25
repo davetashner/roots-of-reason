@@ -1,0 +1,47 @@
+{
+  "easy": {
+    "tick_interval": 4.0,
+    "army_attack_threshold": 12,
+    "retreat_hp_ratio": 0.20,
+    "min_attack_game_time": 600.0,
+    "attack_cooldown": 120.0,
+    "scout_scan_radius": 30,
+    "default_composition": { "infantry": 0.50, "archer": 0.30, "cavalry": 0.20 },
+    "counter_weights": { "infantry": "cavalry", "archer": "infantry", "cavalry": "archer" },
+    "counter_bias": 0.3,
+    "max_military_pop_ratio": 0.40,
+    "military_budget_ratio": 0.50,
+    "target_priority": ["undefended_villagers", "weakest_building", "nearest_building"],
+    "weakness_radius": 10
+  },
+  "normal": {
+    "tick_interval": 3.0,
+    "army_attack_threshold": 8,
+    "retreat_hp_ratio": 0.25,
+    "min_attack_game_time": 420.0,
+    "attack_cooldown": 90.0,
+    "scout_scan_radius": 35,
+    "default_composition": { "infantry": 0.45, "archer": 0.30, "cavalry": 0.25 },
+    "counter_weights": { "infantry": "cavalry", "archer": "infantry", "cavalry": "archer" },
+    "counter_bias": 0.5,
+    "max_military_pop_ratio": 0.50,
+    "military_budget_ratio": 0.60,
+    "target_priority": ["undefended_villagers", "weakest_building", "nearest_building"],
+    "weakness_radius": 12
+  },
+  "hard": {
+    "tick_interval": 2.0,
+    "army_attack_threshold": 6,
+    "retreat_hp_ratio": 0.30,
+    "min_attack_game_time": 300.0,
+    "attack_cooldown": 60.0,
+    "scout_scan_radius": 40,
+    "default_composition": { "infantry": 0.40, "archer": 0.30, "cavalry": 0.30 },
+    "counter_weights": { "infantry": "cavalry", "archer": "infantry", "cavalry": "archer" },
+    "counter_bias": 0.7,
+    "max_military_pop_ratio": 0.60,
+    "military_budget_ratio": 0.70,
+    "target_priority": ["undefended_villagers", "weakest_building", "nearest_building"],
+    "weakness_radius": 15
+  }
+}
