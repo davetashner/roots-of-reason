@@ -1,0 +1,13 @@
+{
+  "name": "Wolf",
+  "hp": 30,
+  "attack": 8,
+  "defense": 0,
+  "speed": 2.0,
+  "range": 0,
+  "los": 4,
+  "attack_speed": 1.5,
+  "attack_type": "melee",
+  "unit_category": "wildlife",
+  "default_stance": "stand_ground"
+}
