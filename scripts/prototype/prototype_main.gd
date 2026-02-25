@@ -25,6 +25,7 @@ var _ai_economy: Node = null
 var _ai_military: Node = null
 var _ai_tech: Node = null
 var _visibility_manager: Node = null
+var _unit_upgrade_manager: Node = null
 var _fog_layer: Node = null
 
 
@@ -460,6 +461,8 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 		_target_detector.register_entity(unit)
 	if _population_manager != null:
 		_population_manager.register_unit(unit, owner_id)
+	if _unit_upgrade_manager != null:
+		_unit_upgrade_manager.apply_upgrades_to_unit(unit, owner_id)
 
 
 func _on_resource_depleted(node: Node2D) -> void:
@@ -482,6 +485,14 @@ func _setup_tech() -> void:
 	_war_bonus.set_script(load("res://scripts/prototype/war_research_bonus.gd"))
 	add_child(_war_bonus)
 	_tech_manager.setup_war_bonus(_war_bonus)
+	# Unit upgrade manager — applies tech stat_modifiers to units
+	_unit_upgrade_manager = Node.new()
+	_unit_upgrade_manager.name = "UnitUpgradeManager"
+	_unit_upgrade_manager.set_script(load("res://scripts/prototype/unit_upgrade_manager.gd"))
+	add_child(_unit_upgrade_manager)
+	_unit_upgrade_manager.setup(self)
+	_tech_manager.tech_researched.connect(_unit_upgrade_manager.on_tech_researched)
+	_tech_manager.tech_regressed.connect(_unit_upgrade_manager.on_tech_regressed)
 	# Connect tech completion to spillover system
 	_tech_manager.tech_researched.connect(_on_tech_researched_spillover)
 
