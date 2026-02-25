@@ -24,6 +24,8 @@ const RESOURCE_KEYS: Dictionary = {
 # player_id -> { ResourceType -> amount }
 var _stockpiles: Dictionary = {}
 var _config: Dictionary = {}
+# player_id -> float gather rate multiplier
+var _gather_multipliers: Dictionary = {}
 
 
 func _ready() -> void:
@@ -42,9 +44,21 @@ func get_amount(player_id: int, resource_type: ResourceType) -> int:
 	return _stockpiles[player_id].get(resource_type, 0)
 
 
+func set_gather_multiplier(player_id: int, multiplier: float) -> void:
+	_gather_multipliers[player_id] = multiplier
+
+
+func get_gather_multiplier(player_id: int) -> float:
+	return _gather_multipliers.get(player_id, 1.0)
+
+
 func add_resource(player_id: int, resource_type: ResourceType, amount: int) -> void:
 	if player_id not in _stockpiles:
 		_stockpiles[player_id] = {}
+	if amount > 0:
+		var multiplier: float = _gather_multipliers.get(player_id, 1.0)
+		if not is_equal_approx(multiplier, 1.0):
+			amount = int(float(amount) * multiplier)
 	var old_amount: int = _stockpiles[player_id].get(resource_type, 0)
 	_stockpiles[player_id][resource_type] = old_amount + amount
 	(
@@ -107,6 +121,7 @@ func init_player(player_id: int, starting_resources: Variant = null, difficulty:
 
 func reset() -> void:
 	_stockpiles.clear()
+	_gather_multipliers.clear()
 
 
 func save_state() -> Dictionary:
@@ -116,12 +131,24 @@ func save_state() -> Dictionary:
 		for resource_type: ResourceType in _stockpiles[player_id]:
 			player_data[RESOURCE_KEYS[resource_type]] = _stockpiles[player_id][resource_type]
 		data[str(player_id)] = player_data
+	var multipliers: Dictionary = {}
+	for player_id: int in _gather_multipliers:
+		multipliers[str(player_id)] = _gather_multipliers[player_id]
+	if not multipliers.is_empty():
+		data["_gather_multipliers"] = multipliers
 	return data
 
 
 func load_state(data: Dictionary) -> void:
 	_stockpiles.clear()
+	_gather_multipliers.clear()
+	if data.has("_gather_multipliers"):
+		var multipliers: Dictionary = data["_gather_multipliers"]
+		for player_id_str: String in multipliers:
+			_gather_multipliers[int(player_id_str)] = float(multipliers[player_id_str])
 	for player_id_str: String in data:
+		if player_id_str == "_gather_multipliers":
+			continue
 		var player_id: int = int(player_id_str)
 		_stockpiles[player_id] = {}
 		var player_data: Dictionary = data[player_id_str]

@@ -212,24 +212,45 @@ func _on_building_construction_complete(building: Node2D) -> void:
 
 
 func _setup_ai() -> void:
-	ResourceManager.init_player(1)
+	var difficulty: String = GameManager.ai_difficulty
+	var tier_config: Dictionary = _load_ai_tier_config(difficulty)
+	ResourceManager.init_player(1, null, difficulty)
+	var multiplier: float = tier_config.get("gather_rate_multiplier", 1.0)
+	if not is_equal_approx(multiplier, 1.0):
+		ResourceManager.set_gather_multiplier(1, multiplier)
 	var ai_tc := _create_ai_town_center()
-	_create_ai_starting_villagers(ai_tc, 3)
+	var villager_count: int = tier_config.get("starting_villagers", 3)
+	_create_ai_starting_villagers(ai_tc, villager_count)
 	_ai_economy = Node.new()
 	_ai_economy.name = "AIEconomy"
 	_ai_economy.set_script(AIEconomyScript)
+	_ai_economy.difficulty = difficulty
 	add_child(_ai_economy)
 	_ai_economy.setup(self, _population_manager, _pathfinder, _map_node, _target_detector, _tech_manager)
 	_ai_military = Node.new()
 	_ai_military.name = "AIMilitary"
 	_ai_military.set_script(AIMilitaryScript)
+	_ai_military.difficulty = difficulty
 	add_child(_ai_military)
 	_ai_military.setup(self, _population_manager, _target_detector, _ai_economy)
 	_ai_tech = Node.new()
 	_ai_tech.name = "AITech"
 	_ai_tech.set_script(AITechScript)
+	_ai_tech.difficulty = difficulty
+	_ai_tech.personality = tier_config.get("personality", "balanced")
 	add_child(_ai_tech)
 	_ai_tech.setup(_tech_manager)
+
+
+func _load_ai_tier_config(difficulty: String) -> Dictionary:
+	var data: Dictionary = DataLoader.load_json("res://data/ai/ai_difficulty.json")
+	if data == null:
+		return {}
+	var tiers: Dictionary = data.get("tiers", {})
+	if difficulty in tiers:
+		return tiers[difficulty]
+	var default_tier: String = data.get("default", "normal")
+	return tiers.get(default_tier, {})
 
 
 func _create_ai_town_center() -> Node2D:

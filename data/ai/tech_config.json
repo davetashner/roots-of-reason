@@ -2,6 +2,7 @@
   "easy": { "tick_interval": 5.0, "max_queue_size": 1 },
   "normal": { "tick_interval": 3.0, "max_queue_size": 2 },
   "hard": { "tick_interval": 2.0, "max_queue_size": 3 },
+  "expert": { "tick_interval": 1.5, "max_queue_size": 4 },
   "personalities": {
     "balanced": {
       "0": ["stone_tools", "fire_mastery", "animal_husbandry", "basket_weaving"],
