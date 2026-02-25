@@ -21,6 +21,17 @@ var under_construction: bool = false
 var build_progress: float = 0.0
 var _build_time: float = 1.0
 
+var _is_ruins: bool = false
+var _ruins_timer: float = 0.0
+var _ruins_decay_time: float = 120.0
+var _ruins_alpha: float = 0.35
+
+var _intact_threshold: float = 0.66
+var _damaged_threshold: float = 0.33
+var _hp_intact_color: Color = Color(0.2, 0.8, 0.2, 0.9)
+var _hp_damaged_color: Color = Color(0.9, 0.8, 0.1, 0.9)
+var _hp_critical_color: Color = Color(0.9, 0.2, 0.2, 0.9)
+
 var _combat_config: Dictionary = {}
 var _construction_alpha: float = 0.4
 var _bar_width: float = 40.0
@@ -32,6 +43,7 @@ func _ready() -> void:
 	_load_building_stats()
 	_load_construction_config()
 	_load_combat_config()
+	_load_destruction_config()
 
 
 func _load_building_stats() -> void:
@@ -81,7 +93,41 @@ func _load_combat_config() -> void:
 		_combat_config = cfg
 
 
+func _load_destruction_config() -> void:
+	var cfg: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		cfg = DataLoader.get_settings("building_destruction")
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_settings"):
+			cfg = dl.get_settings("building_destruction")
+	if cfg.is_empty():
+		return
+	var states: Dictionary = cfg.get("damage_states", {})
+	_intact_threshold = float(states.get("intact_threshold", _intact_threshold))
+	_damaged_threshold = float(states.get("damaged_threshold", _damaged_threshold))
+	var ruins_cfg: Dictionary = cfg.get("ruins", {})
+	_ruins_decay_time = float(ruins_cfg.get("decay_time", _ruins_decay_time))
+	_ruins_alpha = float(ruins_cfg.get("alpha", _ruins_alpha))
+	var bar_cfg: Dictionary = cfg.get("hp_bar", {})
+	var intact_arr: Array = bar_cfg.get("intact_color", [])
+	if intact_arr.size() == 4:
+		_hp_intact_color = _arr_to_color(intact_arr)
+	var damaged_arr: Array = bar_cfg.get("damaged_color", [])
+	if damaged_arr.size() == 4:
+		_hp_damaged_color = _arr_to_color(damaged_arr)
+	var critical_arr: Array = bar_cfg.get("critical_color", [])
+	if critical_arr.size() == 4:
+		_hp_critical_color = _arr_to_color(critical_arr)
+
+
+func _arr_to_color(arr: Array) -> Color:
+	return Color(float(arr[0]), float(arr[1]), float(arr[2]), float(arr[3]))
+
+
 func take_damage(amount: int, _attacker: Node2D) -> void:
+	if _is_ruins:
+		return
 	hp -= amount
 	if hp < 0:
 		hp = 0
@@ -91,16 +137,39 @@ func take_damage(amount: int, _attacker: Node2D) -> void:
 
 
 func _on_destroyed() -> void:
+	_is_ruins = true
+	entity_category = "ruins"
 	building_destroyed.emit(self)
-	set_process(false)
-	var tween := CombatVisual.play_death_animation(self, _combat_config)
-	if tween != null:
-		tween.finished.connect(queue_free)
-	else:
+	_ruins_timer = 0.0
+	set_process(true)
+	queue_redraw()
+
+
+func get_damage_state() -> String:
+	if max_hp <= 0:
+		return "intact"
+	var ratio: float = float(hp) / float(max_hp)
+	if ratio > _intact_threshold:
+		return "intact"
+	if ratio > _damaged_threshold:
+		return "damaged"
+	return "critical"
+
+
+func _process(delta: float) -> void:
+	if not _is_ruins:
+		return
+	var game_delta: float = delta
+	if GameManager.has_method("get_game_delta"):
+		game_delta = GameManager.get_game_delta(delta)
+	_ruins_timer += game_delta
+	if _ruins_timer >= _ruins_decay_time:
 		queue_free()
 
 
 func get_entity_category() -> String:
+	if _is_ruins:
+		return "ruins"
 	if under_construction:
 		return "construction_site"
 	return entity_category
@@ -150,18 +219,35 @@ func is_point_inside(point: Vector2) -> bool:
 
 
 func _draw() -> void:
+	if _is_ruins:
+		_draw_ruins()
+		return
 	var color: Color
 	if owner_id == 0:
 		color = Color(0.2, 0.5, 1.0)
 	else:
 		color = Color(0.8, 0.2, 0.2)
+	var damage_state := ""
 	if under_construction:
 		color.a = _construction_alpha
+	else:
+		damage_state = get_damage_state()
+		if damage_state == "damaged":
+			color = color.darkened(0.2)
+		elif damage_state == "critical":
+			color = color.darkened(0.4)
+			color.a = 0.7
 	# Draw isometric diamonds for each footprint cell
 	for x in footprint.x:
 		for y in footprint.y:
 			var offset := IsoUtils.grid_to_screen(Vector2(x, y))
 			_draw_iso_cell(offset, color)
+	# Draw crack overlay on damaged/critical cells
+	if damage_state == "damaged" or damage_state == "critical":
+		for x in footprint.x:
+			for y in footprint.y:
+				var offset := IsoUtils.grid_to_screen(Vector2(x, y))
+				_draw_crack_overlay(offset, damage_state)
 	# Selection highlight
 	if selected:
 		_draw_selection_outline()
@@ -191,12 +277,14 @@ func _draw_hp_bar() -> void:
 	var ratio: float = float(hp) / float(max_hp)
 	# Background
 	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(0.1, 0.1, 0.1, 0.8))
-	# Fill
+	# Fill with 3-tier color
 	var hp_color: Color
-	if ratio > 0.5:
-		hp_color = Color(0.2, 0.8, 0.2, 0.9)
+	if ratio > _intact_threshold:
+		hp_color = _hp_intact_color
+	elif ratio > _damaged_threshold:
+		hp_color = _hp_damaged_color
 	else:
-		hp_color = Color(0.9, 0.2, 0.2, 0.9)
+		hp_color = _hp_critical_color
 	draw_rect(Rect2(bar_x, bar_y, _bar_width * ratio, _bar_height), hp_color)
 	# Border
 	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(1, 1, 1, 0.5), false)
@@ -219,6 +307,37 @@ func _draw_iso_cell(offset: Vector2, color: Color) -> void:
 	draw_line(points[1], points[2], line_color, 2.0)
 	draw_line(points[2], points[3], line_color, 2.0)
 	draw_line(points[3], points[0], line_color, 2.0)
+
+
+func _draw_ruins() -> void:
+	var ruins_color := Color(0.4, 0.4, 0.4, _ruins_alpha)
+	var hw := IsoUtils.HALF_W
+	var hh := IsoUtils.HALF_H
+	for x in footprint.x:
+		for y in footprint.y:
+			var offset := IsoUtils.grid_to_screen(Vector2(x, y))
+			var points := PackedVector2Array(
+				[
+					offset + Vector2(0, -hh),
+					offset + Vector2(hw, 0),
+					offset + Vector2(0, hh),
+					offset + Vector2(-hw, 0),
+				]
+			)
+			draw_line(points[0], points[1], ruins_color, 1.5)
+			draw_line(points[1], points[2], ruins_color, 1.5)
+			draw_line(points[2], points[3], ruins_color, 1.5)
+			draw_line(points[3], points[0], ruins_color, 1.5)
+
+
+func _draw_crack_overlay(offset: Vector2, state: String) -> void:
+	var hw := IsoUtils.HALF_W
+	var hh := IsoUtils.HALF_H
+	var crack_alpha: float = 0.4 if state == "damaged" else 0.7
+	var crack_color := Color(0.1, 0.1, 0.1, crack_alpha)
+	# Diagonal crack lines across the cell
+	draw_line(offset + Vector2(-hw * 0.3, -hh * 0.5), offset + Vector2(hw * 0.4, hh * 0.3), crack_color, 1.5)
+	draw_line(offset + Vector2(hw * 0.1, -hh * 0.4), offset + Vector2(-hw * 0.2, hh * 0.5), crack_color, 1.5)
 
 
 func _draw_selection_outline() -> void:
@@ -248,6 +367,8 @@ func save_state() -> Dictionary:
 		"build_time": _build_time,
 		"is_drop_off": is_drop_off,
 		"drop_off_types": drop_off_types,
+		"is_ruins": _is_ruins,
+		"ruins_timer": _ruins_timer,
 	}
 
 
@@ -266,4 +387,9 @@ func load_state(data: Dictionary) -> void:
 	drop_off_types.clear()
 	for t in types:
 		drop_off_types.append(str(t))
+	_is_ruins = bool(data.get("is_ruins", false))
+	_ruins_timer = float(data.get("ruins_timer", 0.0))
+	if _is_ruins:
+		entity_category = "ruins"
+		set_process(true)
 	queue_redraw()

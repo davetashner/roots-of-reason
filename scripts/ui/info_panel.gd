@@ -164,20 +164,33 @@ func show_building(building: Node2D) -> void:
 	_is_multi = false
 	_clear_hover()
 	visible = true
+	# Check ruins state
+	var is_ruins: bool = "_is_ruins" in building and building._is_ruins
 	# Portrait color
-	if building.owner_id == 0:
+	if is_ruins:
+		_portrait.color = Color(0.4, 0.4, 0.4)
+	elif building.owner_id == 0:
 		_portrait.color = Color(0.2, 0.5, 1.0)
 	else:
 		_portrait.color = Color(0.8, 0.2, 0.2)
 	# Name
-	var display_name: String = _get_building_display_name(building)
-	_name_label.text = display_name
+	if is_ruins:
+		_name_label.text = "Ruins"
+	else:
+		var display_name: String = _get_building_display_name(building)
+		_name_label.text = display_name
 	# Stats
-	if building.under_construction:
+	if is_ruins:
+		_stats_label.text = ""
+	elif building.under_construction:
 		var pct := int(building.build_progress * 100.0)
 		_stats_label.text = "Progress: %d%%" % pct
 	else:
-		_stats_label.text = ""
+		var state_text := ""
+		if building.has_method("get_damage_state"):
+			var state: String = building.get_damage_state()
+			state_text = state.capitalize()
+		_stats_label.text = state_text
 	_update_building_hp(building)
 
 
@@ -341,6 +354,8 @@ func _update() -> void:
 		if _tracked_entity.under_construction:
 			var pct := int(_tracked_entity.build_progress * 100.0)
 			_stats_label.text = "Progress: %d%%" % pct
+		elif _tracked_entity.has_method("get_damage_state"):
+			_stats_label.text = _tracked_entity.get_damage_state().capitalize()
 	else:
 		var stats := _get_unit_stats(_tracked_entity as Node2D)
 		_update_unit_hp(_tracked_entity as Node2D, stats)
