@@ -72,13 +72,7 @@ func _ready() -> void:
 
 
 func _init_stats() -> void:
-	var raw: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		raw = DataLoader.get_unit_stats(unit_type)
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_unit_stats"):
-			raw = dl.get_unit_stats(unit_type)
+	var raw: Dictionary = _dl_unit_stats(unit_type)
 	stats = UnitStats.new(unit_type, raw)
 
 
@@ -88,83 +82,61 @@ func get_stat(stat_name: String) -> float:
 	return stats.get_stat(stat_name)
 
 
-func _load_build_config() -> void:
-	# Load build_speed from unit stats
-	var unit_cfg: Dictionary = {}
+func _dl_unit_stats(id: String) -> Dictionary:
 	if Engine.has_singleton("DataLoader"):
-		unit_cfg = DataLoader.get_unit_stats("villager")
-	elif is_instance_valid(Engine.get_main_loop()):
+		return DataLoader.get_unit_stats(id)
+	if is_instance_valid(Engine.get_main_loop()):
 		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
 		if dl and dl.has_method("get_unit_stats"):
-			unit_cfg = dl.get_unit_stats("villager")
-	if not unit_cfg.is_empty():
-		_build_speed = float(unit_cfg.get("build_speed", _build_speed))
-	# Load build_reach from construction settings
-	var con_cfg: Dictionary = {}
+			return dl.get_unit_stats(id)
+	return {}
+
+
+func _dl_settings(id: String) -> Dictionary:
 	if Engine.has_singleton("DataLoader"):
-		con_cfg = DataLoader.get_settings("construction")
-	elif is_instance_valid(Engine.get_main_loop()):
+		return DataLoader.get_settings(id)
+	if is_instance_valid(Engine.get_main_loop()):
 		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
 		if dl and dl.has_method("get_settings"):
-			con_cfg = dl.get_settings("construction")
+			return dl.get_settings(id)
+	return {}
+
+
+func _load_build_config() -> void:
+	var unit_cfg := _dl_unit_stats("villager")
+	if not unit_cfg.is_empty():
+		_build_speed = float(unit_cfg.get("build_speed", _build_speed))
+	var con_cfg := _dl_settings("construction")
 	if not con_cfg.is_empty():
 		_build_reach = float(con_cfg.get("build_reach", _build_reach))
 
 
 func _load_gather_config() -> void:
-	var unit_cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		unit_cfg = DataLoader.get_unit_stats("villager")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_unit_stats"):
-			unit_cfg = dl.get_unit_stats("villager")
+	var unit_cfg := _dl_unit_stats("villager")
 	if not unit_cfg.is_empty():
 		_carry_capacity = int(unit_cfg.get("carry_capacity", _carry_capacity))
 		var rates: Variant = unit_cfg.get("gather_rates", {})
 		if rates is Dictionary:
 			_gather_rates = rates
-	var gather_cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		gather_cfg = DataLoader.get_settings("gathering")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			gather_cfg = dl.get_settings("gathering")
+	var gather_cfg := _dl_settings("gathering")
 	if not gather_cfg.is_empty():
 		_gather_reach = float(gather_cfg.get("gather_reach", _gather_reach))
 		_drop_off_reach = float(gather_cfg.get("drop_off_reach", _drop_off_reach))
 
 
 func _load_combat_config() -> void:
-	# Load combat settings from JSON
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("combat")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("combat")
+	var cfg := _dl_settings("combat")
 	if not cfg.is_empty():
 		_combat_config = cfg
-	# Initialize HP from stats
 	if stats != null:
 		var stat_hp: float = stats.get_stat("hp")
 		if stat_hp > 0:
 			max_hp = int(stat_hp)
 			hp = max_hp
-	# Set default stance from unit data
-	var unit_cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		unit_cfg = DataLoader.get_unit_stats(unit_type)
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_unit_stats"):
-			unit_cfg = dl.get_unit_stats(unit_type)
+	var unit_cfg := _dl_unit_stats(unit_type)
 	if not unit_cfg.is_empty():
 		var stance_str: String = str(unit_cfg.get("default_stance", "aggressive"))
 		_stance = _stance_from_string(stance_str)
-		# Set unit_category from unit data
 		if unit_category == "":
 			unit_category = str(unit_cfg.get("unit_category", ""))
 
@@ -500,6 +472,12 @@ func _tick_combat_pursuing() -> void:
 	if attack_range <= 0:
 		range_pixels = TILE_SIZE  # Melee: adjacent tile
 	if dist <= range_pixels:
+		# Check min range — if target is too close for ranged, disengage
+		var min_range := _get_min_range()
+		if min_range > 0 and dist < float(min_range) * TILE_SIZE:
+			_combat_target = null
+			_return_from_combat()
+			return
 		_moving = false
 		_path.clear()
 		_path_index = 0
@@ -534,10 +512,18 @@ func _tick_combat_attacking() -> void:
 			_combat_target = null
 			_return_from_combat()
 		return
+	# Check min range — if target is too close for ranged, disengage
+	var min_range := _get_min_range()
+	if min_range > 0 and dist < float(min_range) * TILE_SIZE:
+		_combat_target = null
+		_return_from_combat()
+		return
 	# Apply damage if cooldown ready
 	if _attack_cooldown <= 0.0:
 		_deal_damage_to_target()
-		var cooldown: float = float(_combat_config.get("attack_cooldown", 1.0))
+		var cooldown: float = get_stat("attack_speed")
+		if cooldown <= 0.0:
+			cooldown = float(_combat_config.get("attack_cooldown", 1.0))
 		_attack_cooldown = cooldown
 		queue_redraw()
 
@@ -636,12 +622,26 @@ func _deal_damage_to_target() -> void:
 	var attacker_stats := _build_stats_dict()
 	var defender_stats := _build_target_stats_dict(_combat_target)
 	var damage := CombatResolver.calculate_damage(attacker_stats, defender_stats, _combat_config)
+	_play_attack_visuals(damage)
 	if _combat_target.has_method("take_damage"):
 		_combat_target.take_damage(damage, self)
 	elif "hp" in _combat_target:
 		_combat_target.hp -= damage
 		if _combat_target.hp <= 0:
 			_combat_target.hp = 0
+
+
+func _play_attack_visuals(damage: int) -> void:
+	CombatVisual.play_attack_flash(self, _combat_config)
+	var vfx_parent := _scene_root if _scene_root != null else get_parent()
+	if vfx_parent == null:
+		return
+	if _get_attack_type() == "ranged":
+		CombatVisual.spawn_projectile(vfx_parent, global_position, _combat_target.global_position, _combat_config)
+	if _combat_config.get("show_damage_numbers", true):
+		CombatVisual.spawn_damage_number(
+			vfx_parent, _combat_target.global_position + Vector2(0, -20), damage, _combat_config
+		)
 
 
 func _build_stats_dict() -> Dictionary:
@@ -705,7 +705,12 @@ func take_damage(amount: int, attacker: Node2D) -> void:
 
 func _die() -> void:
 	unit_died.emit(self)
-	queue_free()
+	set_process(false)
+	var tween := CombatVisual.play_death_animation(self, _combat_config)
+	if tween != null:
+		tween.finished.connect(queue_free)
+	else:
+		queue_free()
 
 
 func attack_move_to(world_pos: Vector2) -> void:
@@ -780,6 +785,12 @@ func _get_attack_type() -> String:
 func _get_attack_range() -> int:
 	if stats != null:
 		return int(stats.get_stat("range"))
+	return 0
+
+
+func _get_min_range() -> int:
+	if stats != null and stats._base_stats.has("min_range"):
+		return int(stats._base_stats["min_range"])
 	return 0
 
 
@@ -933,6 +944,7 @@ func save_state() -> Dictionary:
 		"patrol_point_b_x": _patrol_point_b.x,
 		"patrol_point_b_y": _patrol_point_b.y,
 		"patrol_heading_to_b": _patrol_heading_to_b,
+		"attack_cooldown": _attack_cooldown,
 	}
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
@@ -975,6 +987,7 @@ func load_state(data: Dictionary) -> void:
 		float(data.get("patrol_point_b_y", 0)),
 	)
 	_patrol_heading_to_b = bool(data.get("patrol_heading_to_b", true))
+	_attack_cooldown = float(data.get("attack_cooldown", 0.0))
 	_pending_combat_target_name = str(data.get("combat_target_name", ""))
 	if data.has("stats"):
 		if stats == null:

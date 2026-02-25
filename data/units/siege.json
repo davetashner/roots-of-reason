@@ -12,6 +12,7 @@
   "bonus_vs": { "building": 5.0 },
   "building_damage_ignore_reduction": 0.80,
   "armor_type": "siege",
+  "attack_speed": 4.0,
   "attack_type": "siege",
   "unit_category": "military",
   "default_stance": "aggressive"
