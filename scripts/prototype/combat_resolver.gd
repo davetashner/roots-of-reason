@@ -114,6 +114,8 @@ static func _get_category(entity: Node) -> String:
 static func is_hostile(entity_a: Node, entity_b: Node) -> bool:
 	var owner_a: int = entity_a.owner_id if "owner_id" in entity_a else -1
 	var owner_b: int = entity_b.owner_id if "owner_id" in entity_b else -1
-	if owner_a < 0 or owner_b < 0:
-		return false
+	if owner_a == -1 and owner_b == -1:
+		return false  # Gaia vs Gaia: not hostile
+	if owner_a == -1 or owner_b == -1:
+		return true  # Gaia vs any player: hostile
 	return owner_a != owner_b

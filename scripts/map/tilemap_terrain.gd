@@ -10,6 +10,7 @@ const ElevationGenerator := preload("res://scripts/map/elevation_generator.gd")
 const RiverGenerator := preload("res://scripts/map/river_generator.gd")
 const ResourceGenerator := preload("res://scripts/map/resource_generator.gd")
 const StartingLocationGenerator := preload("res://scripts/map/starting_location_generator.gd")
+const FaunaGenerator := preload("res://scripts/map/fauna_generator.gd")
 const TerrainMapperScript := preload("res://scripts/map/terrain_mapper.gd")
 
 var _terrain_config: Dictionary = {}
@@ -35,6 +36,9 @@ var _resource_positions: Dictionary = {}  # resource_name -> Array[Vector2i]
 
 # Starting positions
 var _starting_positions: Array = []  # Array[Vector2i]
+
+# Fauna positions
+var _fauna_positions: Dictionary = {}  # fauna_name -> Array[Dictionary]
 
 
 func _ready() -> void:
@@ -247,6 +251,11 @@ func _generate_map() -> void:
 	res_gen.configure(_map_gen_config.get("resource_generation", {}))
 	_resource_positions = res_gen.generate(_tile_grid, _map_width, _map_height, _seed_value, _starting_positions)
 
+	# 9. Generate fauna positions (with starting positions for distance constraints)
+	var fauna_gen := FaunaGenerator.new()
+	fauna_gen.configure(_map_gen_config.get("fauna_generation", {}))
+	_fauna_positions = fauna_gen.generate(_tile_grid, _map_width, _map_height, _seed_value, _starting_positions)
+
 
 # -- Public API (backward-compatible with prototype_map.gd) --
 
@@ -326,6 +335,12 @@ func get_elevation_at(grid_pos: Vector2i) -> float:
 
 # -- Resource API --
 
+# -- Fauna API --
+
+
+func get_fauna_positions() -> Dictionary:
+	return _fauna_positions
+
 
 func get_resource_positions() -> Dictionary:
 	return _resource_positions
@@ -381,6 +396,24 @@ func save_state() -> Dictionary:
 	for pos: Vector2i in _starting_positions:
 		start_pos_data.append("%d,%d" % [pos.x, pos.y])
 
+	# Serialize fauna positions
+	var fauna_data: Dictionary = {}
+	for fauna_name: String in _fauna_positions:
+		var packs: Array = []
+		for pack: Dictionary in _fauna_positions[fauna_name]:
+			var pack_pos: Vector2i = pack.position
+			(
+				packs
+				. append(
+					{
+						"position": "%d,%d" % [pack_pos.x, pack_pos.y],
+						"pack_size": pack.pack_size,
+						"contested": pack.contested,
+					}
+				)
+			)
+		fauna_data[fauna_name] = packs
+
 	return {
 		"map_width": _map_width,
 		"map_height": _map_height,
@@ -389,6 +422,7 @@ func save_state() -> Dictionary:
 		"river_data": river_data,
 		"resource_positions": res_data,
 		"starting_positions": start_pos_data,
+		"fauna_positions": fauna_data,
 	}
 
 
@@ -406,6 +440,7 @@ func load_state(state: Dictionary) -> void:
 	_river_widths.clear()
 	_resource_positions.clear()
 	_starting_positions.clear()
+	_fauna_positions.clear()
 
 	var grid_data: Dictionary = state.get("tile_grid", {})
 	for key: String in grid_data:
@@ -464,3 +499,23 @@ func load_state(state: Dictionary) -> void:
 		var parts := str(pos_str).split(",")
 		if parts.size() == 2:
 			_starting_positions.append(Vector2i(int(parts[0]), int(parts[1])))
+
+	# Deserialize fauna positions (backward-compatible)
+	var fauna_data: Dictionary = state.get("fauna_positions", {})
+	for fauna_name: String in fauna_data:
+		var packs: Array[Dictionary] = []
+		for pack in fauna_data[fauna_name]:
+			var pack_dict: Dictionary = pack as Dictionary
+			var pos_parts := str(pack_dict.get("position", "")).split(",")
+			if pos_parts.size() == 2:
+				(
+					packs
+					. append(
+						{
+							"position": Vector2i(int(pos_parts[0]), int(pos_parts[1])),
+							"pack_size": int(pack_dict.get("pack_size", 2)),
+							"contested": bool(pack_dict.get("contested", false)),
+						}
+					)
+				)
+		_fauna_positions[fauna_name] = packs

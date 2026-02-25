@@ -36,6 +36,7 @@ func _ready() -> void:
 	_setup_population()
 	_setup_units()
 	_setup_demo_entities()
+	_setup_fauna()
 	_setup_tech()
 	_setup_ai()
 	_setup_hud()
@@ -188,6 +189,33 @@ func _setup_demo_entities() -> void:
 	var cells := BuildingValidator.get_footprint_cells(bld_pos, Vector2i(3, 3))
 	for cell in cells:
 		_pathfinder.set_cell_solid(cell, true)
+
+
+func _setup_fauna() -> void:
+	var all_fauna: Dictionary = _map_node.get_fauna_positions()
+	var fauna_index := 0
+	for fauna_name: String in all_fauna:
+		var packs: Array = all_fauna[fauna_name]
+		for pack in packs:
+			var pack_dict: Dictionary = pack as Dictionary
+			var grid_pos: Vector2i = pack_dict.get("position", Vector2i.ZERO)
+			var pack_size: int = int(pack_dict.get("pack_size", 2))
+			for i in pack_size:
+				var unit := Node2D.new()
+				unit.name = "Fauna_%s_%d" % [fauna_name, fauna_index]
+				unit.set_script(UnitScript)
+				# Offset pack members slightly
+				var offset := Vector2i(i % 2, i / 2)
+				var spawn_pos: Vector2i = grid_pos + offset
+				unit.position = IsoUtils.grid_to_screen(Vector2(spawn_pos))
+				unit.unit_type = fauna_name
+				unit.owner_id = -1  # Gaia faction
+				unit.unit_color = Color(0.5, 0.5, 0.5)  # Gray
+				add_child(unit)
+				unit._scene_root = self
+				if _target_detector != null:
+					_target_detector.register_entity(unit)
+				fauna_index += 1
 
 
 func _on_building_placed(building: Node2D) -> void:

@@ -187,6 +187,30 @@ func test_is_hostile_same_owner() -> void:
 	assert_bool(CombatResolver.is_hostile(a, b)).is_false()
 
 
+func test_is_hostile_gaia_vs_player() -> void:
+	var gaia := _make_mock_entity("fauna", -1)
+	var player := _make_mock_entity("military", 0)
+	assert_bool(CombatResolver.is_hostile(gaia, player)).is_true()
+
+
+func test_is_hostile_gaia_vs_ai() -> void:
+	var gaia := _make_mock_entity("fauna", -1)
+	var ai := _make_mock_entity("military", 1)
+	assert_bool(CombatResolver.is_hostile(gaia, ai)).is_true()
+
+
+func test_is_hostile_gaia_vs_gaia() -> void:
+	var a := _make_mock_entity("fauna", -1)
+	var b := _make_mock_entity("fauna", -1)
+	assert_bool(CombatResolver.is_hostile(a, b)).is_false()
+
+
+func test_is_hostile_player_vs_ai_unchanged() -> void:
+	var a := _make_mock_entity("military", 0)
+	var b := _make_mock_entity("military", 1)
+	assert_bool(CombatResolver.is_hostile(a, b)).is_true()
+
+
 # -- sort_targets_by_priority --
 
 
