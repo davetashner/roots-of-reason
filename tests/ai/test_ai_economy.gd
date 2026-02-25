@@ -8,6 +8,14 @@ const PopManagerScript := preload("res://scripts/prototype/population_manager.gd
 const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
 const ProductionQueueScript := preload("res://scripts/prototype/production_queue.gd")
 
+# --- Lifecycle ---
+
+
+func before_test() -> void:
+	GameManager.current_age = 0
+	GameManager.game_speed = 1.0
+
+
 # --- Helpers ---
 
 
@@ -364,7 +372,6 @@ func test_tick_uses_game_delta() -> void:
 	ai._process(1.0)
 	# Timer should have been consumed (decremented by interval)
 	assert_float(ai._tick_timer).is_less(2.0)
-	GameManager.game_speed = 1.0
 
 
 # --- Resource constraints ---
