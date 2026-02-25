@@ -24,6 +24,7 @@ var _population_manager: Node = null
 var _pathfinder: Node = null
 var _map_node: Node = null
 var _target_detector: Node = null
+var _tech_manager: Node = null
 
 var _tick_timer: float = 0.0
 var _config: Dictionary = {}
@@ -44,12 +45,14 @@ func setup(
 	pathfinder: Node,
 	map_node: Node,
 	target_detector: Node,
+	tech_manager: Node = null,
 ) -> void:
 	_scene_root = scene_root
 	_population_manager = pop_mgr
 	_pathfinder = pathfinder
 	_map_node = map_node
 	_target_detector = target_detector
+	_tech_manager = tech_manager
 	_load_config()
 	_load_build_order()
 
@@ -207,6 +210,12 @@ func _process_advance_age_step() -> bool:
 		_build_order_index += 1
 		return false
 	var age_entry: Dictionary = ages_data[next_age]
+	# Check tech prerequisites — wait for AITech to research them
+	if _tech_manager != null:
+		var prereqs: Array = age_entry.get("advance_prerequisites", [])
+		for prereq: String in prereqs:
+			if not _tech_manager.is_tech_researched(prereq, player_id):
+				return false
 	var raw_costs: Dictionary = age_entry.get("advance_cost", {})
 	var costs := _parse_costs(raw_costs)
 	if not ResourceManager.can_afford(player_id, costs):

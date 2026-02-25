@@ -6,6 +6,7 @@ const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
 const ProductionQueueScript := preload("res://scripts/prototype/production_queue.gd")
 const AIEconomyScript := preload("res://scripts/ai/ai_economy.gd")
 const AIMilitaryScript := preload("res://scripts/ai/ai_military.gd")
+const AITechScript := preload("res://scripts/ai/ai_tech.gd")
 const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 
 const UNIT_POSITIONS: Array[Vector2i] = [
@@ -33,6 +34,7 @@ var _tech_manager: Node
 var _war_bonus: Node
 var _ai_economy: Node = null
 var _ai_military: Node = null
+var _ai_tech: Node = null
 
 
 func _ready() -> void:
@@ -45,8 +47,8 @@ func _ready() -> void:
 	_setup_population()
 	_setup_units()
 	_setup_demo_entities()
-	_setup_ai()
 	_setup_tech()
+	_setup_ai()
 	_setup_hud()
 
 
@@ -217,12 +219,17 @@ func _setup_ai() -> void:
 	_ai_economy.name = "AIEconomy"
 	_ai_economy.set_script(AIEconomyScript)
 	add_child(_ai_economy)
-	_ai_economy.setup(self, _population_manager, _pathfinder, _map_node, _target_detector)
+	_ai_economy.setup(self, _population_manager, _pathfinder, _map_node, _target_detector, _tech_manager)
 	_ai_military = Node.new()
 	_ai_military.name = "AIMilitary"
 	_ai_military.set_script(AIMilitaryScript)
 	add_child(_ai_military)
 	_ai_military.setup(self, _population_manager, _target_detector, _ai_economy)
+	_ai_tech = Node.new()
+	_ai_tech.name = "AITech"
+	_ai_tech.set_script(AITechScript)
+	add_child(_ai_tech)
+	_ai_tech.setup(_tech_manager)
 
 
 func _create_ai_town_center() -> Node2D:
