@@ -1,0 +1,21 @@
+{
+  "name": "Wolf",
+  "hp": 30,
+  "attack": 8,
+  "defense": 0,
+  "speed": 2.0,
+  "range": 0,
+  "los": 5,
+  "aggro_radius": 3,
+  "flee_threshold": 3,
+  "food_on_kill": 50,
+  "domestication_cost_per_feed": 25,
+  "feeds_required": 3,
+  "domestication_decay_rate": 0.1,
+  "domestication_decay_interval": 60,
+  "armor_type": "none",
+  "attack_speed": 1.5,
+  "attack_type": "melee",
+  "unit_category": "fauna",
+  "population_cost": 0
+}

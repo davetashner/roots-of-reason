@@ -120,5 +120,22 @@
       "berry_bush": 2,
       "tree": 4
     }
+  },
+  "fauna_generation": {
+    "fauna_types": {
+      "wolf": {
+        "base_pack_count": 3,
+        "pack_count_min": 2,
+        "pack_count_max": 6,
+        "pack_size_min": 2,
+        "pack_size_max": 3,
+        "min_distance_from_start": 12,
+        "min_distance_between_packs": 8,
+        "terrain_affinity": { "forest": 1.0, "grass": 0.6, "dirt": 0.3 },
+        "forbidden_terrain": ["water", "river", "mountain"],
+        "noise_weight": 0.4,
+        "noise_seed_offset": 6000
+      }
+    }
   }
 }

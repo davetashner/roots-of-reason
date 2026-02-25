@@ -84,6 +84,7 @@ UNITS = {
     "cavalry":  ("#8B6914", "#7B5904", "C"),
     "siege":    ("#6B4A3A", "#5B3A2A", "S"),
     "naval":    ("#2A6B8B", "#1A5B7B", "N"),
+    "wolf":     ("#808080", "#606060", "W"),
 }
 
 UNIT_SIZE = 32
