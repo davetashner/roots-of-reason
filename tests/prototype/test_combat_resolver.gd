@@ -4,6 +4,12 @@ extends GdUnitTestSuite
 var _mock_script: GDScript
 var _combat_config: Dictionary = {
 	"building_damage_reduction": 0.80,
+	"armor_effectiveness":
+	{
+		"melee": {"none": 1.0, "light": 1.0, "heavy": 0.75, "siege": 1.5},
+		"ranged": {"none": 1.0, "light": 1.2, "heavy": 0.5, "siege": 1.0},
+		"siege": {"none": 1.0, "light": 1.0, "heavy": 1.0, "siege": 0.5},
+	},
 }
 
 
@@ -234,3 +240,66 @@ func test_sort_targets_siege_priority() -> void:
 	assert_str(result[0].unit_category).is_equal("building")
 	assert_str(result[1].unit_category).is_equal("military")
 	assert_str(result[2].unit_category).is_equal("civilian")
+
+
+# -- armor_effectiveness --
+
+
+func test_armor_effectiveness_melee_vs_heavy() -> void:
+	var attacker := _make_stats({"attack": 10, "attack_type": "melee"})
+	var defender := _make_stats({"defense": 2, "armor_type": "heavy"})
+	var dmg := CombatResolver.calculate_damage(attacker, defender, _combat_config)
+	# (10 - 2) * 1.0 bonus * 0.75 armor = 6
+	assert_int(dmg).is_equal(6)
+
+
+func test_armor_effectiveness_ranged_vs_light() -> void:
+	var attacker := _make_stats({"attack": 10, "attack_type": "ranged"})
+	var defender := _make_stats({"defense": 2, "armor_type": "light"})
+	var dmg := CombatResolver.calculate_damage(attacker, defender, _combat_config)
+	# (10 - 2) * 1.0 bonus * 1.2 armor = 9.6 -> 9
+	assert_int(dmg).is_equal(9)
+
+
+func test_armor_effectiveness_ranged_vs_heavy() -> void:
+	var attacker := _make_stats({"attack": 10, "attack_type": "ranged"})
+	var defender := _make_stats({"defense": 2, "armor_type": "heavy"})
+	var dmg := CombatResolver.calculate_damage(attacker, defender, _combat_config)
+	# (10 - 2) * 1.0 bonus * 0.5 armor = 4
+	assert_int(dmg).is_equal(4)
+
+
+func test_armor_effectiveness_siege_vs_siege() -> void:
+	var attacker := _make_stats({"attack": 20, "attack_type": "siege"})
+	var defender := _make_stats({"defense": 2, "armor_type": "siege"})
+	var dmg := CombatResolver.calculate_damage(attacker, defender, _combat_config)
+	# (20 - 2) * 1.0 bonus * 0.5 armor = 9
+	assert_int(dmg).is_equal(9)
+
+
+func test_armor_effectiveness_missing_defaults_to_one() -> void:
+	var attacker := _make_stats({"attack": 10, "attack_type": "melee"})
+	var defender := _make_stats({"defense": 2, "armor_type": "unknown_type"})
+	var dmg := CombatResolver.calculate_damage(attacker, defender, _combat_config)
+	# (10 - 2) * 1.0 bonus * 1.0 default = 8
+	assert_int(dmg).is_equal(8)
+
+
+func test_armor_effectiveness_stacks_with_bonus_vs() -> void:
+	var attacker := _make_stats(
+		{
+			"attack": 10,
+			"attack_type": "melee",
+			"bonus_vs": {"archer": 1.5},
+		}
+	)
+	var defender := _make_stats(
+		{
+			"defense": 2,
+			"unit_type": "archer",
+			"armor_type": "heavy",
+		}
+	)
+	var dmg := CombatResolver.calculate_damage(attacker, defender, _combat_config)
+	# (10 - 2) * 1.5 bonus * 0.75 armor = 9
+	assert_int(dmg).is_equal(9)

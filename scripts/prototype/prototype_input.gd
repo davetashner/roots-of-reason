@@ -331,6 +331,11 @@ func _issue_context_command(world_pos: Vector2) -> void:
 			if unit.has_method("assign_gather_target"):
 				unit.assign_gather_target(target)
 		return
+	if cmd == "garrison" and target != null and target.has_method("garrison_unit"):
+		for unit in selected:
+			if unit is Node2D:
+				target.garrison_unit(unit)
+		return
 	_move_selected(world_pos)
 
 

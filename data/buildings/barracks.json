@@ -8,5 +8,6 @@
   "is_drop_off": false,
   "drop_off_types": [],
   "units_produced": ["infantry", "archer", "cavalry"],
-  "age_required": 1
+  "age_required": 1,
+  "garrison_capacity": 10
 }

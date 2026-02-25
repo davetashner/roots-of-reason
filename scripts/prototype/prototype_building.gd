@@ -16,6 +16,7 @@ var selected: bool = false
 
 var is_drop_off: bool = false
 var drop_off_types: Array[String] = []
+var garrison_capacity: int = 0
 
 var under_construction: bool = false
 var build_progress: float = 0.0
@@ -31,6 +32,11 @@ var _damaged_threshold: float = 0.33
 var _hp_intact_color: Color = Color(0.2, 0.8, 0.2, 0.9)
 var _hp_damaged_color: Color = Color(0.9, 0.8, 0.1, 0.9)
 var _hp_critical_color: Color = Color(0.9, 0.2, 0.2, 0.9)
+
+var _garrisoned_units: Array[Node2D] = []
+var _garrison_arrow_timer: float = 0.0
+var _garrison_config: Dictionary = {}
+var _pending_garrison_names: Array[String] = []
 
 var _combat_config: Dictionary = {}
 var _construction_alpha: float = 0.4
@@ -59,6 +65,7 @@ func _load_building_stats() -> void:
 	if stats.is_empty():
 		return
 	is_drop_off = bool(stats.get("is_drop_off", false))
+	garrison_capacity = int(stats.get("garrison_capacity", 0))
 	var types: Array = stats.get("drop_off_types", [])
 	drop_off_types.clear()
 	for t in types:
@@ -91,6 +98,7 @@ func _load_combat_config() -> void:
 			cfg = dl.get_settings("combat")
 	if not cfg.is_empty():
 		_combat_config = cfg
+		_garrison_config = cfg.get("garrison", {})
 
 
 func _load_destruction_config() -> void:
@@ -137,6 +145,7 @@ func take_damage(amount: int, _attacker: Node2D) -> void:
 
 
 func _on_destroyed() -> void:
+	ungarrison_all()
 	_is_ruins = true
 	entity_category = "ruins"
 	building_destroyed.emit(self)
@@ -157,14 +166,15 @@ func get_damage_state() -> String:
 
 
 func _process(delta: float) -> void:
-	if not _is_ruins:
-		return
 	var game_delta: float = delta
 	if GameManager.has_method("get_game_delta"):
 		game_delta = GameManager.get_game_delta(delta)
-	_ruins_timer += game_delta
-	if _ruins_timer >= _ruins_decay_time:
-		queue_free()
+	if _is_ruins:
+		_ruins_timer += game_delta
+		if _ruins_timer >= _ruins_decay_time:
+			queue_free()
+		return
+	_tick_garrison_arrows(game_delta)
 
 
 func get_entity_category() -> String:
@@ -355,7 +365,128 @@ func _draw_selection_outline() -> void:
 	draw_line(left, top, highlight, 2.0)
 
 
+## -- Garrison System --
+
+
+func garrison_unit(unit: Node2D) -> bool:
+	if not can_garrison():
+		return false
+	if unit in _garrisoned_units:
+		return false
+	_garrisoned_units.append(unit)
+	unit.visible = false
+	unit.set_process(false)
+	return true
+
+
+func ungarrison_all() -> Array[Node2D]:
+	var ejected: Array[Node2D] = []
+	var radius: float = float(_garrison_config.get("ungarrison_radius_tiles", 2)) * 64.0
+	var count := _garrisoned_units.size()
+	for i in count:
+		var unit: Node2D = _garrisoned_units[i]
+		if not is_instance_valid(unit):
+			continue
+		# Place units in a circle around the building
+		var angle := TAU * float(i) / float(maxi(count, 1))
+		var offset := Vector2(cos(angle), sin(angle)) * radius
+		unit.global_position = global_position + offset
+		unit.visible = true
+		unit.set_process(true)
+		ejected.append(unit)
+	_garrisoned_units.clear()
+	return ejected
+
+
+func get_garrisoned_count() -> int:
+	# Clean up freed units
+	var i := _garrisoned_units.size() - 1
+	while i >= 0:
+		if not is_instance_valid(_garrisoned_units[i]):
+			_garrisoned_units.remove_at(i)
+		i -= 1
+	return _garrisoned_units.size()
+
+
+func can_garrison() -> bool:
+	if garrison_capacity <= 0:
+		return false
+	if _is_ruins:
+		return false
+	if under_construction:
+		return false
+	return get_garrisoned_count() < garrison_capacity
+
+
+func _tick_garrison_arrows(game_delta: float) -> void:
+	if get_garrisoned_count() <= 0:
+		return
+	_garrison_arrow_timer += game_delta
+	var interval: float = float(_garrison_config.get("arrow_interval", 2.0))
+	if _garrison_arrow_timer < interval:
+		return
+	_garrison_arrow_timer = 0.0
+	# Find nearest hostile in range
+	var arrow_range: float = float(_garrison_config.get("arrow_range_tiles", 6)) * 64.0
+	var target := _find_nearest_hostile(arrow_range)
+	if target == null:
+		return
+	# Deal arrow damage
+	var arrow_damage: int = int(_garrison_config.get("arrow_damage", 5))
+	var total_damage: int = arrow_damage * get_garrisoned_count()
+	if target.has_method("take_damage"):
+		target.take_damage(total_damage, self)
+	elif "hp" in target:
+		target.hp -= total_damage
+		if target.hp < 0:
+			target.hp = 0
+	# Spawn projectile VFX
+	var vfx_parent := get_parent()
+	if vfx_parent != null:
+		CombatVisual.spawn_projectile(vfx_parent, global_position, target.global_position, _combat_config)
+		if _combat_config.get("show_damage_numbers", true):
+			CombatVisual.spawn_damage_number(
+				vfx_parent, target.global_position + Vector2(0, -20), total_damage, _combat_config
+			)
+
+
+func _find_nearest_hostile(max_range: float) -> Node2D:
+	var root := get_parent()
+	if root == null:
+		return null
+	var best: Node2D = null
+	var best_dist := INF
+	for child in root.get_children():
+		if child == self:
+			continue
+		if not (child is Node2D):
+			continue
+		if not CombatResolver.is_hostile(self, child):
+			continue
+		if "hp" in child and child.hp <= 0:
+			continue
+		var dist: float = global_position.distance_to(child.global_position)
+		if dist > max_range:
+			continue
+		if dist < best_dist:
+			best_dist = dist
+			best = child
+	return best
+
+
+func resolve_garrison(scene_root: Node) -> void:
+	for unit_name in _pending_garrison_names:
+		var unit := scene_root.get_node_or_null(unit_name)
+		if unit is Node2D:
+			garrison_unit(unit)
+	_pending_garrison_names.clear()
+
+
 func save_state() -> Dictionary:
+	var garrisoned_names: Array[String] = []
+	for unit in _garrisoned_units:
+		if is_instance_valid(unit):
+			garrisoned_names.append(str(unit.name))
 	return {
 		"building_name": building_name,
 		"grid_pos": [grid_pos.x, grid_pos.y],
@@ -369,6 +500,8 @@ func save_state() -> Dictionary:
 		"drop_off_types": drop_off_types,
 		"is_ruins": _is_ruins,
 		"ruins_timer": _ruins_timer,
+		"garrison_capacity": garrison_capacity,
+		"garrisoned_units": garrisoned_names,
 	}
 
 
@@ -389,6 +522,11 @@ func load_state(data: Dictionary) -> void:
 		drop_off_types.append(str(t))
 	_is_ruins = bool(data.get("is_ruins", false))
 	_ruins_timer = float(data.get("ruins_timer", 0.0))
+	garrison_capacity = int(data.get("garrison_capacity", 0))
+	_pending_garrison_names.clear()
+	var g_names: Array = data.get("garrisoned_units", [])
+	for n in g_names:
+		_pending_garrison_names.append(str(n))
 	if _is_ruins:
 		entity_category = "ruins"
 		set_process(true)
