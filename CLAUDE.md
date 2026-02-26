@@ -45,6 +45,13 @@ Use `/gdtest` skill to generate test suites for new scripts.
 - **Reference beads issue IDs** in commit messages (e.g., `feat: add camera [roots-of-reason-317.1]`)
 - **Run `ror lint` before committing** — CI enforces zero warnings
 - **Sign off commits** with `git commit -s`
+- **Every PR body MUST include explicit `Closes` lines** for each bead it completes — one per line, using the full ID. Example:
+  ```
+  Closes roots-of-reason-fk5.3
+  Closes roots-of-reason-fk5.4
+  ```
+  Do NOT just mention bead IDs informally in the summary — the `Closes` keyword is what triggers closure tracking. If a PR partially addresses a bead but doesn't complete it, use `Progresses roots-of-reason-XXX` instead.
+- **Before merging a PR:** Verify every `Closes` line maps to a real open bead. After merge, run `bd close` for each.
 
 ## Beads (Issue Tracking)
 
