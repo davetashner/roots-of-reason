@@ -37,8 +37,16 @@ var _enemy_composition: Dictionary = {}
 var _own_military: Array[Node2D] = []
 var _own_barracks: Array[Node2D] = []
 var _town_center: Node2D = null
+var _town_centers: Array[Node2D] = []
 var _enemy_units: Array[Node2D] = []
 var _enemy_buildings: Array[Node2D] = []
+var _enemy_town_centers: Array[Node2D] = []
+
+# Tech regression awareness
+var _tech_manager: Node = null
+var _tr_config: Dictionary = {}
+var _tech_loss_boost_timer: float = 0.0
+var _destroyed_tc_positions: Array[Vector2i] = []
 
 
 func setup(
@@ -46,12 +54,15 @@ func setup(
 	pop_mgr: Node,
 	target_detector: Node,
 	ai_economy: Node,
+	tech_manager: Node = null,
 ) -> void:
 	_scene_root = scene_root
 	_population_manager = pop_mgr
 	_target_detector = target_detector
 	_ai_economy = ai_economy
+	_tech_manager = tech_manager
 	_load_config()
+	_load_tr_config()
 
 
 func _load_config() -> void:
@@ -82,12 +93,38 @@ func _default_config() -> Dictionary:
 	}
 
 
+func _load_tr_config() -> void:
+	var data: Variant = DataLoader.load_json("res://data/ai/tech_regression_config.json")
+	if data == null or not data is Dictionary:
+		_tr_config = {}
+		return
+	_tr_config = data
+	# Apply personality overrides via dot-path keys
+	if personality == null:
+		return
+	var overrides: Dictionary = _tr_config.get("personality_overrides", {})
+	var pid: String = personality.personality_id
+	if pid not in overrides:
+		return
+	var pov: Dictionary = overrides[pid]
+	for key: String in pov:
+		var parts: Array = key.split(".")
+		if parts.size() != 2:
+			continue
+		var section: String = parts[0]
+		var field: String = parts[1]
+		if section in _tr_config and _tr_config[section] is Dictionary:
+			_tr_config[section][field] = pov[key]
+
+
 func _process(delta: float) -> void:
 	var game_delta := GameManager.get_game_delta(delta)
 	if game_delta <= 0.0:
 		return
 	_game_time += game_delta
 	_tick_timer += game_delta
+	if _tech_loss_boost_timer > 0.0:
+		_tech_loss_boost_timer = maxf(_tech_loss_boost_timer - game_delta, 0.0)
 	var interval: float = float(_config.get("tick_interval", 3.0))
 	if _tick_timer < interval:
 		return
@@ -100,6 +137,7 @@ func _tick() -> void:
 	_scan_enemy_composition()
 	_retreat_damaged_units()
 	_try_garrison_outnumbered()
+	_allocate_tc_defenders()
 	_train_military_units()
 	_evaluate_attack()
 
@@ -108,8 +146,10 @@ func _refresh_entity_lists() -> void:
 	_own_military.clear()
 	_own_barracks.clear()
 	_town_center = null
+	_town_centers.clear()
 	_enemy_units.clear()
 	_enemy_buildings.clear()
+	_enemy_town_centers.clear()
 	if _scene_root == null:
 		return
 	for child in _scene_root.get_children():
@@ -127,7 +167,9 @@ func _refresh_entity_lists() -> void:
 func _classify_own_entity(entity: Node2D) -> void:
 	if "building_name" in entity:
 		if entity.building_name == "town_center" and not entity.under_construction:
-			_town_center = entity
+			_town_centers.append(entity)
+			if _town_center == null:
+				_town_center = entity
 		elif entity.building_name == "barracks" and not entity.under_construction:
 			_own_barracks.append(entity)
 		return
@@ -152,6 +194,8 @@ func _is_enemy_entity(entity: Node2D, entity_owner: int) -> bool:
 func _classify_enemy_entity(entity: Node2D) -> void:
 	if "building_name" in entity:
 		_enemy_buildings.append(entity)
+		if entity.building_name == "town_center" and not entity.under_construction:
+			_enemy_town_centers.append(entity)
 	elif entity.has_method("is_idle"):
 		_enemy_units.append(entity)
 
@@ -263,6 +307,9 @@ func _can_train_military() -> bool:
 	if _own_barracks.is_empty() or _population_manager == null:
 		return false
 	var max_mil_ratio: float = float(_config.get("max_military_pop_ratio", 0.50))
+	if _tech_loss_boost_timer > 0.0:
+		var tlr: Dictionary = _tr_config.get("tech_loss_response", {})
+		max_mil_ratio += float(tlr.get("military_pop_ratio_boost", 0.15))
 	var pop_cap: int = _population_manager.get_population_cap(player_id)
 	if pop_cap <= 0:
 		return false
@@ -337,13 +384,56 @@ func _launch_attack(units: Array[Node2D]) -> void:
 
 
 func _select_attack_target() -> Vector2:
-	var priority_list: Array = _config.get("target_priority", [])
+	var priority_list: Array = _config.get("target_priority", []).duplicate()
+	if _should_prioritize_tc_snipe():
+		priority_list.insert(0, "enemy_town_center")
 	for priority: String in priority_list:
 		var target: Vector2 = _find_target_by_priority(priority)
 		if target != Vector2.ZERO:
 			return target
 	# Fallback: nearest enemy building
 	return _find_nearest_enemy_building_pos()
+
+
+func _should_prioritize_tc_snipe() -> bool:
+	if _enemy_town_centers.is_empty() or _tech_manager == null:
+		return false
+	var offense: Dictionary = _tr_config.get("offense", {})
+	var adv_ratio: float = float(offense.get("tc_snipe_military_advantage_ratio", 1.5))
+	var tech_lead_threshold: int = int(offense.get("tc_target_tech_lead_threshold", 3))
+	# Check military advantage
+	if _enemy_units.size() > 0:
+		var ratio: float = float(_own_military.size()) / float(_enemy_units.size())
+		if ratio >= adv_ratio:
+			return true
+	elif not _own_military.is_empty():
+		return true
+	# Check if enemy has tech lead
+	var own_techs: int = _tech_manager.get_researched_techs(player_id).size()
+	# Find enemy tech count (assume player 0 is enemy)
+	var enemy_pid: int = 0 if player_id != 0 else 1
+	var enemy_techs: int = _tech_manager.get_researched_techs(enemy_pid).size()
+	if enemy_techs - own_techs >= tech_lead_threshold:
+		return true
+	return false
+
+
+func _find_best_enemy_tc_target() -> Vector2:
+	if _town_center == null or _enemy_town_centers.is_empty():
+		return Vector2.ZERO
+	var tc_pos: Vector2 = _town_center.global_position
+	var best: Node2D = null
+	var best_dist: float = INF
+	for etc in _enemy_town_centers:
+		if "hp" in etc and etc.hp <= 0:
+			continue
+		var dist: float = tc_pos.distance_to(etc.global_position)
+		if dist < best_dist:
+			best_dist = dist
+			best = etc
+	if best != null:
+		return best.global_position
+	return Vector2.ZERO
 
 
 func _find_target_by_priority(priority: String) -> Vector2:
@@ -354,6 +444,8 @@ func _find_target_by_priority(priority: String) -> Vector2:
 			return _find_weakest_building()
 		"nearest_building":
 			return _find_nearest_enemy_building_pos()
+		"enemy_town_center":
+			return _find_best_enemy_tc_target()
 	return Vector2.ZERO
 
 
@@ -455,7 +547,117 @@ func _try_garrison_outnumbered() -> void:
 					unit.move_to(tc_pos)
 
 
+func _compute_tc_vulnerability(tc: Node2D) -> float:
+	var defense: Dictionary = _tr_config.get("defense", {})
+	var weights: Dictionary = defense.get("scoring_weights", {})
+	var w_tech: float = float(weights.get("tech_count", 0.5))
+	var w_prox: float = float(weights.get("enemy_proximity", 0.3))
+	var w_gap: float = float(weights.get("garrison_gap", 0.2))
+	var radius_tiles: float = float(defense.get("enemy_proximity_radius_tiles", 20))
+	var radius_px: float = radius_tiles * TILE_SIZE
+	# Tech count score (normalized to 40 max)
+	var tech_count: int = 0
+	if _tech_manager != null:
+		tech_count = _tech_manager.get_researched_techs(player_id).size()
+	var tech_score: float = clampf(float(tech_count) / 40.0, 0.0, 1.0)
+	# Enemy proximity score (count enemies within radius / 5)
+	var tc_pos: Vector2 = tc.global_position
+	var nearby_enemies: int = 0
+	for enemy in _enemy_units:
+		if "hp" in enemy and enemy.hp <= 0:
+			continue
+		if tc_pos.distance_to(enemy.global_position) <= radius_px:
+			nearby_enemies += 1
+	var prox_score: float = clampf(float(nearby_enemies) / 5.0, 0.0, 1.0)
+	# Garrison gap score (inverse of nearby defenders / 6)
+	var nearby_defenders: int = _count_own_military_near(tc_pos, radius_px)
+	var gap_score: float = clampf(1.0 - float(nearby_defenders) / 6.0, 0.0, 1.0)
+	var raw_score: float = w_tech * tech_score + w_prox * prox_score + w_gap * gap_score
+	# Scale by age defense multiplier
+	var age_mults: Array = defense.get("age_defense_multiplier", [1.0])
+	var age: int = clampi(GameManager.current_age, 0, age_mults.size() - 1)
+	var age_mult: float = float(age_mults[age])
+	return clampf(raw_score * age_mult, 0.0, 1.0)
+
+
+func _allocate_tc_defenders() -> void:
+	if _town_centers.is_empty() or _tech_manager == null:
+		return
+	var defense: Dictionary = _tr_config.get("defense", {})
+	var base_per_tech: float = float(defense.get("base_garrison_per_tech", 0.15))
+	var min_ratio: float = float(defense.get("min_garrison_ratio", 0.05))
+	var max_ratio: float = float(defense.get("max_garrison_ratio", 0.40))
+	var tech_count: int = _tech_manager.get_researched_techs(player_id).size()
+	if tech_count == 0:
+		return
+	var mil_size: int = _own_military.size()
+	if mil_size == 0:
+		return
+	var desired_ratio: float = clampf(base_per_tech * float(tech_count), min_ratio, max_ratio)
+	var desired_defenders: int = int(desired_ratio * float(mil_size))
+	if desired_defenders <= 0:
+		return
+	# Find most vulnerable TC
+	var most_vulnerable: Node2D = null
+	var highest_vuln: float = -1.0
+	for tc in _town_centers:
+		var vuln: float = _compute_tc_vulnerability(tc)
+		if vuln > highest_vuln:
+			highest_vuln = vuln
+			most_vulnerable = tc
+	if most_vulnerable == null:
+		return
+	var radius_tiles: float = float(defense.get("enemy_proximity_radius_tiles", 20))
+	var radius_px: float = radius_tiles * TILE_SIZE
+	var tc_pos: Vector2 = most_vulnerable.global_position
+	var current_near: int = _count_own_military_near(tc_pos, radius_px)
+	var deficit: int = desired_defenders - current_near
+	if deficit <= 0:
+		return
+	# Move idle military toward most vulnerable TC
+	var moved: int = 0
+	for unit in _own_military:
+		if moved >= deficit:
+			break
+		if not unit.has_method("is_idle") or not unit.is_idle():
+			continue
+		if tc_pos.distance_to(unit.global_position) <= radius_px:
+			continue
+		if unit.has_method("move_to"):
+			unit.move_to(tc_pos)
+			moved += 1
+
+
+func _count_own_military_near(pos: Vector2, radius: float) -> int:
+	var count: int = 0
+	for unit in _own_military:
+		if "hp" in unit and unit.hp <= 0:
+			continue
+		if pos.distance_to(unit.global_position) <= radius:
+			count += 1
+	return count
+
+
+func on_tech_regressed(p_id: int, _tech_id: String, _tech_data: Dictionary) -> void:
+	if p_id != player_id:
+		return
+	var tlr: Dictionary = _tr_config.get("tech_loss_response", {})
+	_tech_loss_boost_timer = float(tlr.get("military_boost_duration", 120.0))
+
+
+func on_building_destroyed(building: Node2D) -> void:
+	if not "building_name" in building:
+		return
+	if building.building_name != "town_center":
+		return
+	if "grid_pos" in building:
+		_destroyed_tc_positions.append(building.grid_pos)
+
+
 func save_state() -> Dictionary:
+	var dtc_serialized: Array = []
+	for pos in _destroyed_tc_positions:
+		dtc_serialized.append([pos.x, pos.y])
 	var state: Dictionary = {
 		"game_time": _game_time,
 		"last_attack_time": _last_attack_time,
@@ -464,6 +666,8 @@ func save_state() -> Dictionary:
 		"tick_timer": _tick_timer,
 		"difficulty": difficulty,
 		"player_id": player_id,
+		"tech_loss_boost_timer": _tech_loss_boost_timer,
+		"destroyed_tc_positions": dtc_serialized,
 	}
 	if personality != null:
 		state["personality_id"] = personality.personality_id
@@ -484,4 +688,11 @@ func load_state(data: Dictionary) -> void:
 	_enemy_composition.clear()
 	for k: String in ec:
 		_enemy_composition[k] = int(ec[k])
+	_tech_loss_boost_timer = float(data.get("tech_loss_boost_timer", 0.0))
+	_destroyed_tc_positions.clear()
+	var dtc: Array = data.get("destroyed_tc_positions", [])
+	for entry in dtc:
+		if entry is Array and entry.size() == 2:
+			_destroyed_tc_positions.append(Vector2i(int(entry[0]), int(entry[1])))
 	_load_config()
+	_load_tr_config()

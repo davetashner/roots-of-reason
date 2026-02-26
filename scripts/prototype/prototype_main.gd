@@ -406,6 +406,12 @@ func _on_building_destroyed(building: Node2D) -> void:
 		if not regressed.is_empty():
 			knowledge_burned.emit(building.last_attacker_id, building.owner_id, regressed)
 			_play_knowledge_burning_vfx(building.position, building.owner_id, building.last_attacker_id, regressed)
+	# Notify AI brains of building destruction
+	if "owner_id" in building and int(building.owner_id) == 1:
+		if _ai_military != null:
+			_ai_military.on_building_destroyed(building)
+		if _ai_economy != null:
+			_ai_economy.on_building_destroyed(building)
 	_update_fog_of_war()
 
 
@@ -526,7 +532,7 @@ func _setup_ai() -> void:
 	_ai_military.difficulty = difficulty
 	_ai_military.personality = ai_pers
 	add_child(_ai_military)
-	_ai_military.setup(self, _population_manager, _target_detector, _ai_economy)
+	_ai_military.setup(self, _population_manager, _target_detector, _ai_economy, _tech_manager)
 	_ai_tech = Node.new()
 	_ai_tech.name = "AITech"
 	_ai_tech.set_script(AITechScript)
@@ -534,6 +540,9 @@ func _setup_ai() -> void:
 	_ai_tech.gameplay_personality = ai_pers
 	add_child(_ai_tech)
 	_ai_tech.setup(_tech_manager)
+	# Connect tech regression signals to AI brains
+	_tech_manager.tech_regressed.connect(_ai_military.on_tech_regressed)
+	_tech_manager.tech_regressed.connect(_ai_tech.on_tech_regressed)
 
 
 func _load_ai_tier_config(difficulty: String) -> Dictionary:
