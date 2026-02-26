@@ -5,5 +5,15 @@
   "protect_age_advancements": true,
   "protect_first_n_techs": 0,
   "re_research_cost_multiplier": 1.0,
-  "cooldown_seconds": 0
+  "cooldown_seconds": 0,
+  "vfx": {
+    "screen_flash_duration": 0.3,
+    "screen_flash_opacity": 0.2,
+    "screen_shake_amplitude": 2.0,
+    "screen_shake_duration": 0.5,
+    "notification_duration": 4.0,
+    "amber_color": [1.0, 0.75, 0.2, 1.0],
+    "expand_circle_duration": 1.5,
+    "expand_circle_max_radius": 40.0
+  }
 }

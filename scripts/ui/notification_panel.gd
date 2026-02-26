@@ -105,6 +105,11 @@ func _process(delta: float) -> void:
 		var label: Label = entry["label"]
 		if is_instance_valid(label):
 			label.queue_free()
+		# Clean up CanvasLayer for center notifications
+		if entry.has("layer"):
+			var layer: CanvasLayer = entry["layer"]
+			if is_instance_valid(layer):
+				layer.queue_free()
 		_active_notifications.remove_at(idx)
 
 
@@ -116,6 +121,36 @@ func _remove_oldest() -> void:
 	if is_instance_valid(label):
 		label.queue_free()
 	_active_notifications.remove_at(0)
+
+
+func notify_center(message: String, duration: float = 4.0) -> void:
+	## Shows a large center-screen notification with amber/gold color.
+	## Used for high-impact events like knowledge burning.
+	var label := Label.new()
+	label.text = message
+	label.add_theme_font_size_override("font_size", 24)
+	label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.2, 1.0))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	# Place in a separate CanvasLayer at high z so it's centered on screen
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	add_child(layer)
+	var container := CenterContainer.new()
+	container.anchor_right = 1.0
+	container.anchor_bottom = 1.0
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(container)
+	label.custom_minimum_size.x = 500
+	container.add_child(label)
+	var entry: Dictionary = {
+		"label": label,
+		"timer": duration,
+		"layer": layer,
+	}
+	_active_notifications.append(entry)
 
 
 func get_notification_count() -> int:
