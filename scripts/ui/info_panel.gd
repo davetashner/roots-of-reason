@@ -14,6 +14,7 @@ var _tracked_entities: Array = []
 var _is_multi: bool = false
 var _hovered_entity: Node = null
 var _is_hovering_resource: bool = false
+var _is_hovering_wolf: bool = false
 
 # Config loaded from data/settings/info_panel.json
 var _hp_green_threshold: float = 0.6
@@ -251,6 +252,7 @@ func clear() -> void:
 func _clear_hover() -> void:
 	_hovered_entity = null
 	_is_hovering_resource = false
+	_is_hovering_wolf = false
 
 
 func _get_hp_color(ratio: float) -> Color:
@@ -275,10 +277,7 @@ func _process(_delta: float) -> void:
 	# Poll selection from InputHandler
 	var selected: Array[Node] = _input_handler._get_selected_units()
 	if selected.is_empty():
-		if not _is_hovering_resource:
-			_check_resource_hover()
-		elif _is_hovering_resource:
-			_check_resource_hover()
+		_check_resource_hover()
 		return
 	# Clear hover when selection exists
 	_clear_hover()
@@ -302,7 +301,7 @@ func _process(_delta: float) -> void:
 
 func _check_resource_hover() -> void:
 	if _target_detector == null:
-		if visible and not _is_hovering_resource:
+		if visible and not _is_hovering_resource and not _is_hovering_wolf:
 			clear()
 		return
 	var viewport := get_viewport()
@@ -318,9 +317,51 @@ func _check_resource_hover() -> void:
 			show_resource_node(found as Node2D)
 		else:
 			_update_resource_hover()
+	elif found != null and "entity_category" in found and found.entity_category == "wild_fauna":
+		if found != _hovered_entity:
+			_show_wolf_info(found as Node2D)
+		else:
+			_update_wolf_info()
 	else:
-		if _is_hovering_resource or visible:
+		if _is_hovering_resource or _is_hovering_wolf or visible:
 			clear()
+
+
+func _show_wolf_info(wolf: Node2D) -> void:
+	_hovered_entity = wolf
+	_is_hovering_wolf = true
+	visible = true
+	_portrait.color = Color(0.5, 0.5, 0.5)
+	_name_label.text = "Wolf"
+	# HP bar
+	var current_hp: int = wolf.hp if "hp" in wolf else 0
+	var max_hp_val: int = wolf.max_hp if "max_hp" in wolf else current_hp
+	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
+	_set_hp_bar(ratio, current_hp, max_hp_val)
+	# Domestication progress
+	var wolf_ai: Node = wolf.get_node_or_null("WolfAI")
+	if wolf_ai != null and wolf_ai.has_method("get_domestication_progress"):
+		var progress: float = wolf_ai.get_domestication_progress()
+		var pct := int(progress * 100.0)
+		_stats_label.text = "Domestication: %d%%" % pct
+	else:
+		_stats_label.text = ""
+
+
+func _update_wolf_info() -> void:
+	if _hovered_entity == null or not is_instance_valid(_hovered_entity):
+		clear()
+		return
+	var wolf: Node2D = _hovered_entity as Node2D
+	var current_hp: int = wolf.hp if "hp" in wolf else 0
+	var max_hp_val: int = wolf.max_hp if "max_hp" in wolf else current_hp
+	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
+	_set_hp_bar(ratio, current_hp, max_hp_val)
+	var wolf_ai: Node = wolf.get_node_or_null("WolfAI")
+	if wolf_ai != null and wolf_ai.has_method("get_domestication_progress"):
+		var progress: float = wolf_ai.get_domestication_progress()
+		var pct := int(progress * 100.0)
+		_stats_label.text = "Domestication: %d%%" % pct
 
 
 func _update_resource_hover() -> void:

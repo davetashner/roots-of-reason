@@ -319,8 +319,16 @@ func _issue_context_command(world_pos: Vector2) -> void:
 	var category := CommandResolver.get_target_category(target)
 	var unit_type := CommandResolver.get_primary_unit_type(selected)
 	var cmd := CommandResolver.resolve(unit_type, category, _command_config.get("command_table", {}))
+	# Shift+right-click on wild fauna with villager → feed
+	if Input.is_key_pressed(KEY_SHIFT) and category == "wild_fauna" and unit_type == "villager":
+		cmd = "feed"
 	command_issued.emit(selected, cmd, target, world_pos)
 	_show_click_marker(world_pos, cmd)
+	if cmd == "feed" and target != null:
+		for unit in selected:
+			if unit.has_method("assign_feed_target"):
+				unit.assign_feed_target(target)
+		return
 	if cmd == "build" and target != null and target.has_method("apply_build_work"):
 		for unit in selected:
 			if unit.has_method("assign_build_target"):
@@ -348,7 +356,11 @@ func _resolve_command_at(world_pos: Vector2) -> String:
 		target = _target_detector.detect(world_pos)
 	var category := CommandResolver.get_target_category(target)
 	var unit_type := CommandResolver.get_primary_unit_type(selected)
-	return CommandResolver.resolve(unit_type, category, _command_config.get("command_table", {}))
+	var cmd := CommandResolver.resolve(unit_type, category, _command_config.get("command_table", {}))
+	# Shift+right-click on wild fauna with villager → feed
+	if Input.is_key_pressed(KEY_SHIFT) and category == "wild_fauna" and unit_type == "villager":
+		cmd = "feed"
+	return cmd
 
 
 func _update_cursor_context(motion: InputEventMouseMotion) -> void:

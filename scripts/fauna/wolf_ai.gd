@@ -2,6 +2,8 @@ extends Node
 ## Wolf AI — state machine driving patrol, aggro, flee behavior for wolf fauna.
 ## Attached as child of a prototype_unit with owner_id == -1 (Gaia).
 
+signal domesticated(feeder_owner_id: int)
+
 enum WolfState { PATROL, ATTACK, FLEE, BEING_FED, DOMESTICATED }
 
 const TILE_SIZE: float = 64.0
@@ -21,6 +23,15 @@ var _scene_root: Node = null
 var _move_target: Vector2 = Vector2.ZERO
 var _is_moving: bool = false
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+# Domestication state
+var _domestication_progress: float = 0.0
+var _domestication_owner_id: int = -1
+var _decay_timer: float = 0.0
+var _feed_lockout_timer: float = 0.0
+var _current_feeder: Node2D = null
+var _pending_feeder: Node2D = null
+var _prev_hp: int = -1
 
 
 func _ready() -> void:
@@ -101,6 +112,13 @@ func _process(delta: float) -> void:
 
 	_scan_timer += game_delta
 
+	# Decrement feed lockout timer
+	if _feed_lockout_timer > 0.0:
+		_feed_lockout_timer -= game_delta
+
+	# Tick domestication decay
+	_tick_domestication_decay(game_delta)
+
 	match _state:
 		WolfState.PATROL:
 			_tick_patrol(game_delta)
@@ -109,9 +127,9 @@ func _process(delta: float) -> void:
 		WolfState.FLEE:
 			_tick_flee(game_delta)
 		WolfState.BEING_FED:
-			pass  # Stub — inert while being fed (future story 7wg.9)
+			_tick_being_fed(game_delta)
 		WolfState.DOMESTICATED:
-			pass  # Stub — terminal state (future story 2hj.7)
+			pass  # Terminal state (future story 2hj.7)
 
 
 func _get_game_delta(delta: float) -> float:
@@ -265,6 +283,9 @@ func _enter_flee() -> void:
 	_is_moving = true
 	# Cancel any proto-unit combat state
 	_wolf._cancel_combat()
+	# Cancel feeding if in progress
+	if _current_feeder != null:
+		cancel_feeding()
 	# Pick flee direction: away from nearest military or toward spawn
 	var threat := _get_military_centroid()
 	if threat != Vector2.ZERO:
@@ -299,6 +320,104 @@ func _enter_patrol() -> void:
 	)
 
 
+# -- BEING_FED --
+
+
+func begin_feeding(feeder: Node2D, feeder_owner_id: int) -> bool:
+	if _state == WolfState.DOMESTICATED:
+		return false
+	if _feed_lockout_timer > 0.0:
+		return false
+	# Contested domestication: different player resets progress
+	if _domestication_owner_id >= 0 and feeder_owner_id != _domestication_owner_id:
+		_domestication_progress = 0.0
+	_domestication_owner_id = feeder_owner_id
+	_current_feeder = feeder
+	_pending_feeder = null
+	_state = WolfState.BEING_FED
+	_is_moving = false
+	_combat_target = null
+	# Track HP for damage detection
+	if _wolf != null and "hp" in _wolf:
+		_prev_hp = _wolf.hp
+	return true
+
+
+func complete_feeding() -> void:
+	var feeds_required: int = int(_cfg.get("feeds_required", 3))
+	_domestication_progress += 1.0 / float(feeds_required)
+	_current_feeder = null
+	_feed_lockout_timer = float(_cfg.get("feed_cooldown_per_wolf", 5.0))
+	if _domestication_progress >= 1.0:
+		_domestication_progress = 1.0
+		_state = WolfState.DOMESTICATED
+		domesticated.emit(_domestication_owner_id)
+	else:
+		_enter_patrol()
+
+
+func cancel_feeding() -> void:
+	_current_feeder = null
+	_pending_feeder = null
+	_feed_lockout_timer = float(_cfg.get("feed_cooldown_per_wolf", 5.0))
+	if _state == WolfState.BEING_FED:
+		_enter_patrol()
+
+
+func register_pending_feeder(feeder: Node2D) -> void:
+	_pending_feeder = feeder
+
+
+func unregister_pending_feeder(feeder: Node2D) -> void:
+	if _pending_feeder == feeder:
+		_pending_feeder = null
+
+
+func get_domestication_progress() -> float:
+	return _domestication_progress
+
+
+func get_domestication_owner() -> int:
+	return _domestication_owner_id
+
+
+func is_being_fed_by(unit: Node2D) -> bool:
+	return _current_feeder == unit
+
+
+func is_feed_target_of(unit: Node2D) -> bool:
+	return _current_feeder == unit or _pending_feeder == unit
+
+
+func _tick_being_fed(game_delta: float) -> void:
+	# Validate feeder
+	if _current_feeder == null or not is_instance_valid(_current_feeder):
+		cancel_feeding()
+		return
+	# Check if wolf took damage — flee
+	if _wolf != null and "hp" in _wolf and _prev_hp >= 0:
+		if _wolf.hp < _prev_hp:
+			cancel_feeding()
+			_enter_flee()
+			return
+		_prev_hp = _wolf.hp
+	# Stay inert — villager drives the timer
+	game_delta = game_delta  # Suppress unused warning
+
+
+func _tick_domestication_decay(game_delta: float) -> void:
+	if _state == WolfState.BEING_FED or _state == WolfState.DOMESTICATED:
+		return
+	if _domestication_progress <= 0.0:
+		return
+	var decay_interval: float = float(_cfg.get("decay_interval", 10.0))
+	_decay_timer += game_delta
+	if _decay_timer >= decay_interval:
+		_decay_timer = 0.0
+		var decay_rate: float = float(_cfg.get("decay_rate", 0.1))
+		_domestication_progress = maxf(0.0, _domestication_progress - decay_rate)
+
+
 # -- Scanning helpers --
 
 
@@ -321,6 +440,9 @@ func _scan_for_aggro_target() -> Node2D:
 		if "unit_category" not in child:
 			continue
 		if child.unit_category not in categories:
+			continue
+		# Suppress aggro against feeding/approaching villager
+		if is_feed_target_of(child):
 			continue
 		var dist: float = _wolf.position.distance_to(child.global_position)
 		if dist > aggro_radius:
@@ -435,6 +557,10 @@ func save_state() -> Dictionary:
 		"is_moving": _is_moving,
 		"move_target_x": _move_target.x,
 		"move_target_y": _move_target.y,
+		"domestication_progress": _domestication_progress,
+		"domestication_owner_id": _domestication_owner_id,
+		"decay_timer": _decay_timer,
+		"feed_lockout_timer": _feed_lockout_timer,
 	}
 
 
@@ -453,3 +579,7 @@ func load_state(data: Dictionary) -> void:
 		float(data.get("move_target_x", 0.0)),
 		float(data.get("move_target_y", 0.0)),
 	)
+	_domestication_progress = float(data.get("domestication_progress", 0.0))
+	_domestication_owner_id = int(data.get("domestication_owner_id", -1))
+	_decay_timer = float(data.get("decay_timer", 0.0))
+	_feed_lockout_timer = float(data.get("feed_lockout_timer", 0.0))
