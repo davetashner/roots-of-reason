@@ -1,0 +1,20 @@
+{
+  "name": "Polynesia",
+  "description": "Voyagers of the open ocean. Their naval vessels move with unmatched swiftness across the seas.",
+  "bonuses": {
+    "naval_speed": 1.20
+  },
+  "unique_building": {
+    "name": "Marae",
+    "replaces": "library",
+    "coastline_reveal": true
+  },
+  "unique_unit": {
+    "name": "War Canoe",
+    "base_unit": "naval",
+    "speed_bonus": 0.3,
+    "transport_capacity": 5
+  },
+  "unique_techs": [],
+  "starting_bonuses": {}
+}

@@ -10,25 +10,41 @@
     "bonuses": { "type": "object" },
     "unique_building": {
       "type": "object",
+      "required": ["name", "replaces"],
       "properties": {
         "name": { "type": "string" },
-        "replaces": { "type": "string" },
-        "knowledge_multiplier": { "type": "number" }
-      }
+        "replaces": { "type": "string" }
+      },
+      "additionalProperties": true
     },
     "unique_unit": {
       "type": "object",
+      "required": ["name", "base_unit"],
       "properties": {
         "name": { "type": "string" },
-        "base_unit": { "type": "string" },
-        "hp_bonus": { "type": "number" },
-        "self_heal_rate": { "type": "number" }
-      }
+        "base_unit": { "type": "string" }
+      },
+      "additionalProperties": true
     },
     "unique_techs": {
       "type": "array",
       "items": { "type": "string" },
       "description": "Tech IDs exclusive to this civilization (defined in tech_tree.json with civ_exclusive field)"
+    },
+    "starting_bonuses": {
+      "type": "object",
+      "properties": {
+        "extra_resources": {
+          "type": "object",
+          "description": "Additional starting resources keyed by resource type"
+        },
+        "extra_units": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Additional starting unit types"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

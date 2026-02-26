@@ -65,6 +65,7 @@ func _ready() -> void:
 	_setup_input()
 	_setup_building_placer()
 	_setup_population()
+	_setup_civilizations()
 	_setup_units()
 	_setup_demo_entities()
 	_setup_fauna()
@@ -222,6 +223,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif key.keycode == KEY_T:
 				if _tech_tree_viewer != null:
 					_tech_tree_viewer.toggle_visible()
+
+
+func _setup_civilizations() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "mesopotamia")
+	CivBonusManager.apply_civ_bonuses(1, "rome")
+	CivBonusManager.apply_starting_bonuses(0)
+	CivBonusManager.apply_starting_bonuses(1)
 
 
 func _setup_units() -> void:
@@ -674,6 +682,7 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 		_population_manager.register_unit(unit, owner_id)
 	if _unit_upgrade_manager != null:
 		_unit_upgrade_manager.apply_upgrades_to_unit(unit, owner_id)
+	CivBonusManager.apply_bonus_to_unit(unit.stats, unit.unit_type, owner_id)
 	unit.unit_died.connect(_on_unit_died)
 	# Attach trade AI for trade carts and merchant ships
 	if unit_type == "trade_cart" or unit_type == "merchant_ship":

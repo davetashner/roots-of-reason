@@ -1,0 +1,21 @@
+{
+  "name": "Rome",
+  "description": "Masters of warfare and discipline. Their military units fight with superior strength and resilience.",
+  "bonuses": {
+    "military_attack": 1.10,
+    "military_defense": 1.10
+  },
+  "unique_building": {
+    "name": "Colosseum",
+    "replaces": "market",
+    "morale_aura": true
+  },
+  "unique_unit": {
+    "name": "Legionnaire",
+    "base_unit": "infantry",
+    "defense_bonus": 3,
+    "shield_wall": true
+  },
+  "unique_techs": [],
+  "starting_bonuses": {}
+}
