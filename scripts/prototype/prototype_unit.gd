@@ -76,6 +76,8 @@ var _pending_feed_target_name: String = ""
 # Formation speed override — when > 0, caps get_move_speed()
 var _formation_speed_override: float = 0.0
 
+var _heal_accumulator: float = 0.0
+
 var _is_dead: bool = false
 var _last_attacker: Node2D = null
 var _war_survival: Node = null
@@ -215,6 +217,7 @@ func _process(delta: float) -> void:
 	_tick_gather(game_delta)
 	_tick_feed(game_delta)
 	_tick_combat(game_delta)
+	_tick_heal(game_delta)
 
 
 func _tick_build(game_delta: float) -> void:
@@ -405,7 +408,8 @@ func _resource_type_to_enum(res_type: String) -> Variant:
 			return ResourceManager.ResourceType.STONE
 		"gold":
 			return ResourceManager.ResourceType.GOLD
-	return null
+		_:
+			return null
 
 
 func assign_gather_target(node: Node2D) -> void:
@@ -554,6 +558,29 @@ func resolve_feed_target(scene_root: Node) -> void:
 	_pending_feed_target_name = ""
 
 
+# -- Self-heal --
+
+
+func _tick_heal(game_delta: float) -> void:
+	if hp <= 0 or hp >= max_hp:
+		return
+	if _combat_state != CombatState.NONE:
+		return
+	if stats == null:
+		return
+	var rate: float = 0.0
+	if stats._base_stats.has("self_heal_rate"):
+		rate = float(stats._base_stats["self_heal_rate"])
+	if rate <= 0.0:
+		return
+	_heal_accumulator += rate * game_delta
+	if _heal_accumulator >= 1.0:
+		var whole := int(_heal_accumulator)
+		hp = mini(hp + whole, max_hp)
+		_heal_accumulator -= float(whole)
+		queue_redraw()
+
+
 # -- Combat --
 
 
@@ -585,19 +612,18 @@ func _tick_combat(game_delta: float) -> void:
 
 
 func _tick_combat_none() -> void:
-	var stance_cfg := _get_stance_config()
-	if not stance_cfg.get("auto_scan", false):
+	if not _get_stance_config().get("auto_scan", false):
 		return
-	var interval: float = float(_combat_config.get("scan_interval", 0.5))
-	if _scan_timer < interval:
+	if _scan_timer < float(_combat_config.get("scan_interval", 0.5)):
 		return
 	_scan_timer = 0.0
 	var target := _scan_for_targets()
-	if target != null:
-		_combat_target = target
-		_leash_origin = position
-		_combat_state = CombatState.PURSUING
-		move_to(target.global_position)
+	if target == null:
+		return
+	_combat_target = target
+	_leash_origin = position
+	_combat_state = CombatState.PURSUING
+	move_to(target.global_position)
 
 
 func _tick_combat_pursuing() -> void:
@@ -870,16 +896,12 @@ func _die() -> void:
 	_cancel_feed()
 	_cancel_gather()
 	_cancel_combat()
-	# Increment killer's kill count
 	var killer: Node2D = _last_attacker
 	if killer != null and is_instance_valid(killer) and "kill_count" in killer:
 		killer.kill_count += 1
-	# Emit signal with killer reference
 	unit_died.emit(self, killer)
-	# Make non-interactive
 	selected = false
 	set_process(false)
-	# Play death fade animation, then enter corpse state
 	var tween := CombatVisual.play_death_animation(self, _combat_config)
 	if tween != null:
 		tween.finished.connect(_enter_corpse_state)
@@ -888,14 +910,9 @@ func _die() -> void:
 
 
 func _enter_corpse_state() -> void:
-	# Apply corpse appearance (grey, semi-transparent)
-	var corpse_color_arr: Array = _combat_config.get("corpse_modulate", [0.4, 0.4, 0.4, 0.5])
-	if corpse_color_arr.size() == 4:
-		modulate = Color(corpse_color_arr[0], corpse_color_arr[1], corpse_color_arr[2], corpse_color_arr[3])
-	else:
-		modulate = Color(0.4, 0.4, 0.4, 0.5)
+	var ca: Array = _combat_config.get("corpse_modulate", [0.4, 0.4, 0.4, 0.5])
+	modulate = Color(ca[0], ca[1], ca[2], ca[3]) if ca.size() == 4 else Color(0.4, 0.4, 0.4, 0.5)
 	queue_redraw()
-	# Schedule corpse fade and removal
 	var corpse_time: float = float(_combat_config.get("corpse_duration", 30.0))
 	var corpse_tween := create_tween()
 	corpse_tween.tween_interval(corpse_time)
@@ -904,11 +921,9 @@ func _enter_corpse_state() -> void:
 
 
 func attack_move_to(world_pos: Vector2) -> void:
-	# Cancel gather and build
 	_cancel_gather()
 	_build_target = null
 	_pending_build_target_name = ""
-	# Set combat state
 	_combat_state = CombatState.ATTACK_MOVING
 	_attack_move_destination = world_pos
 	_leash_origin = position
@@ -917,11 +932,9 @@ func attack_move_to(world_pos: Vector2) -> void:
 
 
 func patrol_between(point_a: Vector2, point_b: Vector2) -> void:
-	# Cancel gather and build
 	_cancel_gather()
 	_build_target = null
 	_pending_build_target_name = ""
-	# Set combat state
 	_combat_state = CombatState.PATROLLING
 	_patrol_point_a = point_a
 	_patrol_point_b = point_b
@@ -973,9 +986,7 @@ func _get_attack_type() -> String:
 
 
 func _get_attack_range() -> int:
-	if stats != null:
-		return int(stats.get_stat("range"))
-	return 0
+	return int(stats.get_stat("range")) if stats != null else 0
 
 
 func _screen_to_grid(p: Vector2) -> Vector2i:
@@ -998,19 +1009,23 @@ func _get_stance_config() -> Dictionary:
 
 
 func _stance_to_string(s: Stance) -> String:
-	if s == Stance.DEFENSIVE:
-		return "defensive"
-	if s == Stance.STAND_GROUND:
-		return "stand_ground"
-	return "aggressive"
+	match s:
+		Stance.DEFENSIVE:
+			return "defensive"
+		Stance.STAND_GROUND:
+			return "stand_ground"
+		_:
+			return "aggressive"
 
 
 func _stance_from_string(s: String) -> Stance:
-	if s == "defensive":
-		return Stance.DEFENSIVE
-	if s == "stand_ground":
-		return Stance.STAND_GROUND
-	return Stance.AGGRESSIVE
+	match s:
+		"defensive":
+			return Stance.DEFENSIVE
+		"stand_ground":
+			return Stance.STAND_GROUND
+		_:
+			return Stance.AGGRESSIVE
 
 
 func resolve_combat_target(scene_root: Node) -> void:
@@ -1023,47 +1038,27 @@ func resolve_combat_target(scene_root: Node) -> void:
 
 
 func _draw() -> void:
-	# Selection ring
 	if selected:
-		draw_arc(
-			Vector2.ZERO,
-			SELECTION_RING_RADIUS,
-			0,
-			TAU,
-			32,
-			Color(0.0, 1.0, 0.0, 0.8),
-			2.0,
-		)
-
-	# Unit body
+		draw_arc(Vector2.ZERO, SELECTION_RING_RADIUS, 0, TAU, 32, Color(0, 1, 0, 0.8), 2.0)
+	var draw_radius := RADIUS
 	if entity_category == "dog":
-		# Dog: smaller circle with collar arc in player color
-		var dog_radius := RADIUS * 0.8
-		draw_circle(Vector2.ZERO, dog_radius, unit_color)
+		draw_radius = RADIUS * 0.8
+		draw_circle(Vector2.ZERO, draw_radius, unit_color)
 		var collar_color := Color(0.2, 0.4, 0.9) if owner_id == 0 else Color(0.9, 0.2, 0.2)
-		draw_arc(Vector2.ZERO, dog_radius + 1.0, 0.0, PI, 16, collar_color, 2.5)
+		draw_arc(Vector2.ZERO, draw_radius + 1.0, 0.0, PI, 16, collar_color, 2.5)
 	else:
 		draw_circle(Vector2.ZERO, RADIUS, unit_color)
-
-	# Direction triangle (points toward facing direction)
-	var dir := _facing
-	var draw_radius := RADIUS * 0.8 if entity_category == "dog" else RADIUS
-	var tip := dir * (draw_radius + 4.0)
-	var left := dir.rotated(2.5) * draw_radius * 0.5
-	var right := dir.rotated(-2.5) * draw_radius * 0.5
+	var tip := _facing * (draw_radius + 4.0)
+	var left := _facing.rotated(2.5) * draw_radius * 0.5
+	var right := _facing.rotated(-2.5) * draw_radius * 0.5
 	draw_colored_polygon(PackedVector2Array([tip, left, right]), Color(1, 1, 1, 0.9))
-
-	if _moving:  # Movement target indicator
+	if _moving:
 		var lt := _target_pos - position
 		draw_circle(lt, 3.0, Color(1, 1, 0, 0.6))
 		draw_arc(lt, 6.0, 0, TAU, 16, Color(1, 1, 0, 0.4), 1.0)
-
-	# Carry indicator
 	if _carried_amount > 0:
 		var cr := float(_carried_amount) / float(_carry_capacity)
 		draw_arc(Vector2.ZERO, RADIUS + 2.0, 0, TAU * cr, 16, Color(0.9, 0.8, 0.1, 0.8), 2.0)
-
-	# HP bar (only if damaged)
 	if max_hp > 0 and hp < max_hp:
 		var bw: float = RADIUS * 2.5
 		var by: float = -RADIUS - 8.0
@@ -1141,6 +1136,7 @@ func save_state() -> Dictionary:
 		"gather_rate_multiplier": _gather_rate_multiplier,
 		"formation_speed_override": _formation_speed_override,
 		"kill_count": kill_count,
+		"heal_accumulator": _heal_accumulator,
 	}
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
@@ -1194,6 +1190,7 @@ func load_state(data: Dictionary) -> void:
 	_gather_rate_multiplier = float(data.get("gather_rate_multiplier", 1.0))
 	_formation_speed_override = float(data.get("formation_speed_override", 0.0))
 	kill_count = int(data.get("kill_count", 0))
+	_heal_accumulator = float(data.get("heal_accumulator", 0.0))
 	if data.has("stats"):
 		if stats == null:
 			stats = UnitStats.new()
