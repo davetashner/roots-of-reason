@@ -508,23 +508,30 @@ func _setup_ai() -> void:
 	var ai_tc := _create_ai_town_center()
 	var villager_count: int = tier_config.get("starting_villagers", 3)
 	_create_ai_starting_villagers(ai_tc, villager_count)
+	# Resolve gameplay personality
+	var personality_id: String = str(tier_config.get("gameplay_personality", "random"))
+	if personality_id == "random":
+		personality_id = AIPersonality.get_random_id()
+	var ai_pers: AIPersonality = AIPersonality.get_personality(personality_id)
 	_ai_economy = Node.new()
 	_ai_economy.name = "AIEconomy"
 	_ai_economy.set_script(AIEconomyScript)
 	_ai_economy.difficulty = difficulty
+	_ai_economy.personality = ai_pers
 	add_child(_ai_economy)
 	_ai_economy.setup(self, _population_manager, _pathfinder, _map_node, _target_detector, _tech_manager)
 	_ai_military = Node.new()
 	_ai_military.name = "AIMilitary"
 	_ai_military.set_script(AIMilitaryScript)
 	_ai_military.difficulty = difficulty
+	_ai_military.personality = ai_pers
 	add_child(_ai_military)
 	_ai_military.setup(self, _population_manager, _target_detector, _ai_economy)
 	_ai_tech = Node.new()
 	_ai_tech.name = "AITech"
 	_ai_tech.set_script(AITechScript)
 	_ai_tech.difficulty = difficulty
-	_ai_tech.personality = tier_config.get("personality", "balanced")
+	_ai_tech.gameplay_personality = ai_pers
 	add_child(_ai_tech)
 	_ai_tech.setup(_tech_manager)
 

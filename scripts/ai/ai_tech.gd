@@ -8,6 +8,7 @@ extends Node
 var player_id: int = 1
 var difficulty: String = "normal"
 var personality: String = "balanced"
+var gameplay_personality: AIPersonality = null
 
 var _tech_manager: Node = null
 var _tick_timer: float = 0.0
@@ -18,6 +19,8 @@ var _personalities: Dictionary = {}
 
 func setup(tech_manager: Node) -> void:
 	_tech_manager = tech_manager
+	if gameplay_personality != null:
+		personality = gameplay_personality.get_tech_personality()
 	_load_config()
 
 
@@ -111,17 +114,26 @@ func _get_priority_techs(age: int) -> Array:
 
 
 func save_state() -> Dictionary:
-	return {
+	var state: Dictionary = {
 		"personality": personality,
 		"difficulty": difficulty,
 		"player_id": player_id,
 		"tick_timer": _tick_timer,
 	}
+	if gameplay_personality != null:
+		state["gameplay_personality_id"] = gameplay_personality.personality_id
+	return state
 
 
 func load_state(data: Dictionary) -> void:
-	personality = str(data.get("personality", personality))
 	difficulty = str(data.get("difficulty", difficulty))
 	player_id = int(data.get("player_id", player_id))
 	_tick_timer = float(data.get("tick_timer", 0.0))
+	var gp_id: String = str(data.get("gameplay_personality_id", ""))
+	if gp_id != "":
+		gameplay_personality = AIPersonality.get_personality(gp_id)
+	if gameplay_personality != null:
+		personality = gameplay_personality.get_tech_personality()
+	else:
+		personality = str(data.get("personality", personality))
 	_load_config()

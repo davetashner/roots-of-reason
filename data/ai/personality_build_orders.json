@@ -1,0 +1,54 @@
+{
+  "rusher": {
+    "steps": [
+      { "action": "train", "unit": "villager", "count": 3 },
+      { "action": "build", "building": "house" },
+      { "action": "build", "building": "barracks" },
+      { "action": "train", "unit": "villager", "count": 2 },
+      { "action": "build", "building": "barracks" },
+      { "action": "build", "building": "house" },
+      { "action": "advance_age" },
+      { "action": "train", "unit": "villager", "count": 3 }
+    ],
+    "villager_allocation": {
+      "0": { "food": 0.65, "wood": 0.25, "stone": 0.05, "gold": 0.05 },
+      "1": { "food": 0.50, "wood": 0.25, "stone": 0.05, "gold": 0.20 }
+    }
+  },
+  "boomer": {
+    "steps": [
+      { "action": "train", "unit": "villager", "count": 5 },
+      { "action": "build", "building": "house" },
+      { "action": "train", "unit": "villager", "count": 5 },
+      { "action": "build", "building": "house" },
+      { "action": "advance_age" },
+      { "action": "build", "building": "town_center" },
+      { "action": "train", "unit": "villager", "count": 8 },
+      { "action": "build", "building": "house" },
+      { "action": "build", "building": "barracks" },
+      { "action": "build", "building": "house" }
+    ],
+    "villager_allocation": {
+      "0": { "food": 0.55, "wood": 0.35, "stone": 0.05, "gold": 0.05 },
+      "1": { "food": 0.40, "wood": 0.30, "stone": 0.10, "gold": 0.20 }
+    }
+  },
+  "turtle": {
+    "steps": [
+      { "action": "train", "unit": "villager", "count": 4 },
+      { "action": "build", "building": "house" },
+      { "action": "train", "unit": "villager", "count": 4 },
+      { "action": "build", "building": "house" },
+      { "action": "advance_age" },
+      { "action": "build", "building": "barracks" },
+      { "action": "train", "unit": "villager", "count": 4 },
+      { "action": "build", "building": "barracks" },
+      { "action": "build", "building": "library" },
+      { "action": "build", "building": "house" }
+    ],
+    "villager_allocation": {
+      "0": { "food": 0.50, "wood": 0.30, "stone": 0.10, "gold": 0.10 },
+      "1": { "food": 0.35, "wood": 0.25, "stone": 0.20, "gold": 0.20 }
+    }
+  }
+}
