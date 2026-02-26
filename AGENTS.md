@@ -3,16 +3,7 @@
 A civilization RTS inspired by Age of Empires where the endgame is achieving artificial general intelligence. Built with Godot 4 + GDScript, 2D isometric, single-player vs AI.
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
-
-## Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-bd sync               # Sync with git
-```
+See `CLAUDE.md` for beads commands, project structure, quality gates, and the standard ship cycle.
 
 ---
 
@@ -50,28 +41,8 @@ Stone → Bronze → Iron → Medieval → Industrial → Information → Singul
 - Advancing requires resource cost + prerequisite buildings
 - **Singularity Age** win chain: GPU Foundry → Transformer Lab → AGI Core
 
-### ADR-006: Project Structure
-```
-project/
-├── scenes/          # Game scenes organized by feature
-├── scripts/         # GDScript files (mirrors scenes/ structure)
-├── autoloads/       # Global singletons (GameManager, ResourceManager, etc.)
-├── data/            # JSON data files (tech trees, unit stats, civ data)
-├── assets/          # Art, audio, fonts (see ADR-008 for full layout)
-├── addons/          # Godot addons (GdUnit4, etc.)
-└── tests/           # Test files (mirrors scripts/ structure)
-```
-
-### ADR-007: Quality Pipeline — 90% Coverage, Zero Warnings
-- **GdUnit4** for all tests (unit + integration)
-- **90% line coverage** enforced in CI on all gameplay scripts
-- **gdtoolkit** (gdlint + gdformat) — zero warnings policy
-- **Headless scene smoke tests** — every .tscn must load without errors
-- **Playability integration tests** — automated gameplay scenarios run headless
-- **Screenshot regression** — UI scenes compared against baseline images
-- **Performance budgets** — frame time benchmarks, CI fails on >15% regression
-- **Export validation** — macOS + Windows builds verified to launch
-- Every PR must pass all gates before merge. No exceptions.
+### ADR-006 & ADR-007
+Project structure and quality pipeline are documented in `CLAUDE.md`.
 
 ### ADR-008: Art Pipeline — Phased Production
 - **Phase 1 (prototype):** Colored geometric shapes. Diamonds for tiles, circles for units, rectangles for buildings. Zero art skill needed. Game is always playable.
@@ -442,52 +413,7 @@ Four milestones define the path from prototype to content-complete. Each milesto
 
 ---
 
-## Coding Standards
+## Coding Standards & Workflow
 
-### All gameplay numbers must be data-driven
-```gdscript
-# WRONG — hardcoded stats
-var hp = 100
-var attack = 15
-
-# RIGHT — loaded from data
-var stats = DataLoader.get_unit_stats("infantry")
-var hp = stats.hp
-var attack = stats.attack
-```
-
-### All game state must be serializable
-Every system that holds game state must implement save/load. Design for serialization from day one — do not bolt it on later.
-
-### Test every system
-- Unit tests for pure logic (damage calculation, resource math, pathfinding)
-- Integration tests for gameplay flows (gather → return → deposit)
-- Scene smoke tests for all .tscn files
-- Target: 90% line coverage, enforced in CI
-
-## Landing the Plane (Session Completion)
-
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
-
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+See `CLAUDE.md` for data-driven conventions, serialization requirements, test standards, quality gates, and the standard feature ship cycle.
 
