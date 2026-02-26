@@ -1,0 +1,159 @@
+extends GdUnitTestSuite
+## Tests for unique civilization technologies — validates civ-exclusive techs
+## load correctly with proper fields, effects, ages, and civ restrictions.
+
+const UNIQUE_TECH_IDS: Array[String] = [
+	"cuneiform_writing",
+	"hanging_gardens_legacy",
+]
+
+
+func before_test() -> void:
+	DataLoader.reload()
+
+
+func after_test() -> void:
+	DataLoader.reload()
+
+
+# -- Both unique techs exist --
+
+
+func test_cuneiform_writing_exists() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("cuneiform_writing")
+	assert_dict(data).is_not_empty()
+	assert_str(data.get("id", "")).is_equal("cuneiform_writing")
+
+
+func test_hanging_gardens_legacy_exists() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("hanging_gardens_legacy")
+	assert_dict(data).is_not_empty()
+	assert_str(data.get("id", "")).is_equal("hanging_gardens_legacy")
+
+
+# -- Required fields present --
+
+
+func test_unique_techs_have_required_fields() -> void:
+	var required_fields: Array[String] = [
+		"id",
+		"name",
+		"age",
+		"cost",
+		"research_time",
+		"prerequisites",
+		"effects",
+	]
+	for tech_id in UNIQUE_TECH_IDS:
+		var data: Dictionary = DataLoader.get_tech_data(tech_id)
+		for field in required_fields:
+			assert_bool(data.has(field)).is_true()
+
+
+# -- Age assignments --
+
+
+func test_cuneiform_writing_is_iron_age() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("cuneiform_writing")
+	assert_int(int(data["age"])).is_equal(2)
+
+
+func test_hanging_gardens_legacy_is_industrial_age() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("hanging_gardens_legacy")
+	assert_int(int(data["age"])).is_equal(4)
+
+
+# -- Effects --
+
+
+func test_cuneiform_writing_has_research_bonus() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("cuneiform_writing")
+	assert_float(float(data["effects"]["research_bonus"])).is_equal_approx(0.10, 0.001)
+
+
+func test_hanging_gardens_has_farm_food_rate() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("hanging_gardens_legacy")
+	var econ: Dictionary = data["effects"]["economic_bonus"]
+	assert_float(float(econ["farm_food_rate"])).is_equal_approx(0.20, 0.001)
+
+
+func test_hanging_gardens_has_building_cost_reduction() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("hanging_gardens_legacy")
+	var econ: Dictionary = data["effects"]["economic_bonus"]
+	assert_float(float(econ["building_cost_reduction"])).is_equal_approx(0.10, 0.001)
+
+
+# -- Civ exclusivity --
+
+
+func test_cuneiform_writing_is_mesopotamia_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("cuneiform_writing")
+	assert_str(data.get("civ_exclusive", "")).is_equal("mesopotamia")
+
+
+func test_hanging_gardens_is_mesopotamia_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("hanging_gardens_legacy")
+	assert_str(data.get("civ_exclusive", "")).is_equal("mesopotamia")
+
+
+# -- Flavor text --
+
+
+func test_unique_techs_have_flavor_text() -> void:
+	for tech_id in UNIQUE_TECH_IDS:
+		var data: Dictionary = DataLoader.get_tech_data(tech_id)
+		assert_bool(data.has("flavor_text")).is_true()
+		assert_str(data["flavor_text"]).is_not_empty()
+
+
+# -- Prerequisites exist in tree --
+
+
+func test_cuneiform_writing_requires_writing() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("cuneiform_writing")
+	var prereqs: Array = data["prerequisites"]
+	assert_bool("writing" in prereqs).is_true()
+
+
+func test_hanging_gardens_requires_agriculture() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("hanging_gardens_legacy")
+	var prereqs: Array = data["prerequisites"]
+	assert_bool("agriculture" in prereqs).is_true()
+
+
+func test_unique_tech_prereqs_exist_in_tree() -> void:
+	for tech_id in UNIQUE_TECH_IDS:
+		var data: Dictionary = DataLoader.get_tech_data(tech_id)
+		var prereqs: Array = data["prerequisites"]
+		for prereq_id in prereqs:
+			var prereq_data: Dictionary = DataLoader.get_tech_data(prereq_id)
+			assert_dict(prereq_data).is_not_empty()
+
+
+# -- Costs are non-empty --
+
+
+func test_unique_techs_have_costs() -> void:
+	for tech_id in UNIQUE_TECH_IDS:
+		var data: Dictionary = DataLoader.get_tech_data(tech_id)
+		assert_dict(data["cost"]).is_not_empty()
+
+
+# -- Total tech count (83 base + 2 unique = 85) --
+
+
+func test_total_tech_count_is_85() -> void:
+	var data: Variant = DataLoader.load_json("res://data/tech/tech_tree.json")
+	assert_int(data.size()).is_equal(85)
+
+
+# -- Mesopotamia civ data references unique techs --
+
+
+func test_mesopotamia_civ_has_unique_techs_array() -> void:
+	var civ_data: Dictionary = DataLoader.get_civ_data("mesopotamia")
+	assert_bool(civ_data.has("unique_techs")).is_true()
+	var techs: Array = civ_data["unique_techs"]
+	assert_int(techs.size()).is_equal(2)
+	assert_bool("cuneiform_writing" in techs).is_true()
+	assert_bool("hanging_gardens_legacy" in techs).is_true()

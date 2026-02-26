@@ -17,6 +17,9 @@ var game_time: float = 0.0
 var current_age: int = 0  # 0=Stone, 1=Bronze, ..., 6=Singularity
 var ai_difficulty: String = "normal"
 
+## {player_id: String} — civilization ID per player (e.g. "mesopotamia")
+var player_civilizations: Dictionary = {}
+
 var _speed_steps: Array = [1.0, 1.5, 2.0, 3.0]
 var _speed_index: int = 0
 var _pause_action: String = "ui_pause"
@@ -136,6 +139,16 @@ func advance_age(new_age: int) -> void:
 	age_advanced.emit(new_age)
 
 
+func set_player_civilization(player_id: int, civ_id: String) -> void:
+	## Assigns a civilization to a player.
+	player_civilizations[player_id] = civ_id
+
+
+func get_player_civilization(player_id: int) -> String:
+	## Returns the civilization ID for a player, or "" if unset.
+	return player_civilizations.get(player_id, "")
+
+
 func save_state() -> Dictionary:
 	return {
 		"game_time": game_time,
@@ -144,6 +157,7 @@ func save_state() -> Dictionary:
 		"is_paused": is_paused,
 		"current_age": current_age,
 		"ai_difficulty": ai_difficulty,
+		"player_civilizations": player_civilizations.duplicate(),
 	}
 
 
@@ -158,3 +172,8 @@ func load_state(data: Dictionary) -> void:
 		age = 0
 	current_age = age
 	ai_difficulty = str(data.get("ai_difficulty", "normal"))
+	# Restore player civilizations (JSON round-trip gives string keys)
+	player_civilizations = {}
+	var raw_civs: Dictionary = data.get("player_civilizations", {})
+	for key: Variant in raw_civs:
+		player_civilizations[int(key)] = str(raw_civs[key])
