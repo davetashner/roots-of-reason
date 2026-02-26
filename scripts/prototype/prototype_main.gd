@@ -2,6 +2,8 @@ extends Node2D
 ## Main prototype scene — assembles map, camera, units, input, and HUD
 ## programmatically at runtime.
 
+signal knowledge_burned(attacker_id: int, defender_id: int, regressed_techs: Array)
+
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
 const ProductionQueueScript := preload("res://scripts/prototype/production_queue.gd")
 const AIEconomyScript := preload("res://scripts/ai/ai_economy.gd")
@@ -319,6 +321,16 @@ func _on_building_destroyed(building: Node2D) -> void:
 		var cells := BuildingValidator.get_footprint_cells(building.grid_pos, building.footprint)
 		for cell in cells:
 			_pathfinder.set_cell_solid(cell, false)
+	# Knowledge burning: destroying a completed town center triggers tech regression
+	if (
+		building.building_name == "town_center"
+		and not building.under_construction
+		and building.last_attacker_id >= 0
+		and building.last_attacker_id != building.owner_id
+	):
+		var regressed: Array = _tech_manager.trigger_knowledge_burning(building.owner_id)
+		if not regressed.is_empty():
+			knowledge_burned.emit(building.last_attacker_id, building.owner_id, regressed)
 	_update_fog_of_war()
 
 

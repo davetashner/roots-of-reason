@@ -20,6 +20,7 @@ var garrison_capacity: int = 0
 
 var under_construction: bool = false
 var build_progress: float = 0.0
+var last_attacker_id: int = -1
 var _build_time: float = 1.0
 
 var _is_ruins: bool = false
@@ -136,6 +137,8 @@ func _arr_to_color(arr: Array) -> Color:
 func take_damage(amount: int, _attacker: Node2D) -> void:
 	if _is_ruins:
 		return
+	if _attacker != null and "owner_id" in _attacker:
+		last_attacker_id = _attacker.owner_id
 	hp -= amount
 	if hp < 0:
 		hp = 0
@@ -498,6 +501,7 @@ func save_state() -> Dictionary:
 		"build_time": _build_time,
 		"is_drop_off": is_drop_off,
 		"drop_off_types": drop_off_types,
+		"last_attacker_id": last_attacker_id,
 		"is_ruins": _is_ruins,
 		"ruins_timer": _ruins_timer,
 		"garrison_capacity": garrison_capacity,
@@ -520,6 +524,7 @@ func load_state(data: Dictionary) -> void:
 	drop_off_types.clear()
 	for t in types:
 		drop_off_types.append(str(t))
+	last_attacker_id = int(data.get("last_attacker_id", -1))
 	_is_ruins = bool(data.get("is_ruins", false))
 	_ruins_timer = float(data.get("ruins_timer", 0.0))
 	garrison_capacity = int(data.get("garrison_capacity", 0))
