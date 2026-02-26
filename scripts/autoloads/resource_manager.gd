@@ -26,6 +26,8 @@ var _stockpiles: Dictionary = {}
 var _config: Dictionary = {}
 # player_id -> float gather rate multiplier
 var _gather_multipliers: Dictionary = {}
+# player_id -> float corruption rate (0.0–1.0)
+var _corruption_rates: Dictionary = {}
 
 
 func _ready() -> void:
@@ -52,6 +54,14 @@ func get_gather_multiplier(player_id: int) -> float:
 	return _gather_multipliers.get(player_id, 1.0)
 
 
+func set_corruption_rate(player_id: int, rate: float) -> void:
+	_corruption_rates[player_id] = rate
+
+
+func get_corruption_rate(player_id: int) -> float:
+	return _corruption_rates.get(player_id, 0.0)
+
+
 func add_resource(player_id: int, resource_type: ResourceType, amount: int) -> void:
 	if player_id not in _stockpiles:
 		_stockpiles[player_id] = {}
@@ -59,6 +69,9 @@ func add_resource(player_id: int, resource_type: ResourceType, amount: int) -> v
 		var multiplier: float = _gather_multipliers.get(player_id, 1.0)
 		if not is_equal_approx(multiplier, 1.0):
 			amount = int(float(amount) * multiplier)
+		var corruption: float = _corruption_rates.get(player_id, 0.0)
+		if corruption > 0.0 and resource_type != ResourceType.KNOWLEDGE:
+			amount = maxi(int(float(amount) * (1.0 - corruption)), 1)
 	var old_amount: int = _stockpiles[player_id].get(resource_type, 0)
 	_stockpiles[player_id][resource_type] = old_amount + amount
 	(
@@ -122,6 +135,7 @@ func init_player(player_id: int, starting_resources: Variant = null, difficulty:
 func reset() -> void:
 	_stockpiles.clear()
 	_gather_multipliers.clear()
+	_corruption_rates.clear()
 
 
 func save_state() -> Dictionary:
@@ -136,12 +150,22 @@ func save_state() -> Dictionary:
 		multipliers[str(player_id)] = _gather_multipliers[player_id]
 	if not multipliers.is_empty():
 		data["_gather_multipliers"] = multipliers
+	var corruption: Dictionary = {}
+	for player_id: int in _corruption_rates:
+		corruption[str(player_id)] = _corruption_rates[player_id]
+	if not corruption.is_empty():
+		data["_corruption_rates"] = corruption
 	return data
 
 
 func load_state(data: Dictionary) -> void:
 	_stockpiles.clear()
 	_gather_multipliers.clear()
+	_corruption_rates.clear()
+	if data.has("_corruption_rates"):
+		var cr: Dictionary = data["_corruption_rates"]
+		for pid_str: String in cr:
+			_corruption_rates[int(pid_str)] = float(cr[pid_str])
 	if data.has("_gather_multipliers"):
 		var multipliers: Dictionary = data["_gather_multipliers"]
 		for player_id_str: String in multipliers:

@@ -9,6 +9,8 @@ var _config: Dictionary = {}
 var _resource_labels: Dictionary = {}
 var _population_label: Label
 var _age_label: Label
+var _corruption_item: HBoxContainer
+var _corruption_label: Label
 
 
 func _ready() -> void:
@@ -82,6 +84,30 @@ func _build_layout() -> void:
 
 		hbox.add_child(item)
 		_resource_labels[resource_name] = lbl
+
+	# Corruption indicator (hidden by default)
+	_corruption_item = HBoxContainer.new()
+	_corruption_item.name = "CorruptionItem"
+	_corruption_item.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_corruption_item.add_theme_constant_override("separation", 4)
+	_corruption_item.visible = false
+
+	var corruption_icon := ColorRect.new()
+	corruption_icon.name = "Icon"
+	corruption_icon.custom_minimum_size = Vector2(icon_size, icon_size)
+	corruption_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	corruption_icon.color = Color(0.6, 0.1, 0.1)
+	_corruption_item.add_child(corruption_icon)
+
+	_corruption_label = Label.new()
+	_corruption_label.name = "Amount"
+	_corruption_label.text = "-0%"
+	_corruption_label.add_theme_font_size_override("font_size", font_size)
+	_corruption_label.add_theme_color_override("font_color", Color(0.9, 0.3, 0.3))
+	_corruption_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_corruption_item.add_child(_corruption_label)
+
+	hbox.add_child(_corruption_item)
 
 	# Separator
 	var sep1 := VSeparator.new()
@@ -171,6 +197,18 @@ static func format_amount(amount: int) -> String:
 	if frac > 0:
 		return "%d.%dk" % [whole, frac]
 	return "%dk" % whole
+
+
+func update_corruption(rate: float) -> void:
+	if _corruption_item == null:
+		return
+	if rate <= 0.0:
+		_corruption_item.visible = false
+		return
+	_corruption_item.visible = true
+	@warning_ignore("narrowing_conversion")
+	var pct: int = int(rate * 100.0)
+	_corruption_label.text = "-%d%%" % pct
 
 
 func update_population(current: int, cap: int) -> void:

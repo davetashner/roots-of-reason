@@ -11,6 +11,7 @@ func before_test() -> void:
 
 func after_test() -> void:
 	ResourceManager._stockpiles = _original_stockpiles.duplicate(true)
+	ResourceManager._corruption_rates.clear()
 
 
 # --- init_player tests ---
@@ -209,3 +210,40 @@ func test_reset_clears_all_stockpiles() -> void:
 	ResourceManager.init_player(99, {ResourceManager.ResourceType.FOOD: 500})
 	ResourceManager.reset()
 	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.FOOD)).is_equal(0)
+
+
+# --- corruption tests ---
+
+
+func test_corruption_reduces_positive_income() -> void:
+	ResourceManager.init_player(99, {})
+	ResourceManager.set_corruption_rate(99, 0.20)
+	ResourceManager.add_resource(99, ResourceManager.ResourceType.FOOD, 100)
+	# 100 * (1 - 0.20) = 80
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.FOOD)).is_equal(80)
+	ResourceManager.set_corruption_rate(99, 0.0)
+
+
+func test_corruption_does_not_affect_knowledge() -> void:
+	ResourceManager.init_player(99, {})
+	ResourceManager.set_corruption_rate(99, 0.20)
+	ResourceManager.add_resource(99, ResourceManager.ResourceType.KNOWLEDGE, 100)
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.KNOWLEDGE)).is_equal(100)
+	ResourceManager.set_corruption_rate(99, 0.0)
+
+
+func test_corruption_does_not_affect_spending() -> void:
+	ResourceManager.init_player(99, {ResourceManager.ResourceType.FOOD: 200})
+	ResourceManager.set_corruption_rate(99, 0.50)
+	ResourceManager.add_resource(99, ResourceManager.ResourceType.FOOD, -100)
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.FOOD)).is_equal(100)
+	ResourceManager.set_corruption_rate(99, 0.0)
+
+
+func test_corruption_minimum_yield_is_one() -> void:
+	ResourceManager.init_player(99, {})
+	ResourceManager.set_corruption_rate(99, 0.99)
+	ResourceManager.add_resource(99, ResourceManager.ResourceType.FOOD, 1)
+	# 1 * (1 - 0.99) = 0.01 -> maxi(0, 1) = 1
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.FOOD)).is_equal(1)
+	ResourceManager.set_corruption_rate(99, 0.0)

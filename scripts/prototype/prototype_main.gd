@@ -31,6 +31,7 @@ var _ai_military: Node = null
 var _ai_tech: Node = null
 var _visibility_manager: Node = null
 var _unit_upgrade_manager: Node = null
+var _corruption_manager: Node = null
 var _fog_layer: Node = null
 
 
@@ -47,6 +48,7 @@ func _ready() -> void:
 	_setup_demo_entities()
 	_setup_fauna()
 	_setup_tech()
+	_setup_corruption()
 	_setup_ai()
 	_setup_hud()
 	# Initial visibility update after all units are placed
@@ -584,6 +586,14 @@ func _setup_tech() -> void:
 	_tech_manager.tech_researched.connect(_on_tech_researched_spillover)
 
 
+func _setup_corruption() -> void:
+	_corruption_manager = Node.new()
+	_corruption_manager.name = "CorruptionManager"
+	_corruption_manager.set_script(load("res://scripts/prototype/corruption_manager.gd"))
+	add_child(_corruption_manager)
+	_corruption_manager.setup(_population_manager, _tech_manager)
+
+
 func _setup_hud() -> void:
 	var hud := CanvasLayer.new()
 	hud.name = "HUD"
@@ -639,12 +649,20 @@ func _setup_resource_bar() -> void:
 		var current: int = _population_manager.get_population(0)
 		var cap: int = _population_manager.get_population_cap(0)
 		_resource_bar.update_population(current, cap)
+	# Connect corruption display
+	if _corruption_manager != null:
+		_corruption_manager.corruption_changed.connect(_on_corruption_changed)
 
 
 func _on_tech_researched_spillover(player_id: int, tech_id: String, _effects: Dictionary) -> void:
 	if _war_bonus != null:
 		var tech_data: Dictionary = DataLoader.get_tech_data(tech_id)
 		_war_bonus.apply_spillover(player_id, tech_id, tech_data)
+
+
+func _on_corruption_changed(player_id: int, rate: float) -> void:
+	if player_id == 0 and _resource_bar != null:
+		_resource_bar.update_corruption(rate)
 
 
 func _on_population_changed(player_id: int, current: int, cap: int) -> void:

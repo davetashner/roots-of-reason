@@ -6,10 +6,12 @@ extends Node
 
 signal population_changed(player_id: int, current: int, cap: int)
 signal near_cap_warning(player_id: int)
+signal building_count_changed(player_id: int, count: int)
 
 var _current_population: Dictionary = {}  # player_id -> int
 var _population_cap: Dictionary = {}  # player_id -> int
 var _building_contributions: Dictionary = {}  # player_id -> Array[int] (instance_id -> bonus)
+var _building_count: Dictionary = {}  # player_id -> int (total buildings including zero-bonus)
 
 var _hard_cap: int = 200
 var _starting_cap: int = 5
@@ -41,10 +43,14 @@ func _ensure_player(player_id: int) -> void:
 		_population_cap[player_id] = _starting_cap
 	if player_id not in _building_contributions:
 		_building_contributions[player_id] = {}
+	if player_id not in _building_count:
+		_building_count[player_id] = 0
 
 
 func register_building(building: Node, player_id: int = 0) -> void:
 	_ensure_player(player_id)
+	_building_count[player_id] = int(_building_count[player_id]) + 1
+	building_count_changed.emit(player_id, int(_building_count[player_id]))
 	var bonus: int = _get_population_bonus(building)
 	if bonus <= 0:
 		return
@@ -56,6 +62,8 @@ func register_building(building: Node, player_id: int = 0) -> void:
 
 func unregister_building(building: Node, player_id: int = 0) -> void:
 	_ensure_player(player_id)
+	_building_count[player_id] = maxi(int(_building_count[player_id]) - 1, 0)
+	building_count_changed.emit(player_id, int(_building_count[player_id]))
 	var contributions: Dictionary = _building_contributions[player_id]
 	var bid: int = building.get_instance_id()
 	if bid in contributions:
@@ -84,6 +92,11 @@ func can_train(player_id: int, pop_cost: int = 1) -> bool:
 func get_population(player_id: int) -> int:
 	_ensure_player(player_id)
 	return int(_current_population[player_id])
+
+
+func get_building_count(player_id: int) -> int:
+	_ensure_player(player_id)
+	return int(_building_count[player_id])
 
 
 func get_population_cap(player_id: int) -> int:
@@ -138,10 +151,14 @@ func save_state() -> Dictionary:
 			"current": int(_current_population[pid]),
 			"cap": int(_population_cap[pid]),
 		}
+	var bld_counts: Dictionary = {}
+	for pid in _building_count:
+		bld_counts[str(pid)] = int(_building_count[pid])
 	return {
 		"population": pop_data,
 		"hard_cap": _hard_cap,
 		"starting_cap": _starting_cap,
+		"building_counts": bld_counts,
 	}
 
 
@@ -149,6 +166,7 @@ func load_state(data: Dictionary) -> void:
 	_current_population.clear()
 	_population_cap.clear()
 	_building_contributions.clear()
+	_building_count.clear()
 	_hard_cap = int(data.get("hard_cap", _hard_cap))
 	_starting_cap = int(data.get("starting_cap", _starting_cap))
 	var pop_data: Dictionary = data.get("population", {})
@@ -158,3 +176,6 @@ func load_state(data: Dictionary) -> void:
 		_current_population[pid] = int(entry.get("current", 0))
 		_population_cap[pid] = int(entry.get("cap", _starting_cap))
 		_building_contributions[pid] = {}
+	var bld_counts: Dictionary = data.get("building_counts", {})
+	for pid_str in bld_counts:
+		_building_count[int(pid_str)] = int(bld_counts[pid_str])

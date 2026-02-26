@@ -235,3 +235,32 @@ func test_starting_cap_from_config() -> void:
 	assert_int(mgr.get_population_cap(0)).is_equal(5)
 	var mgr2 := _create_manager(10)
 	assert_int(mgr2.get_population_cap(0)).is_equal(10)
+
+
+# --- Building count tracking ---
+
+
+func test_building_count_tracks_all_buildings() -> void:
+	var mgr := _create_manager(5)
+	var house := _create_mock_building("house")
+	var barracks := _create_mock_building("barracks")
+	mgr.register_building(house, 0)
+	mgr.register_building(barracks, 0)
+	assert_int(mgr.get_building_count(0)).is_equal(2)
+
+
+func test_unregister_decrements_building_count() -> void:
+	var mgr := _create_manager(5)
+	var house := _create_mock_building("house")
+	mgr.register_building(house, 0)
+	assert_int(mgr.get_building_count(0)).is_equal(1)
+	mgr.unregister_building(house, 0)
+	assert_int(mgr.get_building_count(0)).is_equal(0)
+
+
+func test_building_count_changed_signal_emitted() -> void:
+	var mgr := _create_manager(5)
+	var monitor := monitor_signals(mgr)
+	var house := _create_mock_building("house")
+	mgr.register_building(house, 0)
+	await assert_signal(monitor).is_emitted("building_count_changed", [0, 1])
