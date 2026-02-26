@@ -20,6 +20,7 @@ const NotificationPanelScript := preload("res://scripts/ui/notification_panel.gd
 const RiverOverlayScript := preload("res://scripts/ui/river_overlay.gd")
 const VictoryManagerScript := preload("res://scripts/prototype/victory_manager.gd")
 const KnowledgeBurningVFXScript := preload("res://scripts/prototype/knowledge_burning_vfx.gd")
+const WarSurvivalScript := preload("res://scripts/prototype/war_survival.gd")
 const VictoryScreenScript := preload("res://scripts/ui/victory_screen.gd")
 
 var _camera: Camera2D
@@ -46,6 +47,7 @@ var _trade_manager: Node = null
 var _notification_panel: Control = null
 var _river_overlay: Node2D = null
 var _victory_manager: Node = null
+var _war_survival: Node = null
 var _victory_screen: PanelContainer = null
 var _knowledge_burning_vfx: Node = null
 
@@ -229,6 +231,8 @@ func _setup_units() -> void:
 		unit._scene_root = self
 		if _visibility_manager != null:
 			unit._visibility_manager = _visibility_manager
+		if _war_survival != null:
+			unit._war_survival = _war_survival
 		# Register with input handler after both are in tree
 		if _input_handler.has_method("register_unit"):
 			_input_handler.register_unit(unit)
@@ -307,6 +311,8 @@ func _setup_fauna() -> void:
 				unit.unit_color = Color(0.5, 0.5, 0.5)  # Gray
 				add_child(unit)
 				unit._scene_root = self
+				if _war_survival != null:
+					unit._war_survival = _war_survival
 				if _target_detector != null:
 					_target_detector.register_entity(unit)
 				# Set entity category for wild fauna
@@ -568,6 +574,8 @@ func _create_ai_starting_villagers(tc: Node2D, count: int) -> void:
 		unit.position = IsoUtils.grid_to_screen(Vector2(spawn_pos))
 		add_child(unit)
 		unit._scene_root = self
+		if _war_survival != null:
+			unit._war_survival = _war_survival
 		if _target_detector != null:
 			_target_detector.register_entity(unit)
 		if _population_manager != null:
@@ -632,6 +640,8 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 	unit._scene_root = self
 	if _visibility_manager != null:
 		unit._visibility_manager = _visibility_manager
+	if _war_survival != null:
+		unit._war_survival = _war_survival
 	if _input_handler != null and _input_handler.has_method("register_unit"):
 		_input_handler.register_unit(unit)
 	if _target_detector != null:
@@ -707,6 +717,12 @@ func _setup_tech() -> void:
 	_unit_upgrade_manager.setup(self)
 	_tech_manager.tech_researched.connect(_unit_upgrade_manager.on_tech_researched)
 	_tech_manager.tech_regressed.connect(_unit_upgrade_manager.on_tech_regressed)
+	# War survival — medical tech chain for lethal-damage survival
+	_war_survival = Node.new()
+	_war_survival.name = "WarSurvival"
+	_war_survival.set_script(WarSurvivalScript)
+	add_child(_war_survival)
+	_war_survival.setup(_tech_manager)
 	# Connect tech completion to spillover system
 	_tech_manager.tech_researched.connect(_on_tech_researched_spillover)
 
