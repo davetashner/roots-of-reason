@@ -1,0 +1,72 @@
+{
+  "builder": {
+    "name": "Builder",
+    "description": "Prioritizes economy and age advancement. Attacks late with a strong army.",
+    "tech_personality": "economic",
+    "economy_modifiers": {
+      "max_villagers_multiplier": 1.3,
+      "age_advance_priority": "high"
+    },
+    "military_modifiers": {
+      "army_attack_threshold_multiplier": 1.5,
+      "min_attack_game_time_multiplier": 1.4,
+      "attack_cooldown_multiplier": 1.3,
+      "max_military_pop_ratio_multiplier": 0.8,
+      "military_budget_ratio_multiplier": 0.7
+    },
+    "build_order_override": ""
+  },
+  "rusher": {
+    "name": "Rusher",
+    "description": "Applies early military pressure, sacrificing economy for speed.",
+    "tech_personality": "aggressive",
+    "economy_modifiers": {
+      "max_villagers_multiplier": 0.7,
+      "age_advance_priority": "low"
+    },
+    "military_modifiers": {
+      "army_attack_threshold_multiplier": 0.5,
+      "min_attack_game_time_multiplier": 0.5,
+      "attack_cooldown_multiplier": 0.6,
+      "max_military_pop_ratio_multiplier": 1.3,
+      "military_budget_ratio_multiplier": 1.3
+    },
+    "build_order_override": "rusher"
+  },
+  "boomer": {
+    "name": "Boomer",
+    "description": "Fast expansion to multiple Town Centers. Greedy economy, explosive late game.",
+    "tech_personality": "economic",
+    "economy_modifiers": {
+      "max_villagers_multiplier": 1.5,
+      "age_advance_priority": "high",
+      "extra_tc_target": 2
+    },
+    "military_modifiers": {
+      "army_attack_threshold_multiplier": 1.3,
+      "min_attack_game_time_multiplier": 1.6,
+      "attack_cooldown_multiplier": 1.2,
+      "max_military_pop_ratio_multiplier": 0.7,
+      "military_budget_ratio_multiplier": 0.6
+    },
+    "build_order_override": "boomer"
+  },
+  "turtle": {
+    "name": "Turtle",
+    "description": "Walls and defensive buildings. Strong late-game army behind fortifications.",
+    "tech_personality": "balanced",
+    "economy_modifiers": {
+      "max_villagers_multiplier": 1.1,
+      "age_advance_priority": "normal"
+    },
+    "military_modifiers": {
+      "army_attack_threshold_multiplier": 1.8,
+      "min_attack_game_time_multiplier": 1.5,
+      "attack_cooldown_multiplier": 1.5,
+      "max_military_pop_ratio_multiplier": 1.1,
+      "military_budget_ratio_multiplier": 0.9,
+      "retreat_hp_ratio_multiplier": 1.3
+    },
+    "build_order_override": "turtle"
+  }
+}

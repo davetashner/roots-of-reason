@@ -18,6 +18,7 @@ const RESOURCE_NAME_TO_TYPE: Dictionary = {
 
 var player_id: int = 1
 var difficulty: String = "normal"
+var personality: AIPersonality = null
 
 var _scene_root: Node = null
 var _population_manager: Node = null
@@ -68,9 +69,23 @@ func _load_config() -> void:
 			"building_search_radius": 15,
 			"resource_search_radius": 20,
 		}
+	if personality != null:
+		_config = personality.apply_economy_modifiers(_config)
 
 
 func _load_build_order() -> void:
+	# Check personality build order override first
+	var override_key: String = ""
+	if personality != null:
+		override_key = personality.get_build_order_override()
+	if override_key != "":
+		var pdata: Variant = DataLoader.load_json("res://data/ai/personality_build_orders.json")
+		if pdata is Dictionary and pdata.has(override_key):
+			var bo: Dictionary = pdata[override_key]
+			_build_order = bo.get("steps", [])
+			_villager_allocation = bo.get("villager_allocation", {})
+			return
+	# Default: load from difficulty-based build orders
 	var data: Variant = DataLoader.load_json("res://data/ai/build_orders.json")
 	if data == null or not data is Dictionary:
 		return
@@ -520,13 +535,16 @@ func save_state() -> Dictionary:
 	var tc: Dictionary = {}
 	for k: String in _trained_count:
 		tc[k] = int(_trained_count[k])
-	return {
+	var state: Dictionary = {
 		"build_order_index": _build_order_index,
 		"trained_count": tc,
 		"tick_timer": _tick_timer,
 		"difficulty": difficulty,
 		"player_id": player_id,
 	}
+	if personality != null:
+		state["personality_id"] = personality.personality_id
+	return state
 
 
 func load_state(data: Dictionary) -> void:
@@ -534,8 +552,12 @@ func load_state(data: Dictionary) -> void:
 	_tick_timer = float(data.get("tick_timer", 0.0))
 	difficulty = str(data.get("difficulty", difficulty))
 	player_id = int(data.get("player_id", player_id))
+	var pid: String = str(data.get("personality_id", ""))
+	if pid != "":
+		personality = AIPersonality.get_personality(pid)
 	var tc: Dictionary = data.get("trained_count", {})
 	_trained_count.clear()
 	for k: String in tc:
 		_trained_count[k] = int(tc[k])
+	_load_config()
 	_load_build_order()

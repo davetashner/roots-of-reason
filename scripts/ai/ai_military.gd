@@ -19,6 +19,7 @@ const TILE_SIZE: float = 64.0
 
 var player_id: int = 1
 var difficulty: String = "normal"
+var personality: AIPersonality = null
 
 var _scene_root: Node = null
 var _population_manager: Node = null
@@ -57,8 +58,10 @@ func _load_config() -> void:
 	var data: Variant = DataLoader.load_json("res://data/ai/military_config.json")
 	if data == null or not data is Dictionary:
 		_config = _default_config()
-		return
-	_config = data.get(difficulty, _default_config())
+	else:
+		_config = data.get(difficulty, _default_config())
+	if personality != null:
+		_config = personality.apply_military_modifiers(_config)
 
 
 func _default_config() -> Dictionary:
@@ -453,7 +456,7 @@ func _try_garrison_outnumbered() -> void:
 
 
 func save_state() -> Dictionary:
-	return {
+	var state: Dictionary = {
 		"game_time": _game_time,
 		"last_attack_time": _last_attack_time,
 		"attack_in_progress": _attack_in_progress,
@@ -462,6 +465,9 @@ func save_state() -> Dictionary:
 		"difficulty": difficulty,
 		"player_id": player_id,
 	}
+	if personality != null:
+		state["personality_id"] = personality.personality_id
+	return state
 
 
 func load_state(data: Dictionary) -> void:
@@ -471,6 +477,9 @@ func load_state(data: Dictionary) -> void:
 	_tick_timer = float(data.get("tick_timer", 0.0))
 	difficulty = str(data.get("difficulty", difficulty))
 	player_id = int(data.get("player_id", player_id))
+	var pid: String = str(data.get("personality_id", ""))
+	if pid != "":
+		personality = AIPersonality.get_personality(pid)
 	var ec: Dictionary = data.get("enemy_composition", {})
 	_enemy_composition.clear()
 	for k: String in ec:
