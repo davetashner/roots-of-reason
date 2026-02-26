@@ -467,3 +467,49 @@ func test_load_state_restores_attack_state() -> void:
 	assert_float(ai2._last_attack_time).is_equal(200.0)
 	assert_bool(ai2._attack_in_progress).is_true()
 	assert_int(int(ai2._enemy_composition.get("infantry", 0))).is_equal(3)
+
+
+# --- Singularity target buildings ---
+
+
+func test_singularity_target_buildings_prioritized() -> void:
+	_init_ai_resources()
+	var pop_mgr := _create_pop_manager()
+	var ai := _create_ai_military(self, pop_mgr)
+	var tc := _create_town_center(1, Vector2i(50, 50), pop_mgr)
+	# Create an enemy agi_core building
+	var agi := _create_enemy_building(0, Vector2i(20, 20), 800)
+	agi.building_name = "agi_core"
+	# Create a weaker enemy building closer
+	_create_enemy_building(0, Vector2i(48, 48), 100)
+	# Set singularity targets
+	var sing_targets: Array[String] = ["agi_core", "transformer_lab"]
+	ai.singularity_target_buildings = sing_targets
+	ai._refresh_entity_lists()
+	var target: Vector2 = ai._select_attack_target()
+	# Should target agi_core, not the closer/weaker building
+	var expected: Vector2 = IsoUtils.grid_to_screen(Vector2(Vector2i(20, 20)))
+	assert_float(target.distance_to(expected)).is_less(1.0)
+
+
+func test_set_aggression_override_lowers_threshold() -> void:
+	var ai := _create_ai_military()
+	var base_threshold: int = ai._base_attack_threshold
+	var base_cooldown: float = ai._base_attack_cooldown
+	ai.set_aggression_override(2.0, 0.5)
+	var new_threshold: int = int(ai._config.get("army_attack_threshold", 0))
+	var new_cooldown: float = float(ai._config.get("attack_cooldown", 0.0))
+	assert_int(new_threshold).is_equal(maxi(int(float(base_threshold) / 2.0), 1))
+	assert_float(new_cooldown).is_equal_approx(base_cooldown * 0.5, 0.01)
+
+
+func test_clear_aggression_override_restores_base() -> void:
+	var ai := _create_ai_military()
+	var base_threshold: int = ai._base_attack_threshold
+	var base_cooldown: float = ai._base_attack_cooldown
+	ai.set_aggression_override(2.0, 0.5)
+	ai.clear_aggression_override()
+	var threshold: int = int(ai._config.get("army_attack_threshold", 0))
+	var cooldown: float = float(ai._config.get("attack_cooldown", 0.0))
+	assert_int(threshold).is_equal(base_threshold)
+	assert_float(cooldown).is_equal_approx(base_cooldown, 0.01)
