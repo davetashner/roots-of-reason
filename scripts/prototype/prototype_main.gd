@@ -13,6 +13,9 @@ const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
 const WolfAIScript := preload("res://scripts/fauna/wolf_ai.gd")
 const DogAIScript := preload("res://scripts/fauna/dog_ai.gd")
+const RiverTransportScript := preload("res://scripts/prototype/river_transport.gd")
+const NotificationPanelScript := preload("res://scripts/ui/notification_panel.gd")
+const RiverOverlayScript := preload("res://scripts/ui/river_overlay.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -33,6 +36,9 @@ var _visibility_manager: Node = null
 var _unit_upgrade_manager: Node = null
 var _corruption_manager: Node = null
 var _fog_layer: Node = null
+var _river_transport: Node = null
+var _notification_panel: Control = null
+var _river_overlay: Node2D = null
 
 
 func _ready() -> void:
@@ -49,6 +55,7 @@ func _ready() -> void:
 	_setup_fauna()
 	_setup_tech()
 	_setup_corruption()
+	_setup_river_transport()
 	_setup_ai()
 	_setup_hud()
 	# Initial visibility update after all units are placed
@@ -375,6 +382,28 @@ func _on_building_destroyed(building: Node2D) -> void:
 	_update_fog_of_war()
 
 
+func _setup_river_transport() -> void:
+	_river_transport = Node.new()
+	_river_transport.name = "RiverTransport"
+	_river_transport.set_script(RiverTransportScript)
+	add_child(_river_transport)
+	_river_transport.setup(_map_node, _building_placer, _target_detector)
+	# Connect destruction signals for notifications
+	_river_transport.barge_destroyed_with_resources.connect(_on_barge_destroyed_with_resources)
+
+
+func _on_barge_destroyed_with_resources(barge: Node2D, resources: Dictionary) -> void:
+	if _notification_panel == null:
+		return
+	if barge.owner_id != 0:
+		return
+	var total: int = 0
+	for res_type: int in resources:
+		total += resources[res_type]
+	if total > 0:
+		_notification_panel.notify("Barge destroyed! Lost %d resources." % total, "alert")
+
+
 func _setup_ai() -> void:
 	var difficulty: String = GameManager.ai_difficulty
 	var tier_config: Dictionary = _load_ai_tier_config(difficulty)
@@ -611,7 +640,7 @@ func _setup_hud() -> void:
 	_info_panel.name = "InfoPanelWidget"
 	_info_panel.set_script(load("res://scripts/ui/info_panel.gd"))
 	info_panel_layer.add_child(_info_panel)
-	_info_panel.setup(_input_handler, _target_detector)
+	_info_panel.setup(_input_handler, _target_detector, _river_transport)
 	# Command panel
 	var cmd_panel_layer := CanvasLayer.new()
 	cmd_panel_layer.name = "CommandPanel"
@@ -630,6 +659,24 @@ func _setup_hud() -> void:
 	_input_handler._cursor_overlay = _cursor_overlay
 	# Resource bar HUD
 	_setup_resource_bar()
+	# Notification panel (right side, scene-local)
+	var notif_layer := CanvasLayer.new()
+	notif_layer.name = "NotificationLayer"
+	notif_layer.layer = 11
+	add_child(notif_layer)
+	_notification_panel = Control.new()
+	_notification_panel.name = "NotificationPanel"
+	_notification_panel.set_script(NotificationPanelScript)
+	notif_layer.add_child(_notification_panel)
+	# River overlay (sibling Node2D, higher z_index than tilemap)
+	_river_overlay = Node2D.new()
+	_river_overlay.name = "RiverOverlay"
+	_river_overlay.set_script(RiverOverlayScript)
+	_river_overlay.z_index = 5
+	add_child(_river_overlay)
+	_river_overlay.setup(_map_node, _get_player_start_position())
+	# Wire input handler to river overlay
+	_input_handler._river_overlay = _river_overlay
 
 
 func _setup_resource_bar() -> void:
@@ -652,6 +699,9 @@ func _setup_resource_bar() -> void:
 	# Connect corruption display
 	if _corruption_manager != null:
 		_corruption_manager.corruption_changed.connect(_on_corruption_changed)
+	# Connect river transport for in-transit resource display
+	if _river_transport != null:
+		_resource_bar.setup_transit(_river_transport)
 
 
 func _on_tech_researched_spillover(player_id: int, tech_id: String, _effects: Dictionary) -> void:

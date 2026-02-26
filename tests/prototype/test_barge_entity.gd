@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Tests for barge_entity.gd — barge movement, damage, and save/load.
+## Tests for barge_entity.gd — barge movement, damage, selection, visuals, and save/load.
 
 const BargeScript := preload("res://scripts/prototype/barge_entity.gd")
 
@@ -85,6 +85,7 @@ func test_save_load_state() -> void:
 	barge.total_carried = 8
 	barge.path_index = 1
 	barge.position = Vector2(100.0, 50.0)
+	barge.selected = true
 	var state: Dictionary = barge.save_state()
 	var barge2 := _create_barge()
 	barge2.load_state(state)
@@ -98,3 +99,101 @@ func test_save_load_state() -> void:
 	assert_float(barge2.position.y).is_equal_approx(50.0, 0.01)
 	assert_int(barge2.carried_resources.get(0, 0)).is_equal(5)
 	assert_int(barge2.carried_resources.get(1, 0)).is_equal(3)
+	assert_bool(barge2.selected).is_true()
+
+
+# --- Selection tests ---
+
+
+func test_select_sets_selected_true() -> void:
+	var barge := _create_barge()
+	assert_bool(barge.selected).is_false()
+	barge.select()
+	assert_bool(barge.selected).is_true()
+
+
+func test_deselect_sets_selected_false() -> void:
+	var barge := _create_barge()
+	barge.select()
+	barge.deselect()
+	assert_bool(barge.selected).is_false()
+
+
+func test_is_point_inside_near_center() -> void:
+	var barge := _create_barge()
+	barge.position = Vector2(100, 100)
+	# Point within selection ring radius (default 18)
+	assert_bool(barge.is_point_inside(Vector2(110, 100))).is_true()
+
+
+func test_is_point_inside_far_away() -> void:
+	var barge := _create_barge()
+	barge.position = Vector2(100, 100)
+	# Point far outside selection ring
+	assert_bool(barge.is_point_inside(Vector2(200, 200))).is_false()
+
+
+# --- Damage flash tests ---
+
+
+func test_damage_flash_timer_set_on_damage() -> void:
+	var barge := _create_barge()
+	barge.take_damage(3)
+	assert_float(barge._damage_flash_timer).is_greater(0.0)
+
+
+func test_damage_flash_timer_decreases() -> void:
+	var barge := _create_barge()
+	barge.take_damage(3)
+	var initial_timer: float = barge._damage_flash_timer
+	barge._process(0.1)
+	assert_float(barge._damage_flash_timer).is_less(initial_timer)
+
+
+# --- Wake trail tests ---
+
+
+func test_wake_trail_grows_during_movement() -> void:
+	var path: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)]
+	var barge := _create_barge(path)
+	barge.position = IsoUtils.grid_to_screen(Vector2(0, 0))
+	for _i in 30:
+		barge._process(0.05)
+	assert_int(barge._wake_positions.size()).is_greater(0)
+
+
+func test_wake_trail_capped_at_max_length() -> void:
+	var path: Array[Vector2i] = []
+	for i in 20:
+		path.append(Vector2i(i, 0))
+	var barge := _create_barge(path)
+	barge.position = IsoUtils.grid_to_screen(Vector2(0, 0))
+	barge.speed = 5000.0
+	for _i in 200:
+		barge._process(0.05)
+	assert_int(barge._wake_positions.size()).is_less_equal(barge._wake_trail_length)
+
+
+# --- Draw with selection ring ---
+
+
+func test_draw_with_selection_ring_no_crash() -> void:
+	var barge := _create_barge()
+	barge.selected = true
+	barge.carried_resources = {0: 5, 1: 3}
+	barge.queue_redraw()
+	assert_bool(is_instance_valid(barge)).is_true()
+
+
+# --- Entity category ---
+
+
+func test_entity_category_default_own_barge() -> void:
+	var barge := _create_barge()
+	assert_str(barge.entity_category).is_equal("own_barge")
+
+
+func test_entity_category_enemy_on_load() -> void:
+	var barge := _create_barge()
+	barge.load_state({"owner_id": 1})
+	assert_str(barge.entity_category).is_equal("enemy_barge")

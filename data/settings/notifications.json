@@ -1,0 +1,12 @@
+{
+  "max_visible": 5,
+  "default_duration": 4.0,
+  "fade_duration": 0.5,
+  "font_size": 14,
+  "panel_width": 300,
+  "tier_colors": {
+    "info": [0.8, 0.8, 0.8, 1.0],
+    "warning": [1.0, 0.85, 0.3, 1.0],
+    "alert": [1.0, 0.3, 0.3, 1.0]
+  }
+}

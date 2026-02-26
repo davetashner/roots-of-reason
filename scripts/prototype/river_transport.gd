@@ -7,6 +7,8 @@ extends Node
 signal barge_dispatched(barge: Node2D)
 signal barge_arrived(barge: Node2D)
 signal barge_destroyed(barge: Node2D)
+signal barge_destroyed_with_resources(barge: Node2D, resources: Dictionary)
+signal barge_arrived_with_resources(barge: Node2D, resources: Dictionary)
 
 const BargeScript := preload("res://scripts/prototype/barge_entity.gd")
 
@@ -25,16 +27,21 @@ const NEIGHBORS_8 := [
 # References
 var _map_node: Node = null
 var _building_placer: Node = null
+var _target_detector: Node = null
 
 # Config (loaded from JSON)
 var _base_barge_speed: float = 180.0
 var _max_downstream_search_depth: int = 200
 var _depot_river_proximity: int = 2
 var _barge_visual_size: float = 24.0
+var _barge_pool_size: int = 8
 
 # Per-dock state
 var _dock_data: Dictionary = {}  # Node2D -> DockInfo dict
 var _active_barges: Array[Node2D] = []
+
+# Barge pool
+var _barge_pool: Array[Node2D] = []
 
 
 func _ready() -> void:
@@ -47,6 +54,7 @@ func _load_config() -> void:
 	_max_downstream_search_depth = int(cfg.get("max_downstream_search_depth", _max_downstream_search_depth))
 	_depot_river_proximity = int(cfg.get("depot_river_proximity", _depot_river_proximity))
 	_barge_visual_size = float(cfg.get("barge_visual_size", _barge_visual_size))
+	_barge_pool_size = int(cfg.get("barge_pool_size", _barge_pool_size))
 
 
 func _load_settings(settings_name: String) -> Dictionary:
@@ -85,9 +93,10 @@ func _load_building_stats(building_name: String) -> Dictionary:
 	return {}
 
 
-func setup(map_node: Node, building_placer: Node) -> void:
+func setup(map_node: Node, building_placer: Node, target_detector: Node = null) -> void:
 	_map_node = map_node
 	_building_placer = building_placer
+	_target_detector = target_detector
 	if _building_placer and _building_placer.has_signal("building_placed"):
 		_building_placer.building_placed.connect(_on_building_placed)
 
@@ -109,6 +118,7 @@ func register_dock(building: Node2D) -> void:
 		"max_barge_capacity": int(stats.get("max_barge_capacity", 30)),
 		"barge_hp": int(stats.get("barge_hp", 15)),
 		"transport_speed_multiplier": float(stats.get("transport_speed_multiplier", 3.0)),
+		"active_barge_count": 0,
 	}
 
 
@@ -175,8 +185,6 @@ func _find_depot_near_river(river_tile: Vector2i, owner_id: int, exclude: Node2D
 			continue
 		if node.owner_id != owner_id:
 			continue
-		# Skip if it's a dock with no queued resources (it's a source, not dest)
-		# Actually, any dock or TC is valid as a destination
 		var bname: String = entry.get("building_name", "")
 		var is_depot: bool = bname == "town_center" or (bool(node.is_drop_off) and bname != "")
 		if not is_depot:
@@ -244,9 +252,8 @@ func _dispatch_barge(dock: Node2D) -> void:
 			queued.erase(res_type)
 	info["queued_total"] = maxi(0, queued_total - loaded)
 	info["time_since_last_dispatch"] = 0.0
-	# Create barge
-	var barge := Node2D.new()
-	barge.set_script(BargeScript)
+	# Create or acquire barge
+	var barge := _acquire_barge()
 	barge.carried_resources = barge_resources
 	barge.total_carried = loaded
 	barge.owner_id = dock.owner_id
@@ -257,12 +264,59 @@ func _dispatch_barge(dock: Node2D) -> void:
 	barge.path_index = 0
 	barge._visual_size = _barge_visual_size
 	barge.position = IsoUtils.grid_to_screen(Vector2(river_tile))
+	barge.entity_category = "own_barge" if dock.owner_id == 0 else "enemy_barge"
+	barge._arrived = false
+	barge._destroyed = false
+	barge.selected = false
+	barge._wake_positions.clear()
+	barge._damage_flash_timer = 0.0
+	barge.visible = true
+	barge.modulate = Color.WHITE
 	barge.destroyed.connect(_on_barge_destroyed)
 	barge.arrived.connect(_on_barge_arrived)
 	if is_inside_tree():
-		get_parent().add_child(barge)
+		if not barge.is_inside_tree():
+			get_parent().add_child(barge)
 	_active_barges.append(barge)
+	info["active_barge_count"] = info.get("active_barge_count", 0) + 1
+	# Register with target detector for combat interaction
+	if _target_detector != null and _target_detector.has_method("register_entity"):
+		_target_detector.register_entity(barge)
 	barge_dispatched.emit(barge)
+
+
+func _acquire_barge() -> Node2D:
+	## Get a barge from the pool, or create a new one if pool is empty.
+	if not _barge_pool.is_empty():
+		var barge: Node2D = _barge_pool.pop_back()
+		barge.set_process(true)
+		return barge
+	var barge := Node2D.new()
+	barge.set_script(BargeScript)
+	return barge
+
+
+func _release_barge(barge: Node2D) -> void:
+	## Return a barge to the pool instead of freeing it.
+	# Disconnect signals
+	if barge.destroyed.is_connected(_on_barge_destroyed):
+		barge.destroyed.disconnect(_on_barge_destroyed)
+	if barge.arrived.is_connected(_on_barge_arrived):
+		barge.arrived.disconnect(_on_barge_arrived)
+	# Unregister from target detector
+	if _target_detector != null and _target_detector.has_method("unregister_entity"):
+		_target_detector.unregister_entity(barge)
+	barge.set_process(false)
+	barge.visible = false
+	barge.carried_resources.clear()
+	barge.total_carried = 0
+	barge.river_path.clear()
+	barge._wake_positions.clear()
+	barge.selected = false
+	if _barge_pool.size() < _barge_pool_size:
+		_barge_pool.append(barge)
+	elif is_instance_valid(barge):
+		barge.queue_free()
 
 
 func _build_river_path(start_tile: Vector2i, _depot: Node2D) -> Array[Vector2i]:
@@ -307,18 +361,33 @@ func _on_barge_destroyed(barge: Node2D) -> void:
 		for res_type: int in barge.carried_resources:
 			var amount: int = barge.carried_resources[res_type]
 			rm.add_resource(barge.owner_id, res_type, -amount)
+	var lost_resources: Dictionary = barge.carried_resources.duplicate()
 	_active_barges.erase(barge)
+	# Decrement dock barge count
+	_decrement_dock_barge_count(barge.owner_id)
 	barge_destroyed.emit(barge)
-	if is_instance_valid(barge):
-		barge.queue_free()
+	barge_destroyed_with_resources.emit(barge, lost_resources)
+	_release_barge(barge)
 
 
 func _on_barge_arrived(barge: Node2D) -> void:
 	# Resources are already in stockpile — just clean up
+	var delivered_resources: Dictionary = barge.carried_resources.duplicate()
 	_active_barges.erase(barge)
+	_decrement_dock_barge_count(barge.owner_id)
 	barge_arrived.emit(barge)
-	if is_instance_valid(barge):
-		barge.queue_free()
+	barge_arrived_with_resources.emit(barge, delivered_resources)
+	_release_barge(barge)
+
+
+func _decrement_dock_barge_count(owner_id: int) -> void:
+	for dock: Node2D in _dock_data:
+		if not is_instance_valid(dock):
+			continue
+		if dock.owner_id == owner_id:
+			var info: Dictionary = _dock_data[dock]
+			info["active_barge_count"] = maxi(0, info.get("active_barge_count", 0) - 1)
+			break
 
 
 func _on_building_placed(building: Node2D) -> void:
@@ -344,6 +413,33 @@ func get_dock_data() -> Dictionary:
 	return _dock_data
 
 
+func get_in_transit_resources(owner_id: int) -> Dictionary:
+	## Returns total resources currently being carried by barges for an owner.
+	var result: Dictionary = {}
+	for barge: Node2D in _active_barges:
+		if not is_instance_valid(barge):
+			continue
+		if barge.owner_id != owner_id:
+			continue
+		for res_type: int in barge.carried_resources:
+			result[res_type] = result.get(res_type, 0) + barge.carried_resources[res_type]
+	return result
+
+
+func get_dock_info(dock: Node2D) -> Dictionary:
+	## Returns a read-friendly summary of dock state.
+	if not _dock_data.has(dock):
+		return {}
+	var info: Dictionary = _dock_data[dock]
+	var time_left: float = maxf(0.0, info.get("barge_spawn_interval", 5.0) - info.get("time_since_last_dispatch", 0.0))
+	return {
+		"queued_resources": info.get("queued_resources", {}).duplicate(),
+		"queued_total": info.get("queued_total", 0),
+		"active_barge_count": info.get("active_barge_count", 0),
+		"time_until_next_dispatch": time_left,
+	}
+
+
 func save_state() -> Dictionary:
 	var docks_out: Array[Dictionary] = []
 	for dock: Node2D in _dock_data:
@@ -363,6 +459,7 @@ func save_state() -> Dictionary:
 					"queued_resources": queued_out,
 					"queued_total": info.get("queued_total", 0),
 					"time_since_last_dispatch": info.get("time_since_last_dispatch", 0.0),
+					"active_barge_count": info.get("active_barge_count", 0),
 				}
 			)
 		)
@@ -394,16 +491,17 @@ func load_state(data: Dictionary) -> void:
 		info["queued_resources"] = queued
 		info["queued_total"] = int(entry.get("queued_total", 0))
 		info["time_since_last_dispatch"] = float(entry.get("time_since_last_dispatch", 0.0))
+		info["active_barge_count"] = int(entry.get("active_barge_count", 0))
 	# Restore barges
 	var barges_data: Array = data.get("barges", [])
 	for barge_data: Dictionary in barges_data:
-		var barge := Node2D.new()
-		barge.set_script(BargeScript)
+		var barge := _acquire_barge()
 		barge.load_state(barge_data)
 		barge.destroyed.connect(_on_barge_destroyed)
 		barge.arrived.connect(_on_barge_arrived)
 		if is_inside_tree():
-			get_parent().add_child(barge)
+			if not barge.is_inside_tree():
+				get_parent().add_child(barge)
 		_active_barges.append(barge)
 
 

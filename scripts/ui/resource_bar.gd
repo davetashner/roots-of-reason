@@ -7,10 +7,12 @@ const RESOURCE_ORDER: Array[String] = ["Food", "Wood", "Stone", "Gold", "Knowled
 
 var _config: Dictionary = {}
 var _resource_labels: Dictionary = {}
+var _transit_labels: Dictionary = {}
 var _population_label: Label
 var _age_label: Label
 var _corruption_item: HBoxContainer
 var _corruption_label: Label
+var _river_transport: Node = null
 
 
 func _ready() -> void:
@@ -82,8 +84,23 @@ func _build_layout() -> void:
 		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		item.add_child(lbl)
 
+		var transit_size: int = _config.get("in_transit_font_size", 13)
+		var transit_color_arr: Array = _config.get("in_transit_color", [0.5, 0.9, 0.5, 1.0])
+		var transit_color := Color(
+			transit_color_arr[0], transit_color_arr[1], transit_color_arr[2], transit_color_arr[3]
+		)
+		var transit_lbl := Label.new()
+		transit_lbl.name = "Transit"
+		transit_lbl.text = ""
+		transit_lbl.add_theme_font_size_override("font_size", transit_size)
+		transit_lbl.add_theme_color_override("font_color", transit_color)
+		transit_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		transit_lbl.visible = false
+		item.add_child(transit_lbl)
+
 		hbox.add_child(item)
 		_resource_labels[resource_name] = lbl
+		_transit_labels[resource_name] = transit_lbl
 
 	# Corruption indicator (hidden by default)
 	_corruption_item = HBoxContainer.new()
@@ -165,6 +182,32 @@ func _on_resources_changed(player_id: int, resource_type: String, _old_amount: i
 func _update_resource_label(resource_name: String, amount: int) -> void:
 	if resource_name in _resource_labels:
 		_resource_labels[resource_name].text = format_amount(amount)
+
+
+func setup_transit(river_transport: Node) -> void:
+	_river_transport = river_transport
+
+
+func _process(_delta: float) -> void:
+	_update_transit_labels()
+
+
+func _update_transit_labels() -> void:
+	if _river_transport == null or not _river_transport.has_method("get_in_transit_resources"):
+		return
+	var in_transit: Dictionary = _river_transport.get_in_transit_resources(PLAYER_ID)
+	for resource_name: String in RESOURCE_ORDER:
+		var res_type: int = _resource_name_to_type(resource_name)
+		if not _transit_labels.has(resource_name):
+			continue
+		var transit_lbl: Label = _transit_labels[resource_name]
+		var amount: int = in_transit.get(res_type, 0)
+		if amount > 0:
+			transit_lbl.text = "(+%s)" % format_amount(amount)
+			transit_lbl.visible = true
+		else:
+			transit_lbl.text = ""
+			transit_lbl.visible = false
 
 
 func flash_resource(resource_name: String) -> void:

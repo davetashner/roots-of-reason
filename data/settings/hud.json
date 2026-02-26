@@ -12,6 +12,8 @@
       "Knowledge": [0.3, 0.5, 0.9]
     },
     "flash_color": [1.0, 0.2, 0.2, 1.0],
-    "flash_duration": 0.3
+    "flash_duration": 0.3,
+    "in_transit_font_size": 13,
+    "in_transit_color": [0.5, 0.9, 0.5, 1.0]
   }
 }
