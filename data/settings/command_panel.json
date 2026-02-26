@@ -21,6 +21,11 @@
       {"id": "build_library", "label": "Library", "tooltip": "Build Library (150 Wood, 50 Gold)", "action": "build", "building": "library"},
       {"id": "build_wonder", "label": "Wonder", "tooltip": "Build Wonder (1000 Wood, Stone, Gold)", "action": "build", "building": "wonder"}
     ],
+    "market": [
+      {"id": "sell_food", "label": "Sell Food", "tooltip": "Sell 100 Food for Gold", "action": "trade", "sell_resource": "food", "sell_amount": 100},
+      {"id": "sell_wood", "label": "Sell Wood", "tooltip": "Sell 100 Wood for Gold", "action": "trade", "sell_resource": "wood", "sell_amount": 100},
+      {"id": "sell_stone", "label": "Sell Stone", "tooltip": "Sell 100 Stone for Gold", "action": "trade", "sell_resource": "stone", "sell_amount": 100}
+    ],
     "default": [
       {"id": "stop", "label": "Stop", "tooltip": "Stop current action", "action": "stop"},
       {"id": "hold", "label": "Hold", "tooltip": "Hold Position", "action": "hold"}

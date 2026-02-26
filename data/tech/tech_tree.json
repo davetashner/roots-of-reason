@@ -141,7 +141,7 @@
     "prerequisites": [],
     "effects": {
       "unlock_buildings": ["dock"],
-      "unlock_units": ["fishing_boat"]
+      "unlock_units": ["fishing_boat", "merchant_ship"]
     },
     "flavor_text": "The horizon beckons."
   },

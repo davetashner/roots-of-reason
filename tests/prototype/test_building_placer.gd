@@ -6,6 +6,16 @@ const MapScript := preload("res://scripts/prototype/prototype_map.gd")
 const PathfindingScript := preload("res://scripts/prototype/pathfinding_grid.gd")
 const TargetDetectorScript := preload("res://scripts/prototype/target_detector.gd")
 
+var _original_age: int = 0
+
+
+func before() -> void:
+	_original_age = GameManager.current_age
+
+
+func after() -> void:
+	GameManager.current_age = _original_age
+
 
 func _build_grass_grid(size: int) -> Dictionary:
 	var grid: Dictionary = {}
@@ -187,3 +197,24 @@ func test_parse_costs_maps_strings_to_enum() -> void:
 	assert_int(parsed[ResourceManager.ResourceType.WOOD]).is_equal(100)
 	assert_bool(parsed.has(ResourceManager.ResourceType.STONE)).is_true()
 	assert_int(parsed[ResourceManager.ResourceType.STONE]).is_equal(50)
+
+
+# -- Age gate --
+
+
+func test_start_placement_fails_when_age_too_low() -> void:
+	var placer := _create_placer()
+	GameManager.current_age = 0
+	# Market requires age 1
+	var result: bool = placer.start_placement("market", 0)
+	assert_bool(result).is_false()
+	assert_bool(placer.is_active()).is_false()
+
+
+func test_start_placement_succeeds_at_correct_age() -> void:
+	var placer := _create_placer()
+	GameManager.current_age = 1
+	# Market requires age 1
+	var result: bool = placer.start_placement("market", 0)
+	assert_bool(result).is_true()
+	assert_bool(placer.is_active()).is_true()

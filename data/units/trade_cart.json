@@ -1,0 +1,14 @@
+{
+  "name": "Trade Cart",
+  "hp": 70,
+  "attack": 0,
+  "defense": 2,
+  "speed": 1.2,
+  "los": 4,
+  "train_time": 30,
+  "train_cost": { "wood": 100, "gold": 50 },
+  "population_cost": 1,
+  "unit_category": "civilian",
+  "movement_type": "land",
+  "entity_category": "own_unit"
+}

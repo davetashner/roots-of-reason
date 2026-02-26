@@ -1,0 +1,14 @@
+{
+  "base_exchange_rates": {
+    "food": 100,
+    "wood": 100,
+    "stone": 150,
+    "knowledge": 200
+  },
+  "route_base_gold": 25,
+  "route_reference_distance": 20,
+  "route_pause_time": 1.0,
+  "rate_window_seconds": 120.0,
+  "saturation_threshold": 500,
+  "saturation_max_penalty": 0.5
+}

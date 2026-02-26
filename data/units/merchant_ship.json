@@ -1,0 +1,14 @@
+{
+  "name": "Merchant Ship",
+  "hp": 90,
+  "attack": 0,
+  "defense": 3,
+  "speed": 1.5,
+  "los": 5,
+  "train_time": 35,
+  "train_cost": { "wood": 150, "gold": 75 },
+  "population_cost": 1,
+  "unit_category": "civilian",
+  "movement_type": "water",
+  "entity_category": "own_unit"
+}
