@@ -1216,5 +1216,32 @@
     },
     "flavor_text": "The tortoise formation turns a wall of shields into an impenetrable defense against projectiles.",
     "civ_exclusive": "rome"
+  },
+  {
+    "id": "wayfinding",
+    "name": "Wayfinding",
+    "age": 2,
+    "cost": { "knowledge": 150, "gold": 75 },
+    "research_time": 50.0,
+    "prerequisites": ["sailing"],
+    "effects": {
+      "naval_los_bonus": 0.30
+    },
+    "flavor_text": "Ancient star navigation techniques grant Polynesian sailors unmatched awareness of distant shores.",
+    "civ_exclusive": "polynesia"
+  },
+  {
+    "id": "haka",
+    "name": "Haka",
+    "age": 3,
+    "cost": { "knowledge": 200, "gold": 100 },
+    "research_time": 60.0,
+    "prerequisites": ["iron_working"],
+    "effects": {
+      "battle_cry_attack_bonus": 0.15,
+      "battle_cry_duration": 30.0
+    },
+    "flavor_text": "The fearsome war dance strikes terror into enemies and emboldens warriors with ferocious spirit.",
+    "civ_exclusive": "polynesia"
   }
 ]

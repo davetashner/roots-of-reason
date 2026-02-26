@@ -1,0 +1,20 @@
+{
+  "name": "War Canoe",
+  "hp": 120,
+  "attack": 8,
+  "defense": 2,
+  "speed": 2.34,
+  "range": 4,
+  "los": 6,
+  "population_cost": 2,
+  "train_time": 35,
+  "train_cost": { "wood": 150, "gold": 50 },
+  "bonus_vs": {},
+  "armor_type": "heavy",
+  "attack_speed": 2.5,
+  "attack_type": "ranged",
+  "movement_type": "water",
+  "transport_capacity": 5,
+  "unit_category": "military",
+  "default_stance": "aggressive"
+}
