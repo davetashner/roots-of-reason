@@ -27,6 +27,7 @@ const SingularityRegressionScript := preload("res://scripts/prototype/singularit
 const AISingularityScript := preload("res://scripts/ai/ai_singularity.gd")
 const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen.gd")
 const PauseMenuScript := preload("res://scripts/ui/pause_menu.gd")
+const MinimapScript := preload("res://scripts/ui/minimap.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -60,6 +61,7 @@ var _singularity_regression: Node = null
 var _ai_singularity: Node = null
 var _civ_selection_screen: PanelContainer = null
 var _pause_menu: PanelContainer = null
+var _minimap: Control = null
 
 
 func _ready() -> void:
@@ -927,6 +929,19 @@ func _setup_hud() -> void:
 	pause_layer.add_child(_pause_menu)
 	_pause_menu.quit_to_menu.connect(_on_pause_menu_quit_to_menu)
 	_pause_menu.quit_to_desktop.connect(_on_pause_menu_quit_to_desktop)
+	# Minimap (bottom-left)
+	var minimap_layer := CanvasLayer.new()
+	minimap_layer.name = "MinimapLayer"
+	minimap_layer.layer = 10
+	add_child(minimap_layer)
+	_minimap = Control.new()
+	_minimap.name = "Minimap"
+	_minimap.set_script(MinimapScript)
+	_minimap.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_minimap.position = Vector2(8, -208)
+	minimap_layer.add_child(_minimap)
+	_minimap.setup(_map_node, _camera, _visibility_manager, self)
+	_minimap.minimap_move_command.connect(_on_minimap_move_command)
 
 
 func _setup_resource_bar() -> void:
@@ -979,6 +994,11 @@ func _on_pause_menu_quit_to_menu() -> void:
 
 func _on_pause_menu_quit_to_desktop() -> void:
 	get_tree().quit()
+
+
+func _on_minimap_move_command(world_pos: Vector2) -> void:
+	if _input_handler != null and _input_handler.has_method("_move_selected"):
+		_input_handler._move_selected(world_pos)
 
 
 func _get_player_start_position() -> Vector2i:
