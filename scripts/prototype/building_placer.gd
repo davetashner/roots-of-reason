@@ -57,7 +57,8 @@ func start_placement(building_name: String, player_id: int = 0) -> bool:
 	if _active:
 		cancel_placement()
 	_player_id = player_id
-	_building_stats = _load_building_stats(building_name)
+	var resolved := CivBonusManager.get_resolved_building_id(player_id, building_name)
+	_building_stats = _load_building_stats(resolved)
 	if _building_stats.is_empty():
 		return false
 	var age_req: int = int(_building_stats.get("age_required", 0))
@@ -66,7 +67,7 @@ func start_placement(building_name: String, player_id: int = 0) -> bool:
 	var costs := _parse_costs(_building_stats.get("build_cost", {}))
 	if not ResourceManager.can_afford(_player_id, costs):
 		return false
-	_building_name = building_name
+	_building_name = resolved
 	_active = true
 	_create_ghost()
 	placement_started.emit(_building_name)

@@ -666,8 +666,9 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 	var unit_count := get_child_count()
 	unit.name = "Unit_%d" % unit_count
 	unit.set_script(UnitScript)
-	unit.unit_type = unit_type
 	var owner_id: int = building.owner_id if "owner_id" in building else 0
+	var resolved_type := CivBonusManager.get_resolved_unit_id(owner_id, unit_type)
+	unit.unit_type = resolved_type
 	unit.owner_id = owner_id
 	# Spawn at building position offset by rally point
 	var pq: Node = building.get_node_or_null("ProductionQueue")

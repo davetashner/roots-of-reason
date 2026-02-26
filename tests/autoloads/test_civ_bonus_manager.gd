@@ -221,3 +221,55 @@ func test_apply_bonus_no_civ_assigned() -> void:
 	var stats := UnitStats.new("infantry", {"attack": 10.0})
 	CivBonusManager.apply_bonus_to_unit(stats, "infantry", 99)
 	assert_float(stats.get_stat("attack")).is_equal_approx(10.0, 0.1)
+
+
+# --- Building swap ---
+
+
+func test_mesopotamia_library_resolves_to_ziggurat() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "mesopotamia")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "library")
+	assert_str(resolved).is_equal("ziggurat")
+
+
+func test_mesopotamia_non_replaced_building_unchanged() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "mesopotamia")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "barracks")
+	assert_str(resolved).is_equal("barracks")
+
+
+func test_no_civ_building_passthrough() -> void:
+	var resolved := CivBonusManager.get_resolved_building_id(99, "library")
+	assert_str(resolved).is_equal("library")
+
+
+func test_rome_library_unchanged() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "rome")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "library")
+	assert_str(resolved).is_equal("library")
+
+
+# --- Unit swap ---
+
+
+func test_mesopotamia_infantry_resolves_to_immortal_guard() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "mesopotamia")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "infantry")
+	assert_str(resolved).is_equal("immortal_guard")
+
+
+func test_mesopotamia_non_replaced_unit_unchanged() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "mesopotamia")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "villager")
+	assert_str(resolved).is_equal("villager")
+
+
+func test_no_civ_unit_passthrough() -> void:
+	var resolved := CivBonusManager.get_resolved_unit_id(99, "infantry")
+	assert_str(resolved).is_equal("infantry")
+
+
+func test_rome_infantry_resolves_to_legionnaire() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "rome")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "infantry")
+	assert_str(resolved).is_equal("legionnaire")

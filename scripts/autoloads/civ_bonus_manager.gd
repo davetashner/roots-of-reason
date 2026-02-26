@@ -55,6 +55,30 @@ func get_build_speed_multiplier(player_id: int) -> float:
 	return get_bonus_value(player_id, "build_speed")
 
 
+func get_resolved_building_id(player_id: int, building_id: String) -> String:
+	if player_id not in _active_civs:
+		return building_id
+	var data := _load_civ_data(_active_civs[player_id])
+	var unique: Dictionary = data.get("unique_building", {})
+	if unique.is_empty():
+		return building_id
+	if str(unique.get("replaces", "")) != building_id:
+		return building_id
+	return str(unique.get("name", "")).to_lower().replace(" ", "_")
+
+
+func get_resolved_unit_id(player_id: int, unit_id: String) -> String:
+	if player_id not in _active_civs:
+		return unit_id
+	var data := _load_civ_data(_active_civs[player_id])
+	var unique: Dictionary = data.get("unique_unit", {})
+	if unique.is_empty():
+		return unit_id
+	if str(unique.get("base_unit", "")) != unit_id:
+		return unit_id
+	return str(unique.get("name", "")).to_lower().replace(" ", "_")
+
+
 func apply_bonus_to_unit(unit_stats: UnitStats, unit_id: String, player_id: int) -> void:
 	if unit_stats == null:
 		return
