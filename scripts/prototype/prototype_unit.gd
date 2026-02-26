@@ -87,6 +87,9 @@ func _ready() -> void:
 	_load_build_config()
 	_load_gather_config()
 	_load_combat_config()
+	var cbm: Node = _get_autoload("CivBonusManager")
+	if cbm != null and stats != null:
+		cbm.apply_bonus_to_unit(stats, unit_type, owner_id)
 
 
 func _init_stats() -> void:
@@ -118,23 +121,30 @@ func clear_formation_speed() -> void:
 	_formation_speed_override = 0.0
 
 
-func _dl_unit_stats(id: String) -> Dictionary:
-	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_unit_stats(id)
+func _get_autoload(autoload_name: String) -> Node:
 	if is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_unit_stats"):
-			return dl.get_unit_stats(id)
+		return Engine.get_main_loop().root.get_node_or_null(autoload_name)
+	return null
+
+
+func _get_civ_build_multiplier() -> float:
+	var cbm: Node = _get_autoload("CivBonusManager")
+	if cbm != null:
+		return cbm.get_build_speed_multiplier(owner_id)
+	return 1.0
+
+
+func _dl_unit_stats(id: String) -> Dictionary:
+	var dl: Node = _get_autoload("DataLoader")
+	if dl != null and dl.has_method("get_unit_stats"):
+		return dl.get_unit_stats(id)
 	return {}
 
 
 func _dl_settings(id: String) -> Dictionary:
-	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_settings(id)
-	if is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			return dl.get_settings(id)
+	var dl: Node = _get_autoload("DataLoader")
+	if dl != null and dl.has_method("get_settings"):
+		return dl.get_settings(id)
 	return {}
 
 
@@ -223,9 +233,10 @@ func _tick_build(game_delta: float) -> void:
 	_moving = false
 	_path.clear()
 	_path_index = 0
-	# Apply build work: build_speed / build_time per second
+	# Apply build work: build_speed / build_time per second, scaled by civ bonus
 	var build_time: float = _build_target._build_time
-	var work: float = (_build_speed / build_time) * game_delta
+	var civ_mult: float = _get_civ_build_multiplier()
+	var work: float = (_build_speed / build_time) * game_delta * civ_mult
 	_build_target.apply_build_work(work)
 	# Check if construction completed
 	if not _build_target.under_construction:
@@ -1042,33 +1053,24 @@ func _draw() -> void:
 	var right := dir.rotated(-2.5) * draw_radius * 0.5
 	draw_colored_polygon(PackedVector2Array([tip, left, right]), Color(1, 1, 1, 0.9))
 
-	# Movement target indicator
-	if _moving:
-		var local_target := _target_pos - position
-		draw_circle(local_target, 3.0, Color(1, 1, 0, 0.6))
-		draw_arc(local_target, 6.0, 0, TAU, 16, Color(1, 1, 0, 0.4), 1.0)
+	if _moving:  # Movement target indicator
+		var lt := _target_pos - position
+		draw_circle(lt, 3.0, Color(1, 1, 0, 0.6))
+		draw_arc(lt, 6.0, 0, TAU, 16, Color(1, 1, 0, 0.4), 1.0)
 
 	# Carry indicator
 	if _carried_amount > 0:
-		var carry_color := Color(0.9, 0.8, 0.1, 0.8)
-		var ratio := float(_carried_amount) / float(_carry_capacity)
-		draw_arc(Vector2.ZERO, RADIUS + 2.0, 0, TAU * ratio, 16, carry_color, 2.0)
+		var cr := float(_carried_amount) / float(_carry_capacity)
+		draw_arc(Vector2.ZERO, RADIUS + 2.0, 0, TAU * cr, 16, Color(0.9, 0.8, 0.1, 0.8), 2.0)
 
 	# HP bar (only if damaged)
 	if max_hp > 0 and hp < max_hp:
-		var bar_width: float = RADIUS * 2.5
-		var bar_height: float = 3.0
-		var bar_y: float = -RADIUS - 8.0
-		var ratio: float = float(hp) / float(max_hp)
-		var bg_rect := Rect2(-bar_width / 2.0, bar_y, bar_width, bar_height)
-		draw_rect(bg_rect, Color(0.2, 0.2, 0.2, 0.8))
-		var fg_rect := Rect2(-bar_width / 2.0, bar_y, bar_width * ratio, bar_height)
-		var hp_color: Color
-		if ratio > 0.5:
-			hp_color = Color(0.2, 0.8, 0.2)
-		else:
-			hp_color = Color(0.9, 0.2, 0.2)
-		draw_rect(fg_rect, hp_color)
+		var bw: float = RADIUS * 2.5
+		var by: float = -RADIUS - 8.0
+		var r: float = float(hp) / float(max_hp)
+		draw_rect(Rect2(-bw / 2.0, by, bw, 3.0), Color(0.2, 0.2, 0.2, 0.8))
+		var hpc := Color(0.2, 0.8, 0.2) if r > 0.5 else Color(0.9, 0.2, 0.2)
+		draw_rect(Rect2(-bw / 2.0, by, bw * r, 3.0), hpc)
 
 
 func move_to(world_pos: Vector2) -> void:
