@@ -23,6 +23,13 @@ A civilization RTS inspired by Age of Empires where the endgame is achieving AGI
 - **Serializable state:** Every system holding game state must implement save/load from day one
 - **Language:** GDScript only. C# reserved for proven hot paths after profiling.
 
+### GDScript Gotchas
+
+- **Lambda capture:** GDScript lambdas do NOT capture loop variables by value. Use Array or Dictionary containers for signal detection in tests instead of direct variable capture.
+- **JSON numerics:** `JSON.parse_string()` loads all numbers as floats. Always cast to `int()` when comparing against integer game values.
+- **File length:** Keep files under 1000 lines. Proactively refactor if approaching this limit.
+- **Formatter safety:** Run `gdformat` BEFORE running tests to avoid lint-then-revert cycles. Verify inline dictionary calls weren't mangled by the formatter.
+
 ## Quality Gates
 
 Run before committing:
@@ -38,8 +45,18 @@ Use `/gdtest` skill to generate test suites for new scripts.
 - **After creating a new GDScript file**, run `/gdtest <path>` to generate its test suite
 - **Available skills:** `/gdtest` (test generation), `/hud` (HUD elements), `/ui-theme` (Godot themes)
 
+### Common Test Failure Causes
+
+When tests fail, check these first before debugging from scratch:
+
+1. **init_player defaults:** `init_player()` provides non-zero starting resources — mock starting resources explicitly in tests
+2. **DataLoader overwrites:** `DataLoader` may overwrite values set in test `before()` — set test values after `DataLoader` init or mock the loader
+3. **find_nearest_hostile returns null:** Test context may lack required nodes — stub the method or add mock hostiles
+4. **Signal monitor cleanup:** Signal monitors attached to singletons cause freeing issues — detach in `after()` or use Array-based detection
+
 ## Workflow
 
+- **Explore thoroughly, then implement decisively.** Read existing code and understand integration points before writing new code — skipping exploration leads to rewrites. But keep exploration focused: know what question each file read is answering. Once you have enough context to start, start. If a session includes both exploration and implementation, try to ship at least one concrete deliverable before the session ends.
 - **Never push directly to main** — always create a PR
 - **Run `bd sync` before pushing** to keep beads backlog in sync
 - **Reference beads issue IDs** in commit messages (e.g., `feat: add camera [roots-of-reason-317.1]`)
@@ -52,6 +69,21 @@ Use `/gdtest` skill to generate test suites for new scripts.
   ```
   Do NOT just mention bead IDs informally in the summary — the `Closes` keyword is what triggers closure tracking. If a PR partially addresses a bead but doesn't complete it, use `Progresses roots-of-reason-XXX` instead.
 - **Before merging a PR:** Verify every `Closes` line maps to a real open bead. After merge, run `bd close` for each.
+
+## Standard Feature Ship Cycle
+
+After implementing a feature, execute this sequence without interruption:
+
+1. Run all tests (`ror test`) and fix failures
+2. Run linter/formatter (`ror lint`) and fix issues
+3. Commit with conventional message referencing bead ID (`git commit -s`)
+4. Push branch and create PR with `Closes` lines
+5. Wait for CI — fix any failures
+6. Merge to main (`gh pr merge --squash --delete-branch`)
+7. Close related beads (`bd close <id>`)
+8. Pull main and clean up (`git pull origin main && git fetch --prune`)
+
+When a session includes multiple tasks, **complete the first task fully through merge** before starting the next. One merged feature is better than two half-done features.
 
 ## Beads (Issue Tracking)
 
