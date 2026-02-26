@@ -1,0 +1,11 @@
+{
+  "wonder_countdown_duration": 600,
+  "defeat_delay": 5.0,
+  "allow_continue_after_victory": true,
+  "singularity_age": 6,
+  "victory_conditions": {
+    "military": { "enabled": true, "label": "Military Conquest" },
+    "singularity": { "enabled": true, "label": "Singularity Achieved" },
+    "wonder": { "enabled": true, "label": "Wonder Built" }
+  }
+}
