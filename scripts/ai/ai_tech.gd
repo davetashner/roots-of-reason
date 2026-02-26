@@ -15,6 +15,7 @@ var _tick_timer: float = 0.0
 var _tick_interval: float = 3.0
 var _max_queue_size: int = 2
 var _personalities: Dictionary = {}
+var _regressed_requeue: Array[String] = []
 
 
 func setup(tech_manager: Node) -> void:
@@ -59,11 +60,39 @@ func _tick() -> void:
 		queue = _tech_manager.get_research_queue(player_id)
 
 
+func on_tech_regressed(p_id: int, tech_id: String, _tech_data: Dictionary) -> void:
+	if p_id != player_id:
+		return
+	if tech_id not in _regressed_requeue:
+		_regressed_requeue.append(tech_id)
+
+
+func _find_regressed_tech(current_queue: Array) -> String:
+	# Return first re-researchable tech from the requeue list, cleaning completed entries.
+	var i: int = 0
+	while i < _regressed_requeue.size():
+		var tech_id: String = _regressed_requeue[i]
+		if _tech_manager.is_tech_researched(tech_id, player_id):
+			_regressed_requeue.remove_at(i)
+			continue
+		if tech_id in current_queue:
+			i += 1
+			continue
+		if _tech_manager.can_research(player_id, tech_id):
+			return tech_id
+		i += 1
+	return ""
+
+
 func _find_next_tech(current_queue: Array) -> String:
 	# Priority 1: age prerequisites for next age
 	var prereq_tech: String = _find_unresearched_prereq(current_queue)
 	if prereq_tech != "":
 		return prereq_tech
+	# Priority 1.5: re-research regressed techs
+	var regressed_tech: String = _find_regressed_tech(current_queue)
+	if regressed_tech != "":
+		return regressed_tech
 	# Priority 2: personality tech list for current age
 	var personality_tech: String = _find_personality_tech(current_queue, GameManager.current_age)
 	if personality_tech != "":
@@ -119,6 +148,7 @@ func save_state() -> Dictionary:
 		"difficulty": difficulty,
 		"player_id": player_id,
 		"tick_timer": _tick_timer,
+		"regressed_requeue": _regressed_requeue.duplicate(),
 	}
 	if gameplay_personality != null:
 		state["gameplay_personality_id"] = gameplay_personality.personality_id
@@ -136,4 +166,8 @@ func load_state(data: Dictionary) -> void:
 		personality = gameplay_personality.get_tech_personality()
 	else:
 		personality = str(data.get("personality", personality))
+	_regressed_requeue.clear()
+	var rq: Array = data.get("regressed_requeue", [])
+	for tech_id in rq:
+		_regressed_requeue.append(str(tech_id))
 	_load_config()

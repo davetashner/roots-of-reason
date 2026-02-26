@@ -34,6 +34,8 @@ var _build_order_index: int = 0
 var _villager_allocation: Dictionary = {}
 var _town_center: Node2D = null
 var _trained_count: Dictionary = {}
+var _destroyed_tc_positions: Array[Vector2i] = []
+var _tr_config: Dictionary = {}
 
 # Cached entity lists (refreshed each tick)
 var _own_villagers: Array[Node2D] = []
@@ -56,6 +58,7 @@ func setup(
 	_tech_manager = tech_manager
 	_load_config()
 	_load_build_order()
+	_load_tr_config()
 
 
 func _load_config() -> void:
@@ -211,6 +214,8 @@ func _process_build_step(step: Dictionary) -> bool:
 	if building_name == "":
 		_build_order_index += 1
 		return false
+	if building_name == "town_center" and not _should_build_forward_tc():
+		return false
 	var building := _place_building(building_name)
 	if building != null:
 		_build_order_index += 1
@@ -256,6 +261,74 @@ func _try_opportunistic_train() -> bool:
 	return pq.add_to_queue("villager")
 
 
+func _load_tr_config() -> void:
+	var data: Variant = DataLoader.load_json("res://data/ai/tech_regression_config.json")
+	if data == null or not data is Dictionary:
+		_tr_config = {}
+		return
+	_tr_config = data
+	if personality == null:
+		return
+	var overrides: Dictionary = _tr_config.get("personality_overrides", {})
+	var pid: String = personality.personality_id
+	if pid not in overrides:
+		return
+	var pov: Dictionary = overrides[pid]
+	for key: String in pov:
+		var parts: Array = key.split(".")
+		if parts.size() != 2:
+			continue
+		var section: String = parts[0]
+		var field: String = parts[1]
+		if section in _tr_config and _tr_config[section] is Dictionary:
+			_tr_config[section][field] = pov[key]
+
+
+func _should_build_forward_tc() -> bool:
+	var ftc: Dictionary = _tr_config.get("forward_tc", {})
+	var min_adv: float = float(ftc.get("min_military_advantage_ratio", 1.8))
+	var max_tech_risky: int = int(ftc.get("max_tech_count_for_risky_build", 15))
+	var own_mil: int = _count_military_units(player_id)
+	var enemy_pid: int = 0 if player_id != 0 else 1
+	var enemy_mil: int = _count_military_units(enemy_pid)
+	# High tech count increases required advantage
+	if _tech_manager != null:
+		var tech_count: int = _tech_manager.get_researched_techs(player_id).size()
+		if tech_count > max_tech_risky:
+			min_adv *= 1.5
+	if enemy_mil > 0:
+		var ratio: float = float(own_mil) / float(enemy_mil)
+		return ratio >= min_adv
+	return own_mil > 0
+
+
+func _count_military_units(owner: int) -> int:
+	var count: int = 0
+	if _scene_root == null:
+		return count
+	for child in _scene_root.get_children():
+		if not (child is Node2D):
+			continue
+		if "owner_id" not in child:
+			continue
+		if int(child.owner_id) != owner:
+			continue
+		if not child.has_method("is_idle"):
+			continue
+		if "unit_category" in child and str(child.unit_category) == "military":
+			count += 1
+	return count
+
+
+func on_building_destroyed(building: Node2D) -> void:
+	if not "building_name" in building:
+		return
+	if building.building_name != "town_center":
+		return
+	if "grid_pos" in building:
+		_destroyed_tc_positions.append(building.grid_pos)
+
+
 func _place_building(bname: String) -> Node2D:
 	var stats: Dictionary = DataLoader.get_building_stats(bname)
 	if stats.is_empty():
@@ -266,7 +339,7 @@ func _place_building(bname: String) -> Node2D:
 		return null
 	var fp: Array = stats.get("footprint", [1, 1])
 	var footprint := Vector2i(int(fp[0]), int(fp[1]))
-	var grid_pos := _find_valid_placement(footprint)
+	var grid_pos := _find_valid_placement(footprint, bname)
 	if grid_pos == Vector2i(-1, -1):
 		return null
 	if not ResourceManager.spend(player_id, costs):
@@ -356,11 +429,15 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 		_population_manager.register_unit(unit, player_id)
 
 
-func _find_valid_placement(footprint: Vector2i) -> Vector2i:
+func _find_valid_placement(footprint: Vector2i, building_name: String = "") -> Vector2i:
 	if _town_center == null:
 		return Vector2i(-1, -1)
 	var tc_pos: Vector2i = _town_center.grid_pos
 	var radius: int = int(_config.get("building_search_radius", 15))
+	var avoid_radius: int = 0
+	if building_name == "town_center":
+		var tlr: Dictionary = _tr_config.get("tech_loss_response", {})
+		avoid_radius = int(tlr.get("destroyed_position_avoid_radius_tiles", 10))
 	# Spiral search outward from town center
 	for r in range(3, radius + 1):
 		for dx in range(-r, r + 1):
@@ -369,9 +446,20 @@ func _find_valid_placement(footprint: Vector2i) -> Vector2i:
 					continue
 				var pos := tc_pos + Vector2i(dx, dy)
 				var constraint: String = ""
-				if BuildingValidator.is_placement_valid(pos, footprint, _map_node, _pathfinder, constraint):
-					return pos
+				if not BuildingValidator.is_placement_valid(pos, footprint, _map_node, _pathfinder, constraint):
+					continue
+				if avoid_radius > 0 and _is_near_destroyed_tc(pos, avoid_radius):
+					continue
+				return pos
 	return Vector2i(-1, -1)
+
+
+func _is_near_destroyed_tc(pos: Vector2i, radius: int) -> bool:
+	for dtc_pos in _destroyed_tc_positions:
+		var dist: int = absi(pos.x - dtc_pos.x) + absi(pos.y - dtc_pos.y)
+		if dist <= radius:
+			return true
+	return false
 
 
 func _find_nearest_idle_villager(target_pos: Vector2) -> Node2D:
@@ -535,12 +623,16 @@ func save_state() -> Dictionary:
 	var tc: Dictionary = {}
 	for k: String in _trained_count:
 		tc[k] = int(_trained_count[k])
+	var dtc_serialized: Array = []
+	for pos in _destroyed_tc_positions:
+		dtc_serialized.append([pos.x, pos.y])
 	var state: Dictionary = {
 		"build_order_index": _build_order_index,
 		"trained_count": tc,
 		"tick_timer": _tick_timer,
 		"difficulty": difficulty,
 		"player_id": player_id,
+		"destroyed_tc_positions": dtc_serialized,
 	}
 	if personality != null:
 		state["personality_id"] = personality.personality_id
@@ -559,5 +651,11 @@ func load_state(data: Dictionary) -> void:
 	_trained_count.clear()
 	for k: String in tc:
 		_trained_count[k] = int(tc[k])
+	_destroyed_tc_positions.clear()
+	var dtc: Array = data.get("destroyed_tc_positions", [])
+	for entry in dtc:
+		if entry is Array and entry.size() == 2:
+			_destroyed_tc_positions.append(Vector2i(int(entry[0]), int(entry[1])))
 	_load_config()
 	_load_build_order()
+	_load_tr_config()
