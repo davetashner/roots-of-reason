@@ -23,6 +23,7 @@ const KnowledgeBurningVFXScript := preload("res://scripts/prototype/knowledge_bu
 const WarSurvivalScript := preload("res://scripts/prototype/war_survival.gd")
 const VictoryScreenScript := preload("res://scripts/ui/victory_screen.gd")
 const TechTreeViewerScript := preload("res://scripts/ui/tech_tree_viewer.gd")
+const SingularityRegressionScript := preload("res://scripts/prototype/singularity_regression.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -52,6 +53,7 @@ var _war_survival: Node = null
 var _victory_screen: PanelContainer = null
 var _knowledge_burning_vfx: Node = null
 var _tech_tree_viewer: PanelContainer = null
+var _singularity_regression: Node = null
 
 
 func _ready() -> void:
@@ -731,6 +733,12 @@ func _setup_tech() -> void:
 	_war_survival.setup(_tech_manager)
 	# Connect tech completion to spillover system
 	_tech_manager.tech_researched.connect(_on_tech_researched_spillover)
+	# Singularity regression — tech regression + singularity path interaction
+	_singularity_regression = Node.new()
+	_singularity_regression.name = "SingularityRegression"
+	_singularity_regression.set_script(SingularityRegressionScript)
+	add_child(_singularity_regression)
+	_singularity_regression.setup(_tech_manager, _notification_panel)
 
 
 func _setup_corruption() -> void:
