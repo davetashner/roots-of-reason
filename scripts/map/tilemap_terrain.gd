@@ -8,6 +8,7 @@ const TEXTURE_BASE_PATH := "res://assets/tiles/terrain/prototype/"
 
 const ElevationGenerator := preload("res://scripts/map/elevation_generator.gd")
 const RiverGenerator := preload("res://scripts/map/river_generator.gd")
+const CoastlineGenerator := preload("res://scripts/map/coastline_generator.gd")
 const ResourceGenerator := preload("res://scripts/map/resource_generator.gd")
 const StartingLocationGenerator := preload("res://scripts/map/starting_location_generator.gd")
 const FaunaGenerator := preload("res://scripts/map/fauna_generator.gd")
@@ -156,26 +157,30 @@ func _build_tileset() -> void:
 		_source_ids[terrain_name] = source_id
 		source_id += 1
 
-	# Register river tile explicitly (not in terrain_weights — procedurally placed)
-	if not _source_ids.has("river"):
-		var river_tex_path := TEXTURE_BASE_PATH + "river.png"
-		var river_tex: Texture2D = load(river_tex_path)
-		if river_tex != null:
-			var river_source := TileSetAtlasSource.new()
-			river_source.texture = river_tex
-			river_source.texture_region_size = TILE_SIZE
-			ts.add_source(river_source, source_id)
-			river_source.create_tile(Vector2i.ZERO)
+	# Register procedurally-placed terrain tiles (not in terrain_weights)
+	var extra_terrains := ["river", "shore", "shallows", "deep_water"]
+	for extra_name: String in extra_terrains:
+		if _source_ids.has(extra_name):
+			continue
+		var extra_tex_path := TEXTURE_BASE_PATH + extra_name + ".png"
+		var extra_tex: Texture2D = load(extra_tex_path)
+		if extra_tex == null:
+			continue
+		var extra_source := TileSetAtlasSource.new()
+		extra_source.texture = extra_tex
+		extra_source.texture_region_size = TILE_SIZE
+		ts.add_source(extra_source, source_id)
+		extra_source.create_tile(Vector2i.ZERO)
 
-			var river_tile_data: TileData = river_source.get_tile_data(Vector2i.ZERO, 0)
-			river_tile_data.set_custom_data("terrain_type", "river")
-			river_tile_data.set_custom_data("movement_cost", float(_terrain_costs.get("river", 3.0)))
-			var river_props: Dictionary = _terrain_properties.get("river", {})
-			river_tile_data.set_custom_data("buildable", river_props.get("buildable", false))
-			river_tile_data.set_custom_data("blocks_los", river_props.get("blocks_los", false))
+		var extra_tile_data: TileData = extra_source.get_tile_data(Vector2i.ZERO, 0)
+		extra_tile_data.set_custom_data("terrain_type", extra_name)
+		extra_tile_data.set_custom_data("movement_cost", float(_terrain_costs.get(extra_name, 1.0)))
+		var extra_props: Dictionary = _terrain_properties.get(extra_name, {})
+		extra_tile_data.set_custom_data("buildable", extra_props.get("buildable", false))
+		extra_tile_data.set_custom_data("blocks_los", extra_props.get("blocks_los", false))
 
-			_source_ids["river"] = source_id
-			source_id += 1
+		_source_ids[extra_name] = source_id
+		source_id += 1
 
 	tile_set = ts
 
@@ -196,7 +201,7 @@ func _generate_map() -> void:
 	moisture_gen.configure(_map_gen_config.get("moisture_noise", {}))
 	var moisture_grid: Dictionary = moisture_gen.generate(_map_width, _map_height, _seed_value)
 
-	# 4. Map elevation + moisture to terrain type
+	# 4. Map elevation + moisture to terrain type (rendering deferred to step 4b)
 	var mapper := TerrainMapperScript.new()
 	mapper.configure(_map_gen_config)
 	for row in _map_height:
@@ -206,9 +211,20 @@ func _generate_map() -> void:
 			var moisture: float = moisture_grid.get(pos, 0.0)
 			var terrain: String = mapper.get_terrain(elevation, moisture)
 			_tile_grid[pos] = terrain
-			var sid: int = _source_ids.get(terrain, -1)
-			if sid >= 0:
-				set_cell(pos, sid, Vector2i.ZERO)
+
+	# 4a. Reclassify water/land adjacency into shore/shallows/deep_water
+	var coast_gen := CoastlineGenerator.new()
+	coast_gen.configure(_map_gen_config.get("coastline_generation", {}))
+	var coast_result: Dictionary = coast_gen.generate(_tile_grid, _map_width, _map_height)
+	var coast_changes: Dictionary = coast_result.get("changes", {})
+	for pos: Vector2i in coast_changes:
+		_tile_grid[pos] = coast_changes[pos]
+
+	# 4b. Render all tiles (after coastline reclassification)
+	for pos: Vector2i in _tile_grid:
+		var sid: int = _source_ids.get(_tile_grid[pos], -1)
+		if sid >= 0:
+			set_cell(pos, sid, Vector2i.ZERO)
 
 	# 5. Generate rivers (existing system, unchanged)
 	var river_gen := RiverGenerator.new()

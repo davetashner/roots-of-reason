@@ -17,6 +17,9 @@ const TERRAIN_COLORS: Dictionary = {
 	"stone": Color("8C8C8C"),
 	"mountain": Color("736666"),
 	"river": Color("4A90C4"),
+	"shore": Color("C2B280"),
+	"shallows": Color("7EC8E3"),
+	"deep_water": Color("2B5F8A"),
 }
 const DEFAULT_TERRAIN_COLOR := Color(0.2, 0.2, 0.2)
 
