@@ -20,6 +20,7 @@ const TILE_SIZE: float = 64.0
 var player_id: int = 1
 var difficulty: String = "normal"
 var personality: AIPersonality = null
+var singularity_target_buildings: Array[String] = []  ## Set by AISingularity
 
 var _scene_root: Node = null
 var _population_manager: Node = null
@@ -47,6 +48,8 @@ var _tech_manager: Node = null
 var _tr_config: Dictionary = {}
 var _tech_loss_boost_timer: float = 0.0
 var _destroyed_tc_positions: Array[Vector2i] = []
+var _base_attack_threshold: int = 0
+var _base_attack_cooldown: float = 0.0
 
 
 func setup(
@@ -70,9 +73,11 @@ func _load_config() -> void:
 	if data == null or not data is Dictionary:
 		_config = _default_config()
 	else:
-		_config = data.get(difficulty, _default_config())
+		_config = data.get(difficulty, _default_config()).duplicate(true)
 	if personality != null:
 		_config = personality.apply_military_modifiers(_config)
+	_base_attack_threshold = int(_config.get("army_attack_threshold", 8))
+	_base_attack_cooldown = float(_config.get("attack_cooldown", 90.0))
 
 
 func _default_config() -> Dictionary:
@@ -384,6 +389,11 @@ func _launch_attack(units: Array[Node2D]) -> void:
 
 
 func _select_attack_target() -> Vector2:
+	# Priority 0: Singularity-critical buildings (set by AISingularity)
+	if not singularity_target_buildings.is_empty():
+		var sing_target: Vector2 = _find_singularity_building_target()
+		if sing_target != Vector2.ZERO:
+			return sing_target
 	var priority_list: Array = _config.get("target_priority", []).duplicate()
 	if _should_prioritize_tc_snipe():
 		priority_list.insert(0, "enemy_town_center")
@@ -393,6 +403,19 @@ func _select_attack_target() -> Vector2:
 			return target
 	# Fallback: nearest enemy building
 	return _find_nearest_enemy_building_pos()
+
+
+func _find_singularity_building_target() -> Vector2:
+	for target_name: String in singularity_target_buildings:
+		for building in _enemy_buildings:
+			if "building_name" not in building:
+				continue
+			if building.building_name != target_name:
+				continue
+			if "hp" in building and building.hp <= 0:
+				continue
+			return building.global_position
+	return Vector2.ZERO
 
 
 func _should_prioritize_tc_snipe() -> bool:
@@ -636,6 +659,17 @@ func _count_own_military_near(pos: Vector2, radius: float) -> int:
 		if pos.distance_to(unit.global_position) <= radius:
 			count += 1
 	return count
+
+
+func set_aggression_override(threshold_mult: float, cooldown_mult: float) -> void:
+	# Lower threshold = more aggressive (divide); lower cooldown = attacks sooner (multiply)
+	_config["army_attack_threshold"] = maxi(int(float(_base_attack_threshold) / threshold_mult), 1)
+	_config["attack_cooldown"] = _base_attack_cooldown * cooldown_mult
+
+
+func clear_aggression_override() -> void:
+	_config["army_attack_threshold"] = _base_attack_threshold
+	_config["attack_cooldown"] = _base_attack_cooldown
 
 
 func on_tech_regressed(p_id: int, _tech_id: String, _tech_data: Dictionary) -> void:

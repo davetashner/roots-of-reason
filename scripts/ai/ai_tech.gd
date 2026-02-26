@@ -9,6 +9,7 @@ var player_id: int = 1
 var difficulty: String = "normal"
 var personality: String = "balanced"
 var gameplay_personality: AIPersonality = null
+var singularity_priority_techs: Array[String] = []  ## Set by AISingularity
 
 var _tech_manager: Node = null
 var _tick_timer: float = 0.0
@@ -84,6 +85,17 @@ func _find_regressed_tech(current_queue: Array) -> String:
 	return ""
 
 
+func _find_singularity_tech(current_queue: Array) -> String:
+	for tech_id: String in singularity_priority_techs:
+		if _tech_manager.is_tech_researched(tech_id, player_id):
+			continue
+		if tech_id in current_queue:
+			continue
+		if _tech_manager.can_research(player_id, tech_id):
+			return tech_id
+	return ""
+
+
 func _find_next_tech(current_queue: Array) -> String:
 	# Priority 1: age prerequisites for next age
 	var prereq_tech: String = _find_unresearched_prereq(current_queue)
@@ -93,6 +105,10 @@ func _find_next_tech(current_queue: Array) -> String:
 	var regressed_tech: String = _find_regressed_tech(current_queue)
 	if regressed_tech != "":
 		return regressed_tech
+	# Priority 1.75: Singularity pursuit techs (set by AISingularity)
+	var sing_tech: String = _find_singularity_tech(current_queue)
+	if sing_tech != "":
+		return sing_tech
 	# Priority 2: personality tech list for current age
 	var personality_tech: String = _find_personality_tech(current_queue, GameManager.current_age)
 	if personality_tech != "":

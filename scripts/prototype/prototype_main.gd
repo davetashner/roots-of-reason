@@ -24,6 +24,7 @@ const WarSurvivalScript := preload("res://scripts/prototype/war_survival.gd")
 const VictoryScreenScript := preload("res://scripts/ui/victory_screen.gd")
 const TechTreeViewerScript := preload("res://scripts/ui/tech_tree_viewer.gd")
 const SingularityRegressionScript := preload("res://scripts/prototype/singularity_regression.gd")
+const AISingularityScript := preload("res://scripts/ai/ai_singularity.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -54,6 +55,7 @@ var _victory_screen: PanelContainer = null
 var _knowledge_burning_vfx: Node = null
 var _tech_tree_viewer: PanelContainer = null
 var _singularity_regression: Node = null
+var _ai_singularity: Node = null
 
 
 func _ready() -> void:
@@ -551,6 +553,14 @@ func _setup_ai() -> void:
 	# Connect tech regression signals to AI brains
 	_tech_manager.tech_regressed.connect(_ai_military.on_tech_regressed)
 	_tech_manager.tech_regressed.connect(_ai_tech.on_tech_regressed)
+	# AI Singularity awareness
+	_ai_singularity = Node.new()
+	_ai_singularity.name = "AISingularity"
+	_ai_singularity.set_script(AISingularityScript)
+	_ai_singularity.difficulty = difficulty
+	_ai_singularity.personality = ai_pers
+	add_child(_ai_singularity)
+	_ai_singularity.setup(_tech_manager, _ai_military, _ai_tech)
 
 
 func _load_ai_tier_config(difficulty: String) -> Dictionary:
