@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roots of Reason — Tech Tree Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232736;
+    --border: #2e3345;
+    --text: #e1e4ed;
+    --text-dim: #8b90a5;
+    --accent: #6c8cff;
+    --age0: #8b7355;
+    --age1: #cd7f32;
+    --age2: #7a8b99;
+    --age3: #9b6b8a;
+    --age4: #6b8f6b;
+    --age5: #5b8fb8;
+    --age6: #b44cff;
+    --singularity: #ff6b9d;
+    --war: #ff4444;
+    --pioneer: #f5a623;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .controls label {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .controls select, .controls input[type="text"] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+
+  .controls input[type="text"] { width: 160px; }
+
+  .controls button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .controls button:hover { background: var(--border); }
+  .controls button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .main-area {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 280px;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .age-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .age-group {
+    margin-bottom: 8px;
+  }
+
+  .age-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+  }
+
+  .age-header .count {
+    font-size: 10px;
+    opacity: 0.7;
+    font-weight: 400;
+  }
+
+  .age-header:hover { filter: brightness(1.2); }
+
+  .age-techs {
+    padding: 2px 0 2px 8px;
+  }
+
+  .tech-item {
+    font-size: 12px;
+    padding: 5px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-left: 2px solid transparent;
+  }
+  .tech-item:hover { background: var(--surface2); }
+  .tech-item.selected { background: var(--surface2); border-left-color: var(--accent); }
+  .tech-item.dimmed { opacity: 0.3; }
+  .tech-item .chain-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .tech-item .war-icon { font-size: 10px; margin-left: auto; flex-shrink: 0; }
+
+  .canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .detail-panel {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    width: 320px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    max-height: calc(100% - 32px);
+    overflow-y: auto;
+  }
+
+  .detail-panel.visible { display: block; }
+
+  .detail-panel h2 {
+    font-size: 15px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .detail-panel .age-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  .detail-panel .close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+  }
+  .detail-panel .close-btn:hover { color: var(--text); }
+
+  .detail-section {
+    margin-top: 12px;
+  }
+
+  .detail-section h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .detail-section p, .detail-section li {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .detail-section ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .detail-section li {
+    padding: 2px 0;
+    padding-left: 12px;
+    position: relative;
+  }
+  .detail-section li::before {
+    content: '·';
+    position: absolute;
+    left: 2px;
+    color: var(--text-dim);
+  }
+
+  .cost-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .cost-chip {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .prereq-link {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .prereq-link:hover { text-decoration: underline; }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .tag.singularity { background: rgba(255,107,157,0.2); color: var(--singularity); }
+  .tag.war { background: rgba(255,68,68,0.15); color: var(--war); }
+  .tag.alert { background: rgba(255,200,50,0.15); color: #ffc832; }
+  .tag.pioneer { background: rgba(245,166,35,0.2); color: var(--pioneer); }
+
+  .prompt-area {
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 12px 20px;
+    flex-shrink: 0;
+  }
+
+  .prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .prompt-header span {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+  }
+
+  .copy-btn {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .copy-btn:hover { filter: brightness(1.15); }
+
+  .prompt-text {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+    max-height: 60px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 0 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .legend-line {
+    width: 16px;
+    height: 2px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ROOTS OF REASON — Tech Tree</h1>
+  <div class="controls">
+    <label>Highlight:
+      <select id="highlightMode">
+        <option value="none">None</option>
+        <option value="singularity">Singularity Chain</option>
+        <option value="war">War Spillovers</option>
+        <option value="military">Military Techs</option>
+        <option value="economy">Economy Techs</option>
+        <option value="health">Health Techs</option>
+        <option value="pioneer">Pioneer Bonuses</option>
+      </select>
+    </label>
+    <label>Search: <input type="text" id="searchBox" placeholder="Filter techs…"></label>
+    <button id="resetBtn">Reset View</button>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot" style="background:var(--singularity)"></span> Singularity</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--pioneer)"></span> Pioneer</span>
+      <span class="legend-item"><span class="legend-line" style="background:var(--text-dim)"></span> Prerequisite</span>
+    </div>
+  </div>
+</header>
+
+<div class="main-area">
+  <div class="sidebar">
+    <div class="age-list" id="ageList"></div>
+  </div>
+
+  <div class="canvas-container" id="canvasContainer">
+    <canvas id="treeCanvas"></canvas>
+    <div class="detail-panel" id="detailPanel">
+      <button class="close-btn" onclick="closeDetail()">&times;</button>
+      <div id="detailContent"></div>
+    </div>
+  </div>
+</div>
+
+<div class="prompt-area">
+  <div class="prompt-header">
+    <span>Generated Prompt</span>
+    <button class="copy-btn" id="copyBtn">Copy</button>
+  </div>
+  <div class="prompt-text" id="promptText">Click a tech node to explore, or use the highlight modes to focus on specific chains.</div>
+</div>
+
+<script>
+const AGE_COLORS = ['#8b7355','#cd7f32','#7a8b99','#9b6b8a','#6b8f6b','#5b8fb8','#b44cff'];
+const AGE_NAMES = ['Stone Age','Bronze Age','Iron Age','Medieval Age','Industrial Age','Information Age','Singularity Age'];
+
+const TECHS = [
+  // Stone Age (0)
+  {id:'stone_tools',name:'Stone Tools',age:0,cost:{food:50},time:25,prereqs:[],effects:['+10% gather rate'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'fire_mastery',name:'Fire Mastery',age:0,cost:{food:75},time:30,prereqs:[],effects:['+20% hunting yield','+2 night LOS'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'animal_husbandry',name:'Animal Husbandry',age:0,cost:{food:100},time:40,prereqs:['stone_tools'],effects:['Unlock sheep pen'],singularity:false,war_spillover:null,public_alert:false,unlocks:['sheep_pen'],pioneer:null},
+  {id:'basket_weaving',name:'Basket Weaving',age:0,cost:{food:75,wood:25},time:30,prereqs:['stone_tools'],effects:['+25% carry capacity'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+
+  // Bronze Age (1)
+  {id:'bronze_working',name:'Bronze Working',age:1,cost:{food:150,gold:100},time:45,prereqs:[],effects:['+1 melee attack','Unlock barracks & infantry'],singularity:false,war_spillover:null,public_alert:false,unlocks:['barracks','infantry'],category:'military',pioneer:{type:'temporary_buff',bonus:'+15% melee attack for 2 min',detail:'Bronze weapons against stone-age opponents was a massacre. The Akkadian Empire\'s bronze-equipped armies conquered all of Mesopotamia.',duration:120,follower_discount:0.10}},
+  {id:'writing',name:'Writing',age:1,cost:{food:100,wood:75},time:50,prereqs:[],effects:['Unlock library'],singularity:false,war_spillover:null,public_alert:false,unlocks:['library'],pioneer:{type:'permanent_stat',bonus:'+1 research queue slot',detail:'Sumerian cuneiform gave Mesopotamia an administrative advantage no oral culture could match. Literate civilizations governed larger territories.',duration:null,follower_discount:0.10}},
+  {id:'pottery',name:'Pottery',age:1,cost:{food:100,wood:50},time:35,prereqs:[],effects:['-50% food decay','Unlock market'],singularity:false,war_spillover:null,public_alert:false,unlocks:['market'],category:'economy',pioneer:null},
+  {id:'irrigation',name:'Irrigation',age:1,cost:{food:200,wood:150},time:60,prereqs:['writing'],effects:['+25% farm output'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'masonry',name:'Masonry',age:1,cost:{wood:150,stone:100},time:50,prereqs:['bronze_working'],effects:['+20% building HP','Unlock stone wall'],singularity:false,war_spillover:null,public_alert:false,unlocks:['stone_wall'],category:'military',pioneer:null},
+  {id:'sailing',name:'Sailing',age:1,cost:{wood:200,gold:75},time:55,prereqs:[],effects:['Unlock dock & fishing boat'],singularity:false,war_spillover:null,public_alert:false,unlocks:['dock','fishing_boat'],pioneer:null},
+  {id:'iron_working',name:'Iron Working',age:1,cost:{food:200,gold:150},time:55,prereqs:['bronze_working'],effects:['+2 melee attack','Unlock swordsman'],singularity:false,war_spillover:null,public_alert:false,unlocks:['swordsman'],category:'military',pioneer:null},
+
+  // Iron Age (2)
+  {id:'philosophy',name:'Philosophy',age:2,cost:{gold:150,knowledge:100},time:60,prereqs:['writing'],effects:['+25% research speed'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'mathematics',name:'Mathematics',age:2,cost:{gold:200,knowledge:150},time:65,prereqs:['writing'],effects:['+15% construction speed','+10% siege accuracy'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:{type:'permanent_stat',bonus:'-5% cost on all future research',detail:'Greek mathematics created foundations every subsequent civilization built on. The first to formalize mathematical thinking gained compounding advantages in engineering, navigation, and warfare.',duration:null,follower_discount:0.10}},
+  {id:'currency',name:'Currency',age:2,cost:{gold:250},time:50,prereqs:['pottery'],effects:['+15% gold income'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'engineering',name:'Engineering',age:2,cost:{wood:200,stone:200,knowledge:100},time:70,prereqs:['mathematics'],effects:['Unlock siege workshop & aqueduct'],singularity:false,war_spillover:null,public_alert:false,unlocks:['siege_workshop','aqueduct'],pioneer:null},
+  {id:'code_of_laws',name:'Code of Laws',age:2,cost:{gold:200,knowledge:150},time:60,prereqs:['writing'],effects:['-30% corruption','+10% villager efficiency'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'trireme',name:'Trireme',age:2,cost:{wood:300,gold:100},time:65,prereqs:['sailing'],effects:['Unlock war galley'],singularity:false,war_spillover:null,public_alert:false,unlocks:['war_galley'],category:'military',pioneer:null},
+  {id:'herbalism',name:'Herbalism',age:2,cost:{food:150,knowledge:100},time:50,prereqs:[],effects:['-25% pandemic severity','-15% pandemic probability','+0.5 HP regen'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'health',pioneer:null},
+
+  // Medieval Age (3)
+  {id:'steel_working',name:'Steel Working',age:3,cost:{gold:300,stone:200},time:70,prereqs:['iron_working'],effects:['+2 defense','+10% building armor'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'military',pioneer:null},
+  {id:'feudalism',name:'Feudalism',age:3,cost:{food:250,gold:150},time:60,prereqs:['code_of_laws'],effects:['-20% villager train time','+10% food income'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'compass',name:'Compass',age:3,cost:{gold:200,knowledge:150},time:65,prereqs:['trireme','mathematics'],effects:['+3 naval LOS','Unlock deep ocean navigation'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:{type:'instant_effect',bonus:'Reveal all coastlines permanently',detail:'Portugal and Spain\'s early compass mastery let them map Africa\'s coast and reach the Americas. The first navigators claimed entire continents.',duration:null,follower_discount:0.15}},
+  {id:'printing_press',name:'Printing Press',age:3,cost:{gold:300,knowledge:200},time:80,prereqs:['writing','philosophy'],effects:['+50% research speed','-10% research time'],singularity:false,war_spillover:null,public_alert:true,unlocks:[],pioneer:{type:'instant_effect',bonus:'Free tech in same age',detail:'Within 50 years of Gutenberg, European literacy rates exploded, the Reformation happened, and scientific knowledge circulated freely. The printing press accelerated everything else.',duration:null,follower_discount:0.15}},
+  {id:'guilds',name:'Guilds',age:3,cost:{gold:350,knowledge:100},time:60,prereqs:['currency'],effects:['+25% trade rates','+15% gold income'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'castle_architecture',name:'Castle Architecture',age:3,cost:{stone:400,gold:200},time:90,prereqs:['masonry','engineering'],effects:['Unlock castle','+30% fortification HP'],singularity:false,war_spillover:null,public_alert:false,unlocks:['castle'],category:'military',pioneer:null},
+  {id:'gunpowder',name:'Gunpowder',age:3,cost:{gold:350,knowledge:200},time:85,prereqs:['iron_working'],effects:['Unlock hand cannoneer','+25% siege damage'],singularity:false,war_spillover:'+10% mining efficiency',public_alert:false,unlocks:['hand_cannoneer'],category:'military',pioneer:{type:'temporary_buff',bonus:'+20% siege damage for 3 min',detail:'When the Ottomans weaponized gunpowder for cannon at Constantinople (1453), they ended the medieval era in a single siege. The first to weaponize a technology often matters more than the first to discover it.',duration:180,follower_discount:0.10}},
+  {id:'banking',name:'Banking',age:3,cost:{gold:400,knowledge:200},time:75,prereqs:['currency','guilds'],effects:['+20% gold income','-25% corruption'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'shipbuilding',name:'Shipbuilding',age:3,cost:{wood:350,gold:200},time:70,prereqs:['compass'],effects:['+25% naval HP','+50% transport capacity'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'crop_rotation',name:'Crop Rotation',age:3,cost:{food:250,wood:150},time:55,prereqs:['irrigation'],effects:['+30% farm output'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+
+  // Industrial Age (4)
+  {id:'steam_power',name:'Steam Power',age:4,cost:{wood:400,gold:300,knowledge:200},time:80,prereqs:['engineering'],effects:['+30% villager work rate','Unlock factory'],singularity:false,war_spillover:null,public_alert:false,unlocks:['factory'],category:'economy',pioneer:{type:'instant_effect',bonus:'Free Factory building',detail:'Britain\'s head start in steam industrialization created "the workshop of the world." A free Factory represents the economic snowball that made Britain the dominant power for a century.',duration:null,follower_discount:0.15}},
+  {id:'rifling',name:'Rifling',age:4,cost:{gold:350,knowledge:250},time:70,prereqs:['gunpowder'],effects:['+30% ranged attack'],singularity:false,war_spillover:'+15% mining efficiency',public_alert:false,unlocks:[],category:'military',pioneer:null},
+  {id:'railroad',name:'Railroad',age:4,cost:{wood:500,stone:400,gold:200},time:90,prereqs:['steam_power'],effects:['+1.0 resource transport speed'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'electricity',name:'Electricity',age:4,cost:{gold:400,knowledge:350},time:85,prereqs:['mathematics','steam_power'],effects:['+1.0 research speed','Unlock telegraph'],singularity:false,war_spillover:null,public_alert:false,unlocks:['telegraph'],pioneer:{type:'temporary_buff',bonus:'+1.0 research speed for 2 min (doubled)',detail:'Electrification transformed everything simultaneously — factories, communication, lighting, transportation. The US and Germany electrified first and became the 20th century\'s dominant economies.',duration:120,follower_discount:0.15}},
+  {id:'steel_production',name:'Steel Production',age:4,cost:{stone:400,gold:300,knowledge:200},time:80,prereqs:['steel_working'],effects:['+30% building HP','+30% naval HP'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'military',pioneer:null},
+  {id:'chemistry',name:'Chemistry',age:4,cost:{gold:350,knowledge:300},time:75,prereqs:['mathematics'],effects:[],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'sanitation',name:'Sanitation',age:4,cost:{food:300,stone:200,knowledge:200},time:65,prereqs:['engineering','herbalism'],effects:['-50% pandemic severity','-30% pandemic prob','+25% pop growth'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'health',pioneer:null},
+  {id:'pasteurization',name:'Pasteurization',age:4,cost:{food:350,knowledge:300},time:70,prereqs:['chemistry','sanitation'],effects:['Eliminates food decay','Camp disease immunity','+1.0 idle HP regen'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'health',pioneer:null},
+  {id:'vaccines',name:'Vaccines',age:4,cost:{food:400,knowledge:500},time:80,prereqs:['pasteurization'],effects:['Pandemic immunity','+15% military max HP'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'health',pioneer:null},
+  {id:'assembly_line',name:'Assembly Line',age:4,cost:{gold:500,knowledge:300},time:85,prereqs:['steam_power'],effects:['-40% unit train time'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'dynamite',name:'Dynamite',age:4,cost:{gold:300,knowledge:250},time:70,prereqs:['gunpowder','chemistry'],effects:['+50% siege damage'],singularity:false,war_spillover:'+25% stone mining',public_alert:false,unlocks:[],category:'military',pioneer:null},
+  {id:'civil_service',name:'Civil Service',age:4,cost:{gold:400,knowledge:300},time:70,prereqs:['code_of_laws','banking'],effects:['-100% corruption','+15% bureaucracy efficiency'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'ballistics',name:'Ballistics',age:4,cost:{gold:400,knowledge:350},time:80,prereqs:['mathematics','rifling'],effects:['+20% ranged accuracy','Unlock artillery'],singularity:false,war_spillover:'+10% navigation',public_alert:false,unlocks:['artillery'],category:'military',pioneer:null},
+
+  // Information Age (5)
+  {id:'atomic_theory',name:'Atomic Theory',age:5,cost:{gold:500,knowledge:500},time:70,prereqs:['chemistry'],effects:['+50% research speed'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'computing_theory',name:'Computing Theory',age:5,cost:{knowledge:600},time:75,prereqs:['electricity','mathematics'],effects:['+1.0 research speed'],singularity:true,war_spillover:null,public_alert:false,unlocks:[],pioneer:{type:'permanent_stat',bonus:'+0.5 permanent research speed',detail:'Bletchley Park and ENIAC gave the UK and US a decisive advantage in WWII and the Cold War. Early computing dominance created Silicon Valley and lasting technological leadership. The countries that led in 1945 still lead today.',duration:null,follower_discount:0.10}},
+  {id:'transistors',name:'Transistors',age:5,cost:{gold:500,knowledge:600},time:70,prereqs:['electricity'],effects:['+25% research speed'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'nuclear_fission',name:'Nuclear Fission',age:5,cost:{gold:600,knowledge:700},time:90,prereqs:['atomic_theory'],effects:['Unlock nuclear plant'],singularity:false,war_spillover:null,public_alert:false,unlocks:['nuclear_plant'],pioneer:null},
+  {id:'rocketry',name:'Rocketry',age:5,cost:{gold:500,knowledge:500},time:80,prereqs:['ballistics','chemistry'],effects:['Unlock missile'],singularity:false,war_spillover:'+15% navigation',public_alert:false,unlocks:['missile'],category:'military',pioneer:null},
+  {id:'satellite',name:'Satellite',age:5,cost:{gold:700,knowledge:600},time:85,prereqs:['rocketry'],effects:['Full map visibility','+10% unit speed'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'semiconductor_fab',name:'Semiconductor Fab',age:5,cost:{gold:800,knowledge:700},time:90,prereqs:['transistors'],effects:['+15% research speed'],singularity:true,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'internet',name:'Internet',age:5,cost:{gold:600,knowledge:900},time:85,prereqs:['computing_theory','semiconductor_fab'],effects:['+2.0 research speed','Library research sharing'],singularity:true,war_spillover:null,public_alert:false,unlocks:[],pioneer:{type:'instant_effect',bonus:'Steal 1 tech from each opponent',detail:'ARPANET gave the US military-academic complex information dominance. The first nation to control internet infrastructure gained intelligence capabilities over every connected rival.',duration:null,follower_discount:0.15}},
+  {id:'machine_learning',name:'Machine Learning',age:5,cost:{gold:500,knowledge:800},time:80,prereqs:['computing_theory','statistics'],effects:['+75% research speed'],singularity:true,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'statistics',name:'Statistics',age:5,cost:{gold:400,knowledge:500},time:65,prereqs:['mathematics'],effects:['+10% gold income'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'radar',name:'Radar',age:5,cost:{gold:500,knowledge:600},time:70,prereqs:['electricity','rocketry'],effects:['+50% enemy detection range'],singularity:false,war_spillover:'+10% farm output',public_alert:false,unlocks:[],category:'military',pioneer:null},
+  {id:'guided_missiles',name:'Guided Missiles',age:5,cost:{gold:700,knowledge:700},time:85,prereqs:['rocketry','computing_theory'],effects:['+50% ranged attack'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'military',pioneer:null},
+  {id:'antibiotics',name:'Antibiotics',age:5,cost:{food:500,knowledge:800},time:80,prereqs:['vaccines','chemistry'],effects:['25% war survival','Villager pandemic immunity'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'health',pioneer:null},
+  {id:'genetics',name:'Genetics',age:5,cost:{food:400,knowledge:700},time:75,prereqs:['antibiotics','chemistry'],effects:['+40% food output','+20% population health'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],category:'health',pioneer:null},
+  {id:'cybersecurity',name:'Cybersecurity',age:5,cost:{gold:500,knowledge:800},time:80,prereqs:['internet'],effects:['Espionage protection','+10% tech regression defense'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+
+  // Singularity Age (6)
+  {id:'neural_networks',name:'Neural Networks',age:6,cost:{gold:800,knowledge:1200},time:60,prereqs:['machine_learning'],effects:['+1.5 research speed'],singularity:true,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'big_data',name:'Big Data',age:6,cost:{gold:600,knowledge:1000},time:55,prereqs:['internet','statistics'],effects:['+20% economic optimization'],singularity:true,war_spillover:null,public_alert:false,unlocks:[],category:'economy',pioneer:null},
+  {id:'parallel_computing',name:'Parallel Computing',age:6,cost:{gold:1000,knowledge:1500},time:70,prereqs:['semiconductor_fab'],effects:['+50% research speed','Unlock GPU foundry'],singularity:true,war_spillover:null,public_alert:false,unlocks:['gpu_foundry'],pioneer:null},
+  {id:'deep_learning',name:'Deep Learning',age:6,cost:{gold:1000,knowledge:2000},time:80,prereqs:['neural_networks','big_data'],effects:['+3.0 research speed'],singularity:true,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'quantum_computing',name:'Quantum Computing',age:6,cost:{gold:1500,knowledge:2500},time:90,prereqs:['computing_theory','parallel_computing'],effects:['+1.0 research speed'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'robotics',name:'Robotics',age:6,cost:{gold:800,knowledge:1500},time:65,prereqs:['machine_learning','assembly_line'],effects:['+50% villager work rate','+30% military production'],singularity:false,war_spillover:null,public_alert:false,unlocks:[],pioneer:null},
+  {id:'transformer_architecture',name:'Transformer Architecture',age:6,cost:{gold:1500,knowledge:3000},time:100,prereqs:['deep_learning','parallel_computing'],effects:['Unlock transformer lab'],singularity:true,war_spillover:null,public_alert:true,unlocks:['transformer_lab'],pioneer:{type:'permanent_stat',bonus:'-30% Alignment Research time',detail:'The first organizations to develop transformer models gained massive leads in AI capability. The advantage in the AGI race is compounding — more capability, more data, more capability.',duration:null,follower_discount:0.10}},
+  {id:'alignment_research',name:'Alignment Research',age:6,cost:{gold:1000,knowledge:4000},time:120,prereqs:['transformer_architecture'],effects:['Unlock AGI Core — Victory!'],singularity:true,war_spillover:null,public_alert:true,unlocks:['agi_core'],pioneer:null},
+];
+
+const techMap = {};
+TECHS.forEach(t => techMap[t.id] = t);
+
+// ─── State ───
+const state = {
+  selected: null,
+  highlight: 'none',
+  search: '',
+  pan: { x: 0, y: 0 },
+  zoom: 1,
+  dragging: false,
+  dragStart: { x: 0, y: 0 },
+  panStart: { x: 0, y: 0 },
+  hovered: null,
+  nodePositions: {},
+};
+
+// ─── Layout: compute node positions ───
+function computeLayout() {
+  const positions = {};
+  const ageGroups = {};
+  TECHS.forEach(t => {
+    if (!ageGroups[t.age]) ageGroups[t.age] = [];
+    ageGroups[t.age].push(t);
+  });
+
+  const colWidth = 180;
+  const rowHeight = 56;
+  const ageGap = 30;
+  const headerH = 36;
+
+  let x = 60;
+  for (let age = 0; age <= 6; age++) {
+    const techs = ageGroups[age] || [];
+    let y = 60;
+    // age header space
+    y += headerH;
+    techs.forEach((t, i) => {
+      positions[t.id] = { x: x + colWidth/2, y: y + i * rowHeight + rowHeight/2, w: colWidth - 16, h: rowHeight - 10 };
+    });
+    x += colWidth + ageGap;
+  }
+  state.nodePositions = positions;
+}
+
+computeLayout();
+
+// ─── Sidebar ───
+function buildSidebar() {
+  const list = document.getElementById('ageList');
+  list.innerHTML = '';
+  for (let age = 0; age <= 6; age++) {
+    const techs = TECHS.filter(t => t.age === age);
+    const filtered = techs.filter(t => matchesFilter(t));
+    const group = document.createElement('div');
+    group.className = 'age-group';
+
+    const header = document.createElement('div');
+    header.className = 'age-header';
+    header.style.background = AGE_COLORS[age] + '33';
+    header.style.color = AGE_COLORS[age];
+    header.innerHTML = `${AGE_NAMES[age]} <span class="count">${techs.length}</span>`;
+    group.appendChild(header);
+
+    const techList = document.createElement('div');
+    techList.className = 'age-techs';
+
+    techs.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'tech-item' + (state.selected === t.id ? ' selected' : '') + (!matchesFilter(t) ? ' dimmed' : '');
+      let dots = '';
+      if (t.singularity) dots += `<span class="chain-dot" style="background:var(--singularity)"></span>`;
+      else dots += `<span class="chain-dot" style="background:${AGE_COLORS[t.age]}"></span>`;
+      let warIcon = t.war_spillover ? '<span class="war-icon" title="War spillover">⚔</span>' : '';
+      let alertIcon = t.public_alert ? '<span class="war-icon" title="Public alert">📢</span>' : '';
+      let pioneerIcon = t.pioneer ? '<span class="war-icon" title="Pioneer bonus: ' + t.pioneer.bonus.replace(/'/g,'&#39;') + '" style="color:var(--pioneer)">★</span>' : '';
+      item.innerHTML = dots + t.name + pioneerIcon + warIcon + alertIcon;
+      item.onclick = () => selectTech(t.id);
+      techList.appendChild(item);
+    });
+
+    group.appendChild(techList);
+    list.appendChild(group);
+  }
+}
+
+function matchesFilter(tech) {
+  if (state.search) {
+    const s = state.search.toLowerCase();
+    if (!tech.name.toLowerCase().includes(s) && !tech.id.includes(s) && !tech.effects.some(e => e.toLowerCase().includes(s))) return false;
+  }
+  if (state.highlight === 'singularity') return tech.singularity;
+  if (state.highlight === 'war') return !!tech.war_spillover;
+  if (state.highlight === 'military') return tech.category === 'military';
+  if (state.highlight === 'economy') return tech.category === 'economy';
+  if (state.highlight === 'health') return tech.category === 'health';
+  if (state.highlight === 'pioneer') return !!tech.pioneer;
+  return true;
+}
+
+// ─── Canvas ───
+const canvas = document.getElementById('treeCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const container = document.getElementById('canvasContainer');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = container.clientWidth * dpr;
+  canvas.height = container.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+function draw() {
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.translate(state.pan.x, state.pan.y);
+  ctx.scale(state.zoom, state.zoom);
+
+  // Draw age columns
+  const colWidth = 180;
+  const ageGap = 30;
+  const headerH = 36;
+  let xOff = 60;
+  for (let age = 0; age <= 6; age++) {
+    const techs = TECHS.filter(t => t.age === age);
+    const colH = headerH + techs.length * 56 + 20;
+
+    // Column background
+    ctx.fillStyle = AGE_COLORS[age] + '0a';
+    ctx.strokeStyle = AGE_COLORS[age] + '22';
+    ctx.lineWidth = 1;
+    roundRect(ctx, xOff, 40, colWidth, colH, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Age name header
+    ctx.fillStyle = AGE_COLORS[age];
+    ctx.font = 'bold 11px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(AGE_NAMES[age].toUpperCase(), xOff + colWidth/2, 60);
+
+    xOff += colWidth + ageGap;
+  }
+
+  // Draw prerequisite lines
+  TECHS.forEach(tech => {
+    const to = state.nodePositions[tech.id];
+    if (!to) return;
+    tech.prereqs.forEach(pid => {
+      const from = state.nodePositions[pid];
+      if (!from) return;
+
+      const isHighlighted = state.selected && (state.selected === tech.id || state.selected === pid);
+      const isSingPath = tech.singularity && techMap[pid] && techMap[pid].singularity;
+
+      ctx.strokeStyle = isSingPath ? 'rgba(255,107,157,0.5)' : isHighlighted ? 'rgba(108,140,255,0.6)' : 'rgba(100,110,140,0.2)';
+      ctx.lineWidth = isSingPath ? 2 : isHighlighted ? 1.5 : 1;
+
+      ctx.beginPath();
+      ctx.moveTo(from.x + from.w/2, from.y);
+      // Bezier curve
+      const midX = (from.x + from.w/2 + to.x - to.w/2) / 2;
+      ctx.bezierCurveTo(midX, from.y, midX, to.y, to.x - to.w/2, to.y);
+      ctx.stroke();
+
+      // Arrow
+      const angle = Math.atan2(to.y - from.y, (to.x - to.w/2) - midX);
+      const ax = to.x - to.w/2;
+      const ay = to.y;
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - 6*Math.cos(angle - 0.4), ay - 6*Math.sin(angle - 0.4));
+      ctx.lineTo(ax - 6*Math.cos(angle + 0.4), ay - 6*Math.sin(angle + 0.4));
+      ctx.fill();
+    });
+  });
+
+  // Draw nodes
+  TECHS.forEach(tech => {
+    const pos = state.nodePositions[tech.id];
+    if (!pos) return;
+    const dimmed = !matchesFilter(tech);
+    const isSelected = state.selected === tech.id;
+    const isHovered = state.hovered === tech.id;
+    const isPrereqOf = state.selected && techMap[state.selected] && techMap[state.selected].prereqs.includes(tech.id);
+    const isDependant = state.selected && tech.prereqs.includes(state.selected);
+
+    const alpha = dimmed ? 0.15 : 1;
+    ctx.globalAlpha = alpha;
+
+    // Node background
+    const bgColor = isSelected ? AGE_COLORS[tech.age] + '55' : isHovered ? AGE_COLORS[tech.age] + '33' : '#1e2130';
+    ctx.fillStyle = bgColor;
+    ctx.strokeStyle = isSelected ? AGE_COLORS[tech.age] : isPrereqOf || isDependant ? 'rgba(108,140,255,0.6)' : tech.singularity ? 'rgba(255,107,157,0.4)' : tech.pioneer ? 'rgba(245,166,35,0.4)' : '#2e3345';
+    ctx.lineWidth = isSelected ? 2 : tech.singularity ? 1.5 : tech.pioneer ? 1.5 : 1;
+
+    roundRect(ctx, pos.x - pos.w/2, pos.y - pos.h/2, pos.w, pos.h, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Singularity glow
+    if (tech.singularity && !dimmed) {
+      ctx.shadowColor = 'rgba(255,107,157,0.3)';
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = 'rgba(255,107,157,0.3)';
+      ctx.lineWidth = 1;
+      roundRect(ctx, pos.x - pos.w/2, pos.y - pos.h/2, pos.w, pos.h, 6);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // Text
+    ctx.fillStyle = isSelected ? '#fff' : dimmed ? '#555' : '#e1e4ed';
+    ctx.font = (isSelected ? 'bold ' : '') + '11px -apple-system, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Truncate name if needed
+    let name = tech.name;
+    if (ctx.measureText(name).width > pos.w - 12) {
+      while (ctx.measureText(name + '…').width > pos.w - 12 && name.length > 3) {
+        name = name.slice(0, -1);
+      }
+      name += '…';
+    }
+    ctx.fillText(name, pos.x, pos.y - 5);
+
+    // Cost summary
+    const costStr = formatCostShort(tech.cost);
+    ctx.font = '9px -apple-system, system-ui, sans-serif';
+    ctx.fillStyle = dimmed ? '#444' : '#8b90a5';
+    ctx.fillText(costStr, pos.x, pos.y + 9);
+
+    // Badges
+    if (tech.pioneer && !dimmed) {
+      ctx.fillStyle = 'rgba(245,166,35,0.9)';
+      ctx.font = 'bold 10px -apple-system, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('★', pos.x - pos.w/2 + 4, pos.y - pos.h/2 + 11);
+      ctx.textAlign = 'center';
+    }
+    if (tech.war_spillover && !dimmed) {
+      ctx.fillStyle = 'rgba(255,68,68,0.8)';
+      ctx.font = '9px -apple-system, system-ui, sans-serif';
+      ctx.fillText('⚔', pos.x + pos.w/2 - 10, pos.y - pos.h/2 + 10);
+    }
+    if (tech.public_alert && !dimmed) {
+      ctx.fillStyle = 'rgba(255,200,50,0.8)';
+      ctx.font = '9px -apple-system, system-ui, sans-serif';
+      ctx.fillText('📢', pos.x + pos.w/2 - 10, pos.y + pos.h/2 - 6);
+    }
+
+    ctx.globalAlpha = 1;
+  });
+
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function formatCostShort(cost) {
+  const parts = [];
+  if (cost.food) parts.push(cost.food + 'F');
+  if (cost.wood) parts.push(cost.wood + 'W');
+  if (cost.stone) parts.push(cost.stone + 'S');
+  if (cost.gold) parts.push(cost.gold + 'G');
+  if (cost.knowledge) parts.push(cost.knowledge + 'K');
+  return parts.join(' ');
+}
+
+function formatCost(cost) {
+  const parts = [];
+  if (cost.food) parts.push(`<span class="cost-chip">🌾 ${cost.food} Food</span>`);
+  if (cost.wood) parts.push(`<span class="cost-chip">🪵 ${cost.wood} Wood</span>`);
+  if (cost.stone) parts.push(`<span class="cost-chip">🪨 ${cost.stone} Stone</span>`);
+  if (cost.gold) parts.push(`<span class="cost-chip">💰 ${cost.gold} Gold</span>`);
+  if (cost.knowledge) parts.push(`<span class="cost-chip">📘 ${cost.knowledge} Knowledge</span>`);
+  return parts.join('');
+}
+
+// ─── Interaction ───
+function selectTech(id) {
+  state.selected = state.selected === id ? null : id;
+  buildSidebar();
+  showDetail();
+  draw();
+  updatePrompt();
+}
+
+function showDetail() {
+  const panel = document.getElementById('detailPanel');
+  const content = document.getElementById('detailContent');
+
+  if (!state.selected) {
+    panel.classList.remove('visible');
+    return;
+  }
+
+  const tech = techMap[state.selected];
+  if (!tech) return;
+
+  let html = `<h2>${tech.name} <span class="age-badge" style="background:${AGE_COLORS[tech.age]}33;color:${AGE_COLORS[tech.age]}">${AGE_NAMES[tech.age]}</span></h2>`;
+
+  // Tags
+  let tags = '';
+  if (tech.singularity) tags += '<span class="tag singularity">SINGULARITY CHAIN</span>';
+  if (tech.pioneer) tags += '<span class="tag pioneer">PIONEER BONUS</span>';
+  if (tech.war_spillover) tags += '<span class="tag war">WAR SPILLOVER</span>';
+  if (tech.public_alert) tags += '<span class="tag alert">PUBLIC ALERT</span>';
+  if (tags) html += `<div style="margin-top:6px">${tags}</div>`;
+
+  // Cost
+  html += `<div class="detail-section"><h3>Cost</h3><div class="cost-row">${formatCost(tech.cost)}</div><div style="margin-top:4px;font-size:12px;color:var(--text-dim)">Research time: ${tech.time}s</div></div>`;
+
+  // Prerequisites
+  if (tech.prereqs.length > 0) {
+    html += `<div class="detail-section"><h3>Prerequisites</h3><ul>`;
+    tech.prereqs.forEach(pid => {
+      const p = techMap[pid];
+      if (p) html += `<li><a class="prereq-link" onclick="selectTech('${pid}')">${p.name}</a> (${AGE_NAMES[p.age]})</li>`;
+    });
+    html += `</ul></div>`;
+  }
+
+  // Effects
+  if (tech.effects.length > 0) {
+    html += `<div class="detail-section"><h3>Effects</h3><ul>`;
+    tech.effects.forEach(e => html += `<li>${e}</li>`);
+    html += `</ul></div>`;
+  }
+
+  // Pioneer bonus
+  if (tech.pioneer) {
+    const p = tech.pioneer;
+    const typeLabel = {permanent_stat:'Permanent',temporary_buff:'Temporary',instant_effect:'Instant'}[p.type];
+    const durationStr = p.duration ? ` (${Math.floor(p.duration/60)}m ${p.duration%60}s)` : '';
+    html += `<div class="detail-section"><h3>★ Pioneer Bonus — First to Discover</h3>`;
+    html += `<div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);border-radius:6px;padding:10px;margin-top:4px">`;
+    html += `<div style="font-size:13px;color:var(--pioneer);font-weight:600;margin-bottom:4px">${p.bonus}</div>`;
+    html += `<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">${typeLabel}${durationStr} · Followers get ${Math.round(p.follower_discount*100)}% research discount</div>`;
+    html += `<div style="font-size:12px;color:var(--text);line-height:1.5;font-style:italic">${p.detail}</div>`;
+    html += `</div></div>`;
+  }
+
+  // War spillover
+  if (tech.war_spillover) {
+    html += `<div class="detail-section"><h3>War Spillover</h3><p style="color:var(--war)">${tech.war_spillover}</p></div>`;
+  }
+
+  // Unlocks
+  if (tech.unlocks.length > 0) {
+    html += `<div class="detail-section"><h3>Unlocks</h3><ul>`;
+    tech.unlocks.forEach(u => html += `<li>${u.replace(/_/g, ' ')}</li>`);
+    html += `</ul></div>`;
+  }
+
+  // Leads to
+  const leadsTo = TECHS.filter(t => t.prereqs.includes(tech.id));
+  if (leadsTo.length > 0) {
+    html += `<div class="detail-section"><h3>Leads To</h3><ul>`;
+    leadsTo.forEach(t => html += `<li><a class="prereq-link" onclick="selectTech('${t.id}')">${t.name}</a> (${AGE_NAMES[t.age]})</li>`);
+    html += `</ul></div>`;
+  }
+
+  // Full prerequisite chain
+  const chain = getPrereqChain(tech.id);
+  if (chain.length > 1) {
+    html += `<div class="detail-section"><h3>Full Research Path (${chain.length} techs)</h3><p style="font-size:12px;color:var(--text-dim)">${chain.map(id => techMap[id].name).join(' → ')}</p></div>`;
+  }
+
+  content.innerHTML = html;
+  panel.classList.add('visible');
+}
+
+function getPrereqChain(id, visited = new Set()) {
+  if (visited.has(id)) return [];
+  visited.add(id);
+  const tech = techMap[id];
+  if (!tech || tech.prereqs.length === 0) return [id];
+  // Get the longest prerequisite chain
+  let longest = [];
+  tech.prereqs.forEach(pid => {
+    const chain = getPrereqChain(pid, new Set(visited));
+    if (chain.length > longest.length) longest = chain;
+  });
+  return [...longest, id];
+}
+
+function closeDetail() {
+  state.selected = null;
+  document.getElementById('detailPanel').classList.remove('visible');
+  buildSidebar();
+  draw();
+  updatePrompt();
+}
+
+// ─── Prompt ───
+function updatePrompt() {
+  const el = document.getElementById('promptText');
+  if (!state.selected) {
+    if (state.highlight !== 'none') {
+      const filtered = TECHS.filter(t => matchesFilter(t));
+      const label = {singularity:'Singularity Chain',war:'War Spillover',military:'Military',economy:'Economy',health:'Health',pioneer:'Pioneer Bonus'}[state.highlight];
+      el.textContent = `The Roots of Reason tech tree has ${TECHS.length} technologies across ${AGE_NAMES.length} ages. Currently showing ${filtered.length} ${label} techs: ${filtered.map(t=>t.name).join(', ')}.`;
+    } else {
+      const pioneerCount = TECHS.filter(t=>t.pioneer).length;
+      el.textContent = `The Roots of Reason tech tree spans ${AGE_NAMES.length} ages (${AGE_NAMES.join(' → ')}) with ${TECHS.length} technologies. The Singularity Chain has ${TECHS.filter(t=>t.singularity).length} critical techs leading to AGI victory. ${pioneerCount} keystone techs have Pioneer Bonuses — first-to-discover rewards grounded in historical precedent. Click any tech to explore.`;
+    }
+    return;
+  }
+
+  const tech = techMap[state.selected];
+  const chain = getPrereqChain(tech.id);
+  const leadsTo = TECHS.filter(t => t.prereqs.includes(tech.id));
+  const totalCost = {};
+  chain.forEach(id => {
+    const t = techMap[id];
+    Object.entries(t.cost).forEach(([r, v]) => totalCost[r] = (totalCost[r] || 0) + v);
+  });
+
+  let parts = [`${tech.name} is a ${AGE_NAMES[tech.age]} technology`];
+  if (tech.prereqs.length) parts[0] += ` requiring ${tech.prereqs.map(p => techMap[p].name).join(' and ')}`;
+  parts.push(`It costs ${Object.entries(tech.cost).map(([r,v]) => `${v} ${r}`).join(', ')} and takes ${tech.time}s to research.`);
+  if (tech.effects.length) parts.push(`Effects: ${tech.effects.join('; ')}.`);
+  if (tech.pioneer) parts.push(`Pioneer Bonus (${tech.pioneer.type.replace(/_/g,' ')}): ${tech.pioneer.bonus}. Followers get ${Math.round(tech.pioneer.follower_discount*100)}% research discount.`);
+  if (tech.singularity) parts.push('This is on the Singularity Chain — required for AGI victory.');
+  if (tech.war_spillover) parts.push(`War spillover: ${tech.war_spillover}.`);
+  if (chain.length > 1) parts.push(`Full research path (${chain.length} techs): ${chain.map(id => techMap[id].name).join(' → ')}. Total path cost: ${Object.entries(totalCost).map(([r,v]) => `${v} ${r}`).join(', ')}.`);
+  if (leadsTo.length) parts.push(`Leads to: ${leadsTo.map(t => t.name).join(', ')}.`);
+
+  el.textContent = parts.join(' ');
+}
+
+// ─── Canvas interaction ───
+canvas.addEventListener('mousedown', e => {
+  const hit = hitTest(e.offsetX, e.offsetY);
+  if (hit) {
+    selectTech(hit);
+    return;
+  }
+  state.dragging = true;
+  state.dragStart = { x: e.clientX, y: e.clientY };
+  state.panStart = { ...state.pan };
+  canvas.style.cursor = 'grabbing';
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (state.dragging) {
+    state.pan.x = state.panStart.x + (e.clientX - state.dragStart.x);
+    state.pan.y = state.panStart.y + (e.clientY - state.dragStart.y);
+    draw();
+    return;
+  }
+  const hit = hitTest(e.offsetX, e.offsetY);
+  if (hit !== state.hovered) {
+    state.hovered = hit;
+    canvas.style.cursor = hit ? 'pointer' : 'grab';
+    draw();
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  state.dragging = false;
+  canvas.style.cursor = state.hovered ? 'pointer' : 'grab';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  state.dragging = false;
+  if (state.hovered) {
+    state.hovered = null;
+    draw();
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const zoomFactor = e.deltaY > 0 ? 0.98 : 1.02;
+  const newZoom = Math.max(0.3, Math.min(3, state.zoom * zoomFactor));
+
+  // Zoom toward cursor
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  state.pan.x = mx - (mx - state.pan.x) * (newZoom / state.zoom);
+  state.pan.y = my - (my - state.pan.y) * (newZoom / state.zoom);
+  state.zoom = newZoom;
+  draw();
+}, { passive: false });
+
+function hitTest(mx, my) {
+  const x = (mx - state.pan.x) / state.zoom;
+  const y = (my - state.pan.y) / state.zoom;
+  for (const tech of TECHS) {
+    const pos = state.nodePositions[tech.id];
+    if (!pos) continue;
+    if (x >= pos.x - pos.w/2 && x <= pos.x + pos.w/2 && y >= pos.y - pos.h/2 && y <= pos.y + pos.h/2) {
+      return tech.id;
+    }
+  }
+  return null;
+}
+
+// ─── Controls ───
+document.getElementById('highlightMode').addEventListener('change', e => {
+  state.highlight = e.target.value;
+  buildSidebar();
+  draw();
+  updatePrompt();
+});
+
+document.getElementById('searchBox').addEventListener('input', e => {
+  state.search = e.target.value;
+  buildSidebar();
+  draw();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state.pan = { x: 0, y: 0 };
+  state.zoom = 1;
+  state.selected = null;
+  state.highlight = 'none';
+  state.search = '';
+  document.getElementById('highlightMode').value = 'none';
+  document.getElementById('searchBox').value = '';
+  closeDetail();
+  buildSidebar();
+  draw();
+  updatePrompt();
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const text = document.getElementById('promptText').textContent;
+  navigator.clipboard.writeText(text);
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 1500);
+});
+
+// ─── Init ───
+window.addEventListener('resize', resize);
+buildSidebar();
+resize();
+updatePrompt();
+
+// Auto-fit: pan to center the tree
+setTimeout(() => {
+  const container = document.getElementById('canvasContainer');
+  const allPos = Object.values(state.nodePositions);
+  if (allPos.length === 0) return;
+  const minX = Math.min(...allPos.map(p => p.x - p.w/2));
+  const maxX = Math.max(...allPos.map(p => p.x + p.w/2));
+  const minY = Math.min(...allPos.map(p => p.y - p.h/2)) - 30;
+  const maxY = Math.max(...allPos.map(p => p.y + p.h/2)) + 20;
+  const treeW = maxX - minX;
+  const treeH = maxY - minY;
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  const fitZoom = Math.min(cw / (treeW + 60), ch / (treeH + 40), 1);
+  state.zoom = fitZoom;
+  state.pan.x = (cw - treeW * fitZoom) / 2 - minX * fitZoom;
+  state.pan.y = (ch - treeH * fitZoom) / 2 - minY * fitZoom;
+  draw();
+}, 50);
+</script>
+</body>
+</html>

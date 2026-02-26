@@ -60,7 +60,17 @@
       "unlock_buildings": ["barracks"],
       "unlock_units": ["infantry"]
     },
-    "flavor_text": "Copper and tin forge an empire."
+    "flavor_text": "Copper and tin forge an empire.",
+    "pioneer_bonus": {
+      "type": "temporary_buff",
+      "effect": {
+        "stat_modifier": { "melee_attack_multiplier": 0.15 }
+      },
+      "duration": 120,
+      "follower_discount": 0.10,
+      "notification": "{civ} has pioneered Bronze Working — their warriors wield weapons no stone can withstand.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "writing",
@@ -72,7 +82,17 @@
     "effects": {
       "unlock_buildings": ["library"]
     },
-    "flavor_text": "Marks on clay become the memory of a people."
+    "flavor_text": "Marks on clay become the memory of a people.",
+    "pioneer_bonus": {
+      "type": "permanent_stat",
+      "effect": {
+        "research_queue_bonus": 1
+      },
+      "duration": null,
+      "follower_discount": 0.10,
+      "notification": "{civ} has pioneered Writing — their scribes preserve knowledge no memory can hold.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "pottery",
@@ -161,7 +181,17 @@
       "economic_bonus": { "construction_speed": 0.15 },
       "stat_modifiers": { "siege_accuracy": 0.10 }
     },
-    "flavor_text": "Numbers reveal the hidden order of things."
+    "flavor_text": "Numbers reveal the hidden order of things.",
+    "pioneer_bonus": {
+      "type": "permanent_stat",
+      "effect": {
+        "stat_modifier": { "research_cost_multiplier": -0.05 }
+      },
+      "duration": null,
+      "follower_discount": 0.10,
+      "notification": "{civ} has pioneered Mathematics — the language of the universe bends to their scholars.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "currency",
@@ -260,7 +290,17 @@
       "stat_modifiers": { "naval_los": 3 },
       "unlock_buildings": ["deep_ocean_navigation"]
     },
-    "flavor_text": "A magnetized needle opens the world."
+    "flavor_text": "A magnetized needle opens the world.",
+    "pioneer_bonus": {
+      "type": "instant_effect",
+      "effect": {
+        "map_reveal": { "percent": 1.0, "target": "coastlines", "duration": null }
+      },
+      "duration": null,
+      "follower_discount": 0.15,
+      "notification": "{civ} has pioneered the Compass — their navigators chart coastlines no rival has seen.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "printing_press",
@@ -273,7 +313,18 @@
       "research_bonus": 0.50,
       "economic_bonus": { "research_time": -0.10 }
     },
-    "flavor_text": "A thousand copies where one scribe labored."
+    "flavor_text": "A thousand copies where one scribe labored.",
+    "public_alert": true,
+    "pioneer_bonus": {
+      "type": "instant_effect",
+      "effect": {
+        "free_tech": { "scope": "same_age" }
+      },
+      "duration": null,
+      "follower_discount": 0.15,
+      "notification": "{civ} has pioneered the Printing Press — knowledge spreads like wildfire through their cities.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "guilds",
@@ -312,7 +363,17 @@
       "stat_modifiers": { "siege_damage": 0.25 }
     },
     "war_spillover": { "mining_efficiency": 0.10 },
-    "flavor_text": "Thunder and fire from a bamboo tube."
+    "flavor_text": "Thunder and fire from a bamboo tube.",
+    "pioneer_bonus": {
+      "type": "temporary_buff",
+      "effect": {
+        "stat_modifier": { "siege_damage": 0.20 }
+      },
+      "duration": 180,
+      "follower_discount": 0.10,
+      "notification": "{civ} has pioneered Gunpowder — the thunder of their cannon echoes across the world.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "banking",
@@ -363,7 +424,17 @@
       "economic_bonus": { "villager_work_rate": 0.30 },
       "unlock_buildings": ["factory"]
     },
-    "flavor_text": "Boiling water moves mountains."
+    "flavor_text": "Boiling water moves mountains.",
+    "pioneer_bonus": {
+      "type": "instant_effect",
+      "effect": {
+        "free_building": "factory"
+      },
+      "duration": null,
+      "follower_discount": 0.15,
+      "notification": "{civ} has pioneered Steam Power — the workshop of the world rises in their cities.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "rifling",
@@ -401,7 +472,17 @@
       "research_bonus": 1.0,
       "unlock_buildings": ["telegraph"]
     },
-    "flavor_text": "Tamed lightning illuminates the age of reason."
+    "flavor_text": "Tamed lightning illuminates the age of reason.",
+    "pioneer_bonus": {
+      "type": "temporary_buff",
+      "effect": {
+        "stat_modifier": { "research_speed": 1.0 }
+      },
+      "duration": 120,
+      "follower_discount": 0.15,
+      "notification": "{civ} has pioneered Electricity — their cities blaze with light while rivals grope in darkness.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "steel_production",
@@ -539,7 +620,17 @@
       "research_bonus": 1.0
     },
     "singularity_chain": true,
-    "flavor_text": "Turing's machine thinks in ones and zeros."
+    "flavor_text": "Turing's machine thinks in ones and zeros.",
+    "pioneer_bonus": {
+      "type": "permanent_stat",
+      "effect": {
+        "stat_modifier": { "research_speed": 0.5 }
+      },
+      "duration": null,
+      "follower_discount": 0.10,
+      "notification": "{civ} has pioneered Computing Theory — the first universal machine hums in their laboratories.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "transistors",
@@ -615,7 +706,17 @@
       "economic_bonus": { "library_research_sharing": true }
     },
     "singularity_chain": true,
-    "flavor_text": "All human knowledge, connected."
+    "flavor_text": "All human knowledge, connected.",
+    "pioneer_bonus": {
+      "type": "instant_effect",
+      "effect": {
+        "tech_steal": { "count": 1, "per_opponent": true }
+      },
+      "duration": null,
+      "follower_discount": 0.15,
+      "notification": "{civ} has pioneered the Internet — their networks reach into every rival's secrets.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "machine_learning",
@@ -793,7 +894,17 @@
     },
     "singularity_chain": true,
     "public_alert": true,
-    "flavor_text": "Attention is all you need."
+    "flavor_text": "Attention is all you need.",
+    "pioneer_bonus": {
+      "type": "permanent_stat",
+      "effect": {
+        "research_discount": { "target_tech": "alignment_research", "time_reduction": 0.30 }
+      },
+      "duration": null,
+      "follower_discount": 0.10,
+      "notification": "{civ} has pioneered Transformer Architecture — the intelligence explosion begins.",
+      "survives_knowledge_burning": true
+    }
   },
   {
     "id": "alignment_research",

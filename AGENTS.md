@@ -370,6 +370,76 @@ Four milestones define the path from prototype to content-complete. Each milesto
 2. **Singularity:** First to complete AGI Core (requires full tech tree)
 3. **Wonder:** Build Wonder, defend for 10-minute countdown
 
+### ADR-021: Tech Tree Historical Expansion — Impact Analysis
+
+**Status:** Proposed · **Bead:** roots-of-reason-02j · **Epic:** roots-of-reason-fxt.11
+
+**Context:** The tech tree has 64 technologies across 7 ages but has significant historical gaps — no Agriculture, no Wheel, no Aviation, thin governance line, and missing foundational innovations that shaped civilization. Players who enjoy learning history through tech trees (a core audience for the genre) will notice these absences. The Singularity endgame is well-designed, but earlier ages feel rushed (Stone Age has only 4 techs for the longest period in human history).
+
+**Decision:** Add 13 historically significant technologies across all ages, expanding the tree from 64 to 77 techs. Each addition fills a specific historical gap, creates more meaningful prerequisite chains, and deepens strategic decision-making.
+
+**New Technologies:**
+
+| Tech | Age | Prerequisites | Key Effects | Historical Rationale |
+|------|-----|---------------|-------------|---------------------|
+| Agriculture | 0 (Stone) | Stone Tools | Unlock Farm, +food gather | Neolithic Revolution (~10,000 BCE) — most important tech in human history, enabled permanent settlement |
+| The Wheel | 1 (Bronze) | Stone Tools | +movement speed | ~3500 BCE — foundational for transport, pottery, and all machinery |
+| Road Building | 2 (Iron) | Engineering | +movement on owned territory, +trade income | Roman roads — as strategically important as legions |
+| Astronomy | 2 (Iron) | Mathematics | +naval LOS | Celestial navigation predates compass by millennia; bridges science chain |
+| Mechanical Power | 3 (Medieval) | Engineering | +25% farm processing, +15% wood gather | Wind/water mills — proto-Industrial Revolution |
+| Optics | 3 (Medieval) | Mathematics | +ranged LOS, +ranged accuracy | Spectacles → telescopes → microscopes; connects to lithography/semiconductor chain |
+| Telegraph | 4 (Industrial) | Electricity | +diplomacy, espionage | Promoted from building unlock; 1837 "Victorian Internet" deserves its own node |
+| Aviation | 4 (Industrial) | Steam Power, Ballistics | Unlock air recon, +trade range | Powered flight (1903) — major gap, tree jumps from ballistics to rocketry |
+| Democracy | 4 (Industrial) | Code of Laws, Printing Press | -corruption, +villager efficiency | Deepens thin governance line; enables diplomatic playstyles |
+| Trade Routes | 3–4 (Medieval/Industrial) | Guilds, Compass | +trade income, unlock trade caravan | Silk Road, maritime trade — as transformative as military tech |
+| Spaceflight | 5 (Information) | Rocketry | Prestige, +research speed | Space Race drove miniaturization; parallel to military Guided Missiles |
+| Renewable Energy | 5 (Information) | Electricity, Chemistry | +sustainable resource gen | AGI needs power; alternative to Nuclear Fission |
+| Brain-Computer Interface | 6 (Singularity) | Neural Networks, Antibiotics | +research speed | Emerging parallel path to AGI; strategic fork vs pure software approach |
+
+**Prerequisite Chain Changes:**
+- Irrigation now requires Agriculture (not just Writing)
+- Compass now requires Astronomy + Trireme (replaces Mathematics)
+- Steam Power now requires Mechanical Power (not just Engineering)
+- Rocketry now requires Aviation + Chemistry (replaces Ballistics + Chemistry)
+- Railroad now requires Road Building + Steam Power
+- Internet now requires Telegraph + Semiconductor Fab (replaces Computing Theory + Semiconductor Fab)
+- Semiconductor Fab gains optional Optics prerequisite (lithography connection)
+
+**Impact Assessment:**
+
+1. **Research pacing:** 13 more techs at ~60-85s each adds ~15-18 minutes to a full-tree run. The age multipliers (2.5x–5.0x in late game) absorb this well. Earlier ages gain depth without dragging — Stone Age goes from 4→5 techs, still the quickest age.
+
+2. **Balance:** New techs add strategic forks (Renewable Energy vs Nuclear Fission, BCI vs Transformer Architecture) rather than just lengthening the critical path. Players must choose branches, not just research everything.
+
+3. **AI personalities:** All three AI personalities (Balanced, Economic, Aggressive) need updated priority orderings. Agriculture and Wheel are universal early picks. Democracy appeals to Economic AI. Aviation appeals to Aggressive AI. Trade Routes is an Economic priority.
+
+4. **Knowledge Burning:** More techs = deeper research history stacks = more buffer before losing critical techs. This is a net positive — currently the late game has very thin stacks in some ages.
+
+5. **Singularity Chain:** BCI creates an optional fork but does NOT add to the critical path length. Alignment Research still requires Transformer Architecture. BCI is an accelerator, not a gate.
+
+6. **JSON data changes:** `tech_tree.json` (+13 entries), `ages.json` (no change — ages stay at 7), `research.json` (no change), `ai/tech_config.json` (update all 3 personality orderings).
+
+7. **Milestone impact:** Milestone 3 description updates from "64 techs" to "77 techs." No milestone gating changes.
+
+8. **Cost scaling:** New techs follow existing cost curves per age. Total resources required for full tree increases ~20%, requiring more economic investment — this is desirable, as it rewards players who balance military and economy.
+
+**Alternatives Considered:**
+- **Add fewer (top 5 only):** Lower risk but leaves gaps in aviation, governance, and trade that genre veterans will notice.
+- **Add more (20+):** Diminishing returns. Cultural/artistic techs (Theatre, Cinema, Music) are interesting but don't connect to the AGI endgame mechanically.
+- **Reorganize existing techs instead:** Some techs could be renamed or combined, but the existing 64 are individually well-designed. Adding is better than replacing.
+
+**Risks:**
+- UI clutter in tech tree viewer (fxt.4) — mitigated by age-column layout which scales horizontally
+- Longer playthroughs — mitigated by age research multipliers and the fact that most games end before full tree completion
+- AI research path tuning — requires playtesting each personality with the expanded tree
+
+**Consequences:**
+- Tech tree grows from 64→77 (20% increase)
+- Average game length increases ~10-15% (offset by strategic depth gains)
+- AI tech config needs retuning for all 3 personalities
+- Tech tree UI (fxt.4) must handle wider columns gracefully
+- All tests referencing tech counts need updating
+
 ---
 
 ## Coding Standards

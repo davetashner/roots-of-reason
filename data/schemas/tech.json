@@ -18,7 +18,101 @@
     "flavor_text": { "type": "string" },
     "singularity_chain": { "type": "boolean" },
     "public_alert": { "type": "boolean" },
-    "war_spillover": { "type": "object" }
+    "war_spillover": { "type": "object" },
+    "pioneer_bonus": {
+      "type": "object",
+      "description": "One-time bonus awarded to the first civilization to research this tech",
+      "required": ["type", "effect", "notification"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["permanent_stat", "temporary_buff", "instant_effect"],
+          "description": "permanent_stat: lasts forever. temporary_buff: fades after duration. instant_effect: fires once (free tech, map reveal, etc.)"
+        },
+        "effect": {
+          "type": "object",
+          "description": "The bonus effect, keyed by effect type",
+          "properties": {
+            "stat_modifier": {
+              "type": "object",
+              "description": "Stat changes applied to the pioneer (e.g. { \"research_speed\": 0.05 })"
+            },
+            "free_building": {
+              "type": "string",
+              "description": "Building ID placed instantly at no cost"
+            },
+            "free_tech": {
+              "type": "object",
+              "description": "Grant a free tech research",
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "enum": ["same_age", "any"],
+                  "description": "Which techs are eligible for the free research"
+                }
+              }
+            },
+            "map_reveal": {
+              "type": "object",
+              "description": "Reveal portions of the map",
+              "properties": {
+                "percent": { "type": "number", "minimum": 0, "maximum": 1 },
+                "target": {
+                  "type": "string",
+                  "enum": ["random", "coastlines", "full"],
+                  "description": "What to reveal: random tiles, all coastlines, or full map"
+                },
+                "duration": {
+                  "type": ["number", "null"],
+                  "description": "Seconds the reveal lasts. null = permanent."
+                }
+              }
+            },
+            "research_queue_bonus": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Additional research queue slots"
+            },
+            "tech_steal": {
+              "type": "object",
+              "description": "Steal tech(s) from opponents",
+              "properties": {
+                "count": { "type": "integer", "minimum": 1 },
+                "per_opponent": { "type": "boolean" }
+              }
+            },
+            "research_discount": {
+              "type": "object",
+              "description": "Discount on a specific future tech",
+              "properties": {
+                "target_tech": { "type": "string" },
+                "time_reduction": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        },
+        "duration": {
+          "type": ["number", "null"],
+          "description": "Duration in seconds for temporary_buff. null for permanent_stat and instant_effect."
+        },
+        "follower_discount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Research time discount for players who research this tech after the pioneer (knowledge diffusion). E.g. 0.15 = 15% faster."
+        },
+        "notification": {
+          "type": "string",
+          "description": "Message broadcast to all players when this pioneer bonus is claimed. Use {civ} as placeholder."
+        },
+        "survives_knowledge_burning": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the pioneer bonus persists if the tech is lost to Knowledge Burning. Default true — you can't un-invent impact."
+        }
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }
