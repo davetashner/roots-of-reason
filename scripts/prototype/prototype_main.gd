@@ -229,6 +229,7 @@ func _setup_units() -> void:
 			_target_detector.register_entity(unit)
 		if _population_manager != null:
 			_population_manager.register_unit(unit, 0)
+		unit.unit_died.connect(_on_unit_died)
 
 
 func _setup_demo_entities() -> void:
@@ -504,6 +505,7 @@ func _create_ai_starting_villagers(tc: Node2D, count: int) -> void:
 			_target_detector.register_entity(unit)
 		if _population_manager != null:
 			_population_manager.register_unit(unit, 1)
+		unit.unit_died.connect(_on_unit_died)
 
 
 func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
@@ -571,6 +573,7 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 		_population_manager.register_unit(unit, owner_id)
 	if _unit_upgrade_manager != null:
 		_unit_upgrade_manager.apply_upgrades_to_unit(unit, owner_id)
+	unit.unit_died.connect(_on_unit_died)
 	# Attach trade AI for trade carts and merchant ships
 	if unit_type == "trade_cart" or unit_type == "merchant_ship":
 		var trade_ai := Node.new()
@@ -588,7 +591,15 @@ func _on_resource_regen_started(_node: Node2D) -> void:
 	pass
 
 
-func _on_fauna_died(unit: Node2D) -> void:
+func _on_unit_died(unit: Node2D, _killer: Node2D) -> void:
+	if _target_detector != null:
+		_target_detector.unregister_entity(unit)
+	if _population_manager != null and "owner_id" in unit:
+		_population_manager.unregister_unit(unit, unit.owner_id)
+	_update_fog_of_war()
+
+
+func _on_fauna_died(unit: Node2D, _killer: Node2D) -> void:
 	if _target_detector != null:
 		_target_detector.unregister_entity(unit)
 	# Spawn carcass for wolves
