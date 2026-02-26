@@ -102,6 +102,12 @@ func can_research(player_id: int, tech_id: String) -> bool:
 	# Already researched or in queue
 	if is_tech_researched(tech_id, player_id) or _is_in_queue(player_id, tech_id):
 		return false
+	# Civ exclusivity check
+	var civ_exclusive: String = tech_data.get("civ_exclusive", "")
+	if civ_exclusive != "":
+		var player_civ: String = GameManager.get_player_civilization(player_id)
+		if player_civ != civ_exclusive:
+			return false
 	# Age requirement and prerequisites
 	var required_age: int = int(tech_data.get("age", 0))
 	if required_age > GameManager.current_age or not _check_prerequisites(player_id, tech_id):

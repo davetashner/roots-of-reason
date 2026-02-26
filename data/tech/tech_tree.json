@@ -1151,5 +1151,34 @@
     "victory_tech": true,
     "public_alert": true,
     "flavor_text": "The last invention humanity needs to make."
+  },
+  {
+    "id": "cuneiform_writing",
+    "name": "Cuneiform Writing",
+    "age": 2,
+    "cost": { "knowledge": 150, "gold": 75 },
+    "research_time": 45.0,
+    "prerequisites": ["writing"],
+    "effects": {
+      "research_bonus": 0.10
+    },
+    "flavor_text": "The wedge-shaped script of Mesopotamia becomes the foundation of recorded knowledge.",
+    "civ_exclusive": "mesopotamia"
+  },
+  {
+    "id": "hanging_gardens_legacy",
+    "name": "Hanging Gardens Legacy",
+    "age": 4,
+    "cost": { "knowledge": 300, "gold": 200 },
+    "research_time": 90.0,
+    "prerequisites": ["agriculture"],
+    "effects": {
+      "economic_bonus": {
+        "farm_food_rate": 0.20,
+        "building_cost_reduction": 0.10
+      }
+    },
+    "flavor_text": "The legendary gardens inspire a new era of agricultural and architectural innovation.",
+    "civ_exclusive": "mesopotamia"
   }
 ]
