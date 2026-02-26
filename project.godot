@@ -21,6 +21,7 @@ GameManager="*res://scripts/autoloads/game_manager.gd"
 ResourceManager="*res://scripts/autoloads/resource_manager.gd"
 DataLoader="*res://scripts/autoloads/data_loader.gd"
 CivBonusManager="*res://scripts/autoloads/civ_bonus_manager.gd"
+SaveManager="*res://scripts/autoloads/save_manager.gd"
 
 [display]
 
