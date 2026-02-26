@@ -18,6 +18,8 @@ const TradeManagerScript := preload("res://scripts/prototype/trade_manager.gd")
 const TradeCartAIScript := preload("res://scripts/prototype/trade_cart_ai.gd")
 const NotificationPanelScript := preload("res://scripts/ui/notification_panel.gd")
 const RiverOverlayScript := preload("res://scripts/ui/river_overlay.gd")
+const VictoryManagerScript := preload("res://scripts/prototype/victory_manager.gd")
+const VictoryScreenScript := preload("res://scripts/ui/victory_screen.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -42,6 +44,8 @@ var _river_transport: Node = null
 var _trade_manager: Node = null
 var _notification_panel: Control = null
 var _river_overlay: Node2D = null
+var _victory_manager: Node = null
+var _victory_screen: PanelContainer = null
 
 
 func _ready() -> void:
@@ -58,6 +62,7 @@ func _ready() -> void:
 	_setup_fauna()
 	_setup_tech()
 	_setup_corruption()
+	_setup_victory()
 	_setup_river_transport()
 	_setup_trade()
 	_setup_ai()
@@ -387,6 +392,36 @@ func _on_building_destroyed(building: Node2D) -> void:
 	_update_fog_of_war()
 
 
+func _setup_victory() -> void:
+	_victory_manager = Node.new()
+	_victory_manager.name = "VictoryManager"
+	_victory_manager.set_script(VictoryManagerScript)
+	add_child(_victory_manager)
+	_victory_manager.setup(_building_placer)
+	# Register existing player TC (created in _setup_demo_entities)
+	for child in get_children():
+		if "building_name" in child and child.building_name == "town_center":
+			if not child.under_construction:
+				_victory_manager.register_town_center(child.owner_id, child)
+	# Connect victory/defeat signals
+	_victory_manager.player_defeated.connect(_on_player_defeated)
+	_victory_manager.player_victorious.connect(_on_player_victorious)
+	# Connect age advancement for singularity check
+	GameManager.age_advanced.connect(_victory_manager.on_age_advanced)
+
+
+func _on_player_defeated(player_id: int) -> void:
+	if player_id == 0 and _victory_screen != null:
+		_victory_screen.show_defeat("All Town Centers Lost")
+
+
+func _on_player_victorious(player_id: int, condition: String) -> void:
+	if player_id == 0 and _victory_screen != null:
+		var result: Dictionary = _victory_manager.get_game_result()
+		var label: String = result.get("condition_label", condition)
+		_victory_screen.show_victory(label)
+
+
 func _setup_river_transport() -> void:
 	_river_transport = Node.new()
 	_river_transport.name = "RiverTransport"
@@ -706,6 +741,15 @@ func _setup_hud() -> void:
 	_river_overlay.setup(_map_node, _get_player_start_position())
 	# Wire input handler to river overlay
 	_input_handler._river_overlay = _river_overlay
+	# Victory/Defeat screen overlay
+	var victory_layer := CanvasLayer.new()
+	victory_layer.name = "VictoryLayer"
+	victory_layer.layer = 20
+	add_child(victory_layer)
+	_victory_screen = PanelContainer.new()
+	_victory_screen.name = "VictoryScreen"
+	_victory_screen.set_script(VictoryScreenScript)
+	victory_layer.add_child(_victory_screen)
 
 
 func _setup_resource_bar() -> void:
