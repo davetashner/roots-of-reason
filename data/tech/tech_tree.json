@@ -1075,5 +1075,45 @@
     "singularity_chain": true,
     "public_alert": true,
     "flavor_text": "The hardest problem: ensuring it wants what we want."
+  },
+  {
+    "id": "gpu_foundry",
+    "name": "GPU Foundry",
+    "age": 6,
+    "cost": { "knowledge": 2000, "gold": 1000 },
+    "research_time": 120,
+    "prerequisites": ["machine_learning"],
+    "effects": {
+      "economic_bonus": { "knowledge_rate": 0.50 }
+    },
+    "singularity_chain": true,
+    "flavor_text": "Thousands of cores blaze in parallel, turning silicon into thought."
+  },
+  {
+    "id": "transformer_lab",
+    "name": "Transformer Lab",
+    "age": 6,
+    "cost": { "knowledge": 3000, "gold": 1500 },
+    "research_time": 180,
+    "prerequisites": ["gpu_foundry"],
+    "effects": {
+      "research_bonus": 2.0
+    },
+    "singularity_chain": true,
+    "public_alert": true,
+    "flavor_text": "Attention mechanisms weave meaning from raw data at superhuman scale."
+  },
+  {
+    "id": "agi_core",
+    "name": "AGI Core",
+    "age": 6,
+    "cost": { "knowledge": 5000, "gold": 3000 },
+    "research_time": 300,
+    "prerequisites": ["transformer_lab"],
+    "effects": {},
+    "singularity_chain": true,
+    "victory_tech": true,
+    "public_alert": true,
+    "flavor_text": "The last invention humanity needs to make."
   }
 ]

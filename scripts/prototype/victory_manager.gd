@@ -292,6 +292,16 @@ func on_age_advanced(new_age: int) -> void:
 		_trigger_victory(0, "singularity")
 
 
+func on_victory_tech_completed(player_id: int, _tech_id: String) -> void:
+	## Called when a victory_tech (e.g. agi_core) research completes.
+	## Triggers the Singularity victory for the researching player.
+	if _game_over:
+		return
+	if _defeated_players.has(player_id):
+		return
+	_trigger_victory(player_id, "singularity")
+
+
 func save_state() -> Dictionary:
 	var tc_out: Dictionary = {}
 	for pid: int in _town_centers:

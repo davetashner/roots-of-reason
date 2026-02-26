@@ -10,6 +10,9 @@ signal tech_regressed(player_id: int, tech_id: String, tech_data: Dictionary)
 signal tech_research_started(player_id: int, tech_id: String)
 signal research_progress(player_id: int, tech_id: String, progress: float)
 signal research_queue_changed(player_id: int)
+signal victory_tech_completed(player_id: int, tech_id: String)
+signal victory_tech_research_started(player_id: int, tech_id: String)
+signal victory_tech_disrupted(player_id: int, tech_id: String)
 
 const RESOURCE_NAME_TO_TYPE: Dictionary = {
 	"food": ResourceManager.ResourceType.FOOD,
@@ -144,6 +147,9 @@ func start_research(player_id: int, tech_id: String) -> bool:
 	if _research_queue[player_id].size() == 1:
 		_research_progress[player_id] = 0.0
 		tech_research_started.emit(player_id, tech_id)
+		# Notify if a victory tech research has begun
+		if tech_data.get("victory_tech", false):
+			victory_tech_research_started.emit(player_id, tech_id)
 	research_queue_changed.emit(player_id)
 	return true
 
@@ -163,11 +169,15 @@ func cancel_research(player_id: int, tech_id: String) -> void:
 	# Remove from cost tracking
 	if player_id in _active_costs and tech_id in _active_costs[player_id]:
 		_active_costs[player_id].erase(tech_id)
+	# Check if this is a victory tech being disrupted while active
+	var was_active_victory_tech: bool = idx == 0 and _is_victory_tech(tech_id)
 	# Remove from queue
 	queue.remove_at(idx)
 	# If we removed the active research, reset progress and start next
 	if idx == 0:
 		_research_progress[player_id] = 0.0
+		if was_active_victory_tech:
+			victory_tech_disrupted.emit(player_id, tech_id)
 		if not queue.is_empty():
 			tech_research_started.emit(player_id, queue[0])
 	research_queue_changed.emit(player_id)
@@ -257,6 +267,8 @@ func revert_tech_effects(player_id: int, tech_id: String) -> void:
 		_regressed_techs[player_id].append(tech_id)
 	var tech_data: Dictionary = get_tech_data(tech_id)
 	tech_regressed.emit(player_id, tech_id, tech_data)
+	if tech_data.get("victory_tech", false):
+		victory_tech_disrupted.emit(player_id, tech_id)
 
 
 func trigger_knowledge_burning(player_id: int) -> Array:
@@ -376,6 +388,9 @@ func _complete_research(player_id: int) -> void:
 	# Emit completion signal
 	tech_researched.emit(player_id, tech_id, effects)
 	research_queue_changed.emit(player_id)
+	# Check if this is a victory tech
+	if tech_data.get("victory_tech", false):
+		victory_tech_completed.emit(player_id, tech_id)
 	# Start next in queue if available
 	if not queue.is_empty():
 		tech_research_started.emit(player_id, queue[0])
@@ -403,6 +418,11 @@ func _serialize_costs(costs: Dictionary) -> Dictionary:
 
 func _is_regressed_tech(player_id: int, tech_id: String) -> bool:
 	return tech_id in _regressed_techs.get(player_id, [])
+
+
+func _is_victory_tech(tech_id: String) -> bool:
+	var tech_data: Dictionary = get_tech_data(tech_id)
+	return tech_data.get("victory_tech", false)
 
 
 func _get_effective_speed(player_id: int) -> float:
