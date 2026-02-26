@@ -52,7 +52,7 @@ func build(map_size: int, tile_grid: Dictionary, terrain_costs: Dictionary = {})
 func _get_terrain_cost(terrain: String) -> float:
 	if _terrain_costs.has(terrain):
 		return float(_terrain_costs[terrain])
-	# Map prototype terrain names to config names
+	# Backward compat: old saves may still have "water" tiles — treat as deep_water
 	if terrain == "water" and _terrain_costs.has("deep_water"):
 		return float(_terrain_costs["deep_water"])
 	return 1.0

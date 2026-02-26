@@ -10,23 +10,29 @@
     "water": -1,
     "shallows": 3.0,
     "deep_water": -1,
-    "river": 3.0
+    "river": 3.0,
+    "shore": 1.0
   },
   "terrain_properties": {
-    "grass":    { "buildable": true,  "blocks_los": false },
-    "dirt":     { "buildable": true,  "blocks_los": false },
-    "sand":     { "buildable": true,  "blocks_los": false },
-    "water":    { "buildable": false, "blocks_los": false },
-    "forest":   { "buildable": true,  "blocks_los": true  },
-    "stone":    { "buildable": true,  "blocks_los": false },
-    "mountain": { "buildable": false, "blocks_los": true  },
-    "river":    { "buildable": false, "blocks_los": false }
+    "grass":      { "buildable": true,  "blocks_los": false },
+    "dirt":       { "buildable": true,  "blocks_los": false },
+    "sand":       { "buildable": true,  "blocks_los": false },
+    "water":      { "buildable": false, "blocks_los": false },
+    "forest":     { "buildable": true,  "blocks_los": true  },
+    "stone":      { "buildable": true,  "blocks_los": false },
+    "mountain":   { "buildable": false, "blocks_los": true  },
+    "river":      { "buildable": false, "blocks_los": false },
+    "shore":      { "buildable": true,  "blocks_los": false },
+    "shallows":   { "buildable": false, "blocks_los": false },
+    "deep_water": { "buildable": false, "blocks_los": false }
   },
   "unit_type_overrides": {
     "naval": {
       "deep_water": 1.0,
       "shallows": 1.0,
       "river": 1.0,
+      "shore": -1,
+      "water": -1,
       "grass": -1,
       "dirt": -1,
       "forest": -1,

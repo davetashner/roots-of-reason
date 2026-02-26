@@ -28,6 +28,9 @@ func _create_terrain_map() -> TileMapLayer:
 		"forest": {"buildable": true, "blocks_los": true},
 		"stone": {"buildable": true, "blocks_los": false},
 		"mountain": {"buildable": false, "blocks_los": true},
+		"shore": {"buildable": true, "blocks_los": false},
+		"shallows": {"buildable": false, "blocks_los": false},
+		"deep_water": {"buildable": false, "blocks_los": false},
 	}
 	map._terrain_costs = {
 		"grass": 1.0,
@@ -37,6 +40,9 @@ func _create_terrain_map() -> TileMapLayer:
 		"stone": 1.5,
 		"water": -1,
 		"mountain": -1,
+		"shore": 1.0,
+		"shallows": 3.0,
+		"deep_water": -1,
 	}
 	map._map_gen_config = {
 		"elevation_noise":
@@ -67,6 +73,7 @@ func _create_terrain_map() -> TileMapLayer:
 		"dirt_moisture_threshold": 0.30,
 		"island_edge_width": 1,
 		"island_falloff_width": 2,
+		"coastline_generation": {"shore_enabled": true},
 	}
 	# Build tileset and generate map without _ready (avoid DataLoader dependency)
 	map._build_tileset()
@@ -81,7 +88,9 @@ func test_get_terrain_at_returns_valid_terrain() -> void:
 	var map := _create_terrain_map()
 	var terrain: String = map.get_terrain_at(Vector2i(0, 0))
 	assert_str(terrain).is_not_empty()
-	var valid_types := ["grass", "dirt", "sand", "water", "forest", "stone", "mountain"]
+	var valid_types := [
+		"grass", "dirt", "sand", "water", "forest", "stone", "mountain", "shore", "shallows", "deep_water"
+	]
 	assert_bool(terrain in valid_types).is_true()
 
 

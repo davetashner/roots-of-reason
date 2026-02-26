@@ -24,6 +24,9 @@ TERRAINS = {
     "stone":    ("#808080", "#707070"),
     "mountain": ("#404050", "#303040"),
     "river":    ("#4A90C4", "#3A80B4"),
+    "shore":      ("#C2B280", "#B2A270"),
+    "shallows":   ("#7EC8E3", "#6EB8D3"),
+    "deep_water": ("#2B5F8A", "#1B4F7A"),
 }
 
 # Diamond vertices for a 128x64 tile
