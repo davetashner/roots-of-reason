@@ -19,6 +19,7 @@ const TradeCartAIScript := preload("res://scripts/prototype/trade_cart_ai.gd")
 const NotificationPanelScript := preload("res://scripts/ui/notification_panel.gd")
 const RiverOverlayScript := preload("res://scripts/ui/river_overlay.gd")
 const VictoryManagerScript := preload("res://scripts/prototype/victory_manager.gd")
+const KnowledgeBurningVFXScript := preload("res://scripts/prototype/knowledge_burning_vfx.gd")
 const VictoryScreenScript := preload("res://scripts/ui/victory_screen.gd")
 
 var _camera: Camera2D
@@ -46,6 +47,7 @@ var _notification_panel: Control = null
 var _river_overlay: Node2D = null
 var _victory_manager: Node = null
 var _victory_screen: PanelContainer = null
+var _knowledge_burning_vfx: Node = null
 
 
 func _ready() -> void:
@@ -389,7 +391,37 @@ func _on_building_destroyed(building: Node2D) -> void:
 		var regressed: Array = _tech_manager.trigger_knowledge_burning(building.owner_id)
 		if not regressed.is_empty():
 			knowledge_burned.emit(building.last_attacker_id, building.owner_id, regressed)
+			_play_knowledge_burning_vfx(building.position, building.owner_id, building.last_attacker_id, regressed)
 	_update_fog_of_war()
+
+
+func _play_knowledge_burning_vfx(
+	world_pos: Vector2,
+	defender_id: int,
+	attacker_id: int,
+	regressed_techs: Array,
+) -> void:
+	if _knowledge_burning_vfx == null:
+		return
+	for tech_data: Dictionary in regressed_techs:
+		var tech_name: String = tech_data.get("name", "Unknown Technology")
+		var effects: Dictionary = tech_data.get("effects", {})
+		var desc: String = _format_tech_effect_description(effects)
+		_knowledge_burning_vfx.play_burning_effect(world_pos, tech_name, desc, defender_id, attacker_id)
+
+
+func _format_tech_effect_description(effects: Dictionary) -> String:
+	var parts: Array[String] = []
+	for key: String in effects:
+		var value: Variant = effects[key]
+		if value is float or value is int:
+			var sign: String = "+" if float(value) >= 0.0 else ""
+			parts.append("%s%s %s" % [sign, str(value), key.replace("_", " ")])
+		else:
+			parts.append("%s: %s" % [key.replace("_", " "), str(value)])
+	if parts.is_empty():
+		return "unknown effect"
+	return ", ".join(parts)
 
 
 func _setup_victory() -> void:
@@ -732,6 +764,12 @@ func _setup_hud() -> void:
 	_notification_panel.name = "NotificationPanel"
 	_notification_panel.set_script(NotificationPanelScript)
 	notif_layer.add_child(_notification_panel)
+	# Knowledge burning VFX — wired to tech_regressed signal
+	_knowledge_burning_vfx = Node.new()
+	_knowledge_burning_vfx.name = "KnowledgeBurningVFX"
+	_knowledge_burning_vfx.set_script(KnowledgeBurningVFXScript)
+	add_child(_knowledge_burning_vfx)
+	_knowledge_burning_vfx.setup(self, _camera, _notification_panel)
 	# River overlay (sibling Node2D, higher z_index than tilemap)
 	_river_overlay = Node2D.new()
 	_river_overlay.name = "RiverOverlay"
