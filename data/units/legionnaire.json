@@ -1,0 +1,20 @@
+{
+  "name": "Legionnaire",
+  "hp": 40,
+  "attack": 6,
+  "defense": 4,
+  "speed": 1.2,
+  "range": 0,
+  "los": 4,
+  "population_cost": 1,
+  "train_time": 20,
+  "train_cost": { "food": 60, "gold": 20 },
+  "bonus_vs": { "archer": 1.5 },
+  "armor_type": "heavy",
+  "attack_speed": 1.5,
+  "attack_type": "melee",
+  "unit_category": "military",
+  "default_stance": "aggressive",
+  "shield_wall": true,
+  "shield_wall_defense_bonus": 3
+}

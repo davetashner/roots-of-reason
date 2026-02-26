@@ -426,6 +426,6 @@ func _check_no_cycle(tech_id: String, path: Dictionary) -> bool:
 # -- Total tech count --
 
 
-func test_total_tech_count_is_86() -> void:
+func test_total_tech_count_is_88() -> void:
 	var data: Variant = DataLoader.load_json("res://data/tech/tech_tree.json")
-	assert_int(data.size()).is_equal(86)
+	assert_int(data.size()).is_equal(88)

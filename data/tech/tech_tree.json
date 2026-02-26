@@ -1190,5 +1190,31 @@
     },
     "flavor_text": "The legendary gardens inspire a new era of agricultural and architectural innovation.",
     "civ_exclusive": "mesopotamia"
+  },
+  {
+    "id": "roman_roads",
+    "name": "Roman Roads",
+    "age": 2,
+    "cost": { "knowledge": 150, "stone": 100 },
+    "research_time": 50.0,
+    "prerequisites": ["engineering"],
+    "effects": {
+      "unit_speed_bonus": 0.15
+    },
+    "flavor_text": "An empire-spanning road network enables rapid troop deployment across vast distances.",
+    "civ_exclusive": "rome"
+  },
+  {
+    "id": "testudo",
+    "name": "Testudo",
+    "age": 3,
+    "cost": { "knowledge": 200, "gold": 100 },
+    "research_time": 60.0,
+    "prerequisites": ["iron_working"],
+    "effects": {
+      "ranged_defense_bonus": 0.20
+    },
+    "flavor_text": "The tortoise formation turns a wall of shields into an impenetrable defense against projectiles.",
+    "civ_exclusive": "rome"
   }
 ]

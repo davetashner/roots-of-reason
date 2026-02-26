@@ -249,6 +249,12 @@ func test_rome_library_unchanged() -> void:
 	assert_str(resolved).is_equal("library")
 
 
+func test_rome_market_resolves_to_colosseum() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "rome")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "market")
+	assert_str(resolved).is_equal("colosseum")
+
+
 # --- Unit swap ---
 
 
