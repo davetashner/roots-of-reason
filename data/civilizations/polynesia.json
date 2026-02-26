@@ -15,6 +15,6 @@
     "speed_bonus": 0.3,
     "transport_capacity": 5
   },
-  "unique_techs": [],
+  "unique_techs": ["wayfinding", "haka"],
   "starting_bonuses": {}
 }

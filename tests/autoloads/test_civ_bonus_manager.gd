@@ -255,6 +255,12 @@ func test_rome_market_resolves_to_colosseum() -> void:
 	assert_str(resolved).is_equal("colosseum")
 
 
+func test_polynesia_library_resolves_to_marae() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "polynesia")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "library")
+	assert_str(resolved).is_equal("marae")
+
+
 # --- Unit swap ---
 
 
@@ -279,3 +285,9 @@ func test_rome_infantry_resolves_to_legionnaire() -> void:
 	CivBonusManager.apply_civ_bonuses(0, "rome")
 	var resolved := CivBonusManager.get_resolved_unit_id(0, "infantry")
 	assert_str(resolved).is_equal("legionnaire")
+
+
+func test_polynesia_naval_resolves_to_war_canoe() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "polynesia")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "naval")
+	assert_str(resolved).is_equal("war_canoe")
