@@ -522,6 +522,16 @@
     "flavor_text": "Silk and spice flow along paths of profit."
   },
   {
+    "id": "espionage",
+    "name": "Espionage",
+    "age": 3,
+    "cost": { "gold": 400, "knowledge": 200 },
+    "research_time": 60,
+    "prerequisites": ["writing", "iron_working"],
+    "effects": { "reveals_opponent_research": true },
+    "flavor_text": "Knowledge of your enemy is the first step to victory."
+  },
+  {
     "id": "steam_power",
     "name": "Steam Power",
     "age": 4,

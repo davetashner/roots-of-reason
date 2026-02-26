@@ -1,0 +1,8 @@
+{
+  "max_lookahead_ages": 1,
+  "show_shadowed_techs": true,
+  "shadowed_hide_cost": true,
+  "shadowed_hide_effects": true,
+  "civ_exclusive_require_all_prereqs": true,
+  "opponent_reveal_effect_key": "reveals_opponent_research"
+}
