@@ -281,6 +281,9 @@ func _setup_fauna() -> void:
 				unit._scene_root = self
 				if _target_detector != null:
 					_target_detector.register_entity(unit)
+				# Set entity category for wild fauna
+				if fauna_name == "wolf":
+					unit.entity_category = "wild_fauna"
 				# Attach wolf AI for wolf fauna
 				if fauna_name == "wolf":
 					var wolf_ai := Node.new()
@@ -288,11 +291,21 @@ func _setup_fauna() -> void:
 					wolf_ai.set_script(WolfAIScript)
 					wolf_ai.pack_id = pack_index
 					unit.add_child(wolf_ai)
+					wolf_ai.domesticated.connect(func(foid: int) -> void: _on_wolf_domesticated(unit, foid))
 				# Connect death signal for carcass spawning
 				if unit.has_signal("unit_died"):
 					unit.unit_died.connect(_on_fauna_died)
 				fauna_index += 1
 			pack_index += 1
+
+
+func _on_wolf_domesticated(wolf_unit: Node2D, feeder_owner_id: int) -> void:
+	wolf_unit.owner_id = feeder_owner_id
+	wolf_unit.entity_category = "dog"
+	wolf_unit.unit_color = Color(0.6, 0.4, 0.2)  # Brown
+	wolf_unit.queue_redraw()
+	if _input_handler != null and _input_handler.has_method("register_unit"):
+		_input_handler.register_unit(wolf_unit)
 
 
 func _on_building_placed(building: Node2D) -> void:

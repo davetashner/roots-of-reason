@@ -13,6 +13,7 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "research_time": { "type": "number", "minimum": 0 },
     "research_multiplier": { "type": "number", "minimum": 0 },
     "flavor_text": { "type": "string" }
   },

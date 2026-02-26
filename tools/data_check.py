@@ -85,12 +85,18 @@ def validate_value(
     # --- type ---
     expected_type = schema.get("type")
     if expected_type:
-        ok_types = _JSON_TYPE_MAP.get(expected_type, ())
-        # "number" should also accept int (JSON numbers)
-        if expected_type == "number":
-            ok_types = (int, float)
+        # JSON Schema allows type as a list: ["string", "null"]
+        type_list = (
+            expected_type if isinstance(expected_type, list)
+            else [expected_type]
+        )
+        ok_types: tuple[type, ...] = ()
+        for t in type_list:
+            ok_types += _JSON_TYPE_MAP.get(t, ())
         # bool is a subclass of int in Python — reject bools for number/integer
-        if expected_type in ("number", "integer") and isinstance(value, bool):
+        if any(
+            t in ("number", "integer") for t in type_list
+        ) and isinstance(value, bool):
             errors.append(
                 f"{path}: expected type '{expected_type}', got 'boolean'"
             )
@@ -176,6 +182,11 @@ _ARRAY_FILE_MAP: dict[str, str] = {
     "ages.json": "age.json",
 }
 
+# Files to skip (config files that don't match their directory's schema)
+_SKIP_FILES: set[str] = {
+    "resource_config.json",
+}
+
 
 def discover_files(data_dir: Path) -> list[tuple[Path, Path, bool]]:
     """Return list of (data_file, schema_file, is_array) tuples."""
@@ -188,6 +199,8 @@ def discover_files(data_dir: Path) -> list[tuple[Path, Path, bool]]:
             continue
         schema_path = schema_dir / schema_name
         for json_file in sorted(subdir.glob("*.json")):
+            if json_file.name in _SKIP_FILES:
+                continue
             results.append((json_file, schema_path, False))
 
     # Tech directory — special array files
