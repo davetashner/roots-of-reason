@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   checks: write
@@ -15,15 +19,15 @@ jobs:
     name: Lint & Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
       - name: Install gdtoolkit
-        run: pip install "gdtoolkit==4.*"
+        run: pip install "gdtoolkit==4.5.0"
 
       - name: Run gdlint
         run: gdlint scripts/ tests/
@@ -31,15 +35,67 @@ jobs:
       - name: Check gdformat
         run: gdformat --check scripts/ tests/
 
+  validate:
+    name: Data & Asset Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate JSON data schemas
+        run: python3 tools/data_check.py
+
+      - name: Validate assets (ADR-008)
+        run: python3 tools/validate_assets.py
+
+      - name: Scan for secrets
+        run: |
+          pip install detect-secrets
+          detect-secrets scan --all-files \
+            --exclude-files '\.godot/|addons/|\.git/' \
+            --exclude-files '\.png$|\.svg$|\.wav$|\.ogg$|\.tres$|\.tscn$' \
+            | python3 -c "
+          import sys, json
+          results = json.load(sys.stdin).get('results', {})
+          total = sum(len(v) for v in results.values())
+          if total:
+              for path, secrets in results.items():
+                  for s in secrets:
+                      print(f'::error file={path},line={s[\"line_number\"]}::{s[\"type\"]}: potential secret detected')
+              sys.exit(1)
+          print('No secrets detected')
+          "
+
+  python-tests:
+    name: Python Tool Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run Python tool tests
+        run: pytest tests/tools/ -v
+
   test:
     name: GdUnit4 Tests
     runs-on: ubuntu-latest
-    needs: lint
+    needs: [lint, validate]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Run GdUnit4 tests
-        uses: godot-gdunit-labs/gdUnit4-action@v1.3.0
+        uses: godot-gdunit-labs/gdUnit4-action@b07efbad7ebb4399455d34de4a0980dc49b26f16 # v1.3.0
         with:
           godot-version: "4.6"
           paths: res://tests
@@ -50,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Run coverage gate
         id: coverage
@@ -61,12 +117,21 @@ jobs:
           set -e
           echo "$output"
 
-          # Parse for summary
-          total=$(echo "$output" | python3 -c "import sys,json; print(json.load(sys.stdin)['total'])")
-          covered=$(echo "$output" | python3 -c "import sys,json; print(json.load(sys.stdin)['covered'])")
-          pct=$(echo "$output" | python3 -c "import sys,json; print(json.load(sys.stdin)['percentage'])")
-          pass=$(echo "$output" | python3 -c "import sys,json; print(str(json.load(sys.stdin)['pass']).lower())")
-          uncovered=$(echo "$output" | python3 -c "import sys,json; d=json.load(sys.stdin); print('\n'.join('- \`'+f+'\`' for f in d['uncovered_files']))")
+          # Single-pass JSON parsing
+          eval "$(echo "$output" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          print(f'total={d[\"total\"]}')
+          print(f'covered={d[\"covered\"]}')
+          print(f'pct={d[\"percentage\"]}')
+          print(f'pass_val={str(d[\"pass\"]).lower()}')
+          ")"
+
+          uncovered=$(echo "$output" | python3 -c "
+          import sys, json
+          for f in json.load(sys.stdin)['uncovered_files']:
+              print(f'- \`{f}\`')
+          ")
 
           {
             echo "summary<<EOF"
@@ -80,7 +145,7 @@ jobs:
               echo "</details>"
               echo ""
             fi
-            if [ "$pass" = "true" ]; then
+            if [ "$pass_val" = "true" ]; then
               echo ":white_check_mark: Coverage gate **passed** (threshold: 18%)"
             else
               echo ":x: Coverage gate **failed** (threshold: 18%)"
@@ -93,7 +158,7 @@ jobs:
 
       - name: Post coverage comment on PR
         if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405 # v2
         with:
           header: coverage
           message: ${{ steps.coverage.outputs.summary }}
