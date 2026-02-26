@@ -26,6 +26,7 @@ const TechTreeViewerScript := preload("res://scripts/ui/tech_tree_viewer.gd")
 const SingularityRegressionScript := preload("res://scripts/prototype/singularity_regression.gd")
 const AISingularityScript := preload("res://scripts/ai/ai_singularity.gd")
 const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen.gd")
+const PauseMenuScript := preload("res://scripts/ui/pause_menu.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -58,6 +59,7 @@ var _tech_tree_viewer: PanelContainer = null
 var _singularity_regression: Node = null
 var _ai_singularity: Node = null
 var _civ_selection_screen: PanelContainer = null
+var _pause_menu: PanelContainer = null
 
 
 func _ready() -> void:
@@ -248,12 +250,27 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey:
 		var key := event as InputEventKey
 		if key.pressed and not key.echo:
-			if key.keycode == KEY_B:
+			if key.keycode == KEY_ESCAPE:
+				_toggle_pause_menu()
+				get_viewport().set_input_as_handled()
+			elif key.keycode == KEY_B:
 				if _building_placer != null and not _building_placer.is_active():
 					_building_placer.start_placement("house", 0)
 			elif key.keycode == KEY_T:
 				if _tech_tree_viewer != null:
 					_tech_tree_viewer.toggle_visible()
+
+
+func _toggle_pause_menu() -> void:
+	if _pause_menu == null:
+		return
+	# Don't open pause menu if victory screen is visible
+	if _victory_screen != null and _victory_screen.visible:
+		return
+	if _pause_menu.visible:
+		_pause_menu.hide_menu()
+	else:
+		_pause_menu.show_menu()
 
 
 func _setup_civilizations() -> void:
@@ -899,6 +916,17 @@ func _setup_hud() -> void:
 	_tech_tree_viewer.set_script(TechTreeViewerScript)
 	tech_viewer_layer.add_child(_tech_tree_viewer)
 	_tech_tree_viewer.setup(_tech_manager, 0)
+	# Pause menu overlay (above victory screen)
+	var pause_layer := CanvasLayer.new()
+	pause_layer.name = "PauseMenuLayer"
+	pause_layer.layer = 22
+	add_child(pause_layer)
+	_pause_menu = PanelContainer.new()
+	_pause_menu.name = "PauseMenu"
+	_pause_menu.set_script(PauseMenuScript)
+	pause_layer.add_child(_pause_menu)
+	_pause_menu.quit_to_menu.connect(_on_pause_menu_quit_to_menu)
+	_pause_menu.quit_to_desktop.connect(_on_pause_menu_quit_to_desktop)
 
 
 func _setup_resource_bar() -> void:
@@ -940,6 +968,17 @@ func _on_corruption_changed(player_id: int, rate: float) -> void:
 func _on_population_changed(player_id: int, current: int, cap: int) -> void:
 	if player_id == 0 and _resource_bar != null:
 		_resource_bar.update_population(current, cap)
+
+
+func _on_pause_menu_quit_to_menu() -> void:
+	GameManager.reset_game_state()
+	ResourceManager.reset()
+	CivBonusManager.reset()
+	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+
+
+func _on_pause_menu_quit_to_desktop() -> void:
+	get_tree().quit()
 
 
 func _get_player_start_position() -> Vector2i:
