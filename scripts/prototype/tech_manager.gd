@@ -13,6 +13,8 @@ signal research_queue_changed(player_id: int)
 signal victory_tech_completed(player_id: int, tech_id: String)
 signal victory_tech_research_started(player_id: int, tech_id: String)
 signal victory_tech_disrupted(player_id: int, tech_id: String)
+signal singularity_tech_researched(player_id: int, tech_id: String, tech_name: String)
+signal singularity_tech_lost(player_id: int, tech_id: String)
 
 const RESOURCE_NAME_TO_TYPE: Dictionary = {
 	"food": ResourceManager.ResourceType.FOOD,
@@ -234,6 +236,31 @@ func get_research_queue(player_id: int = 0) -> Array:
 	return _research_queue.get(player_id, []).duplicate()
 
 
+func get_singularity_chain_status(player_id: int) -> Dictionary:
+	## Returns status of singularity-chain techs for a player.
+	## Keys: "researched" (Array of tech_ids), "at_risk" (String tech_id or ""),
+	## "at_risk_name" (String display name or "").
+	var researched_sing: Array = []
+	var history: Array = _researched_techs.get(player_id, [])
+	for tech_id: String in history:
+		var td: Dictionary = get_tech_data(tech_id)
+		if td.get("singularity_chain", false):
+			researched_sing.append(tech_id)
+	var at_risk_id: String = ""
+	var at_risk_name: String = ""
+	if not history.is_empty() and history.size() > _kb_protect_first_n:
+		var last_id: String = history[-1]
+		var last_data: Dictionary = get_tech_data(last_id)
+		if last_data.get("singularity_chain", false):
+			at_risk_id = last_id
+			at_risk_name = str(last_data.get("name", last_id))
+	return {
+		"researched": researched_sing,
+		"at_risk": at_risk_id,
+		"at_risk_name": at_risk_name,
+	}
+
+
 func regress_latest_tech(player_id: int) -> Dictionary:
 	## Pops the most recently researched tech from the player's history.
 	## Returns the tech data dictionary, or empty dict if nothing to regress.
@@ -256,6 +283,8 @@ func regress_latest_tech(player_id: int) -> Dictionary:
 	var tech_data: Dictionary = get_tech_data(tech_id)
 	_kb_last_regression_time[player_id] = GameManager.game_time
 	tech_regressed.emit(player_id, tech_id, tech_data)
+	if tech_data.get("singularity_chain", false):
+		singularity_tech_lost.emit(player_id, tech_id)
 	return tech_data
 
 
@@ -273,6 +302,8 @@ func revert_tech_effects(player_id: int, tech_id: String) -> void:
 		_regressed_techs[player_id].append(tech_id)
 	var tech_data: Dictionary = get_tech_data(tech_id)
 	tech_regressed.emit(player_id, tech_id, tech_data)
+	if tech_data.get("singularity_chain", false):
+		singularity_tech_lost.emit(player_id, tech_id)
 	if tech_data.get("victory_tech", false):
 		victory_tech_disrupted.emit(player_id, tech_id)
 
@@ -394,6 +425,10 @@ func _complete_research(player_id: int) -> void:
 	# Emit completion signal
 	tech_researched.emit(player_id, tech_id, effects)
 	research_queue_changed.emit(player_id)
+	# Check if this is a singularity chain tech
+	if tech_data.get("singularity_chain", false):
+		var tech_name: String = str(tech_data.get("name", tech_id))
+		singularity_tech_researched.emit(player_id, tech_id, tech_name)
 	# Check if this is a victory tech
 	if tech_data.get("victory_tech", false):
 		victory_tech_completed.emit(player_id, tech_id)

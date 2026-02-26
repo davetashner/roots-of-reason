@@ -1,0 +1,5 @@
+{
+  "public_alert_template": "{civ} has researched {tech_name}!",
+  "knowledge_at_risk_label": "Knowledge at Risk",
+  "construction_pause_on_regression": true
+}
