@@ -5,6 +5,7 @@
 ## Checklist
 
 - [ ] Tests added/updated
-- [ ] No lint warnings (`gdlint scripts/ tests/`)
-- [ ] No format issues (`gdformat --check scripts/ tests/`)
+- [ ] No lint warnings (`ror lint`)
+- [ ] Data schemas valid (`ror data-check`)
+- [ ] Assets valid (`ror validate-assets`)
 - [ ] All CI checks pass

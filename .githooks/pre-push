@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Pre-push hook: runs lint check before allowing push.
+# Install: git config core.hooksPath .githooks
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+echo "Running pre-push lint check ..."
+if ! "$SCRIPT_DIR/tools/ror" lint; then
+    echo ""
+    echo "Push blocked: lint check failed."
+    echo "Run 'ror lint --fix' to auto-format, then retry."
+    exit 1
+fi
