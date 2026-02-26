@@ -315,7 +315,7 @@ func test_take_damage_triggers_retaliation() -> void:
 func test_die_emits_signal() -> void:
 	var u := _create_combat_unit(Vector2.ZERO, "infantry", 0)
 	var result := [false]
-	u.unit_died.connect(func(_unit: Node2D) -> void: result[0] = true)
+	u.unit_died.connect(func(_unit: Node2D, _killer: Node2D) -> void: result[0] = true)
 	u._die()
 	assert_bool(result[0]).is_true()
 

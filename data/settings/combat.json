@@ -13,6 +13,8 @@
   "damage_number_rise_distance": 30.0,
   "damage_number_duration": 0.8,
   "death_fade_duration": 0.5,
+  "corpse_duration": 30.0,
+  "corpse_modulate": [0.4, 0.4, 0.4, 0.5],
   "projectile_speed": 400.0,
   "projectile_radius": 3.0,
   "attack_flash_duration": 0.15,

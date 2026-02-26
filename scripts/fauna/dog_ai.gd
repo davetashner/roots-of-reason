@@ -556,7 +556,7 @@ func _tick_movement(game_delta: float, speed: float) -> void:
 # -- Death handler --
 
 
-func _on_dog_died(_unit: Node2D) -> void:
+func _on_dog_died(_unit: Node2D, _killer: Node2D = null) -> void:
 	_remove_hunt_bonus()
 	_remove_alert_buff()
 	_clear_los_bonus()

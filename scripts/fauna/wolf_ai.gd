@@ -533,7 +533,7 @@ func _tick_movement(game_delta: float, speed: float) -> void:
 # -- Pack death handler --
 
 
-func _on_wolf_died(_unit: Node2D) -> void:
+func _on_wolf_died(_unit: Node2D, _killer: Node2D = null) -> void:
 	# Notify packmates to flee
 	for ai in _pack_members:
 		if not is_instance_valid(ai):

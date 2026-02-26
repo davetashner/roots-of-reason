@@ -3,7 +3,7 @@ extends Node2D
 ## right-click-to-move. Villagers can build construction sites and gather resources.
 ## Military units have combat state machine with attack-move, patrol, and stances.
 
-signal unit_died(unit: Node2D)
+signal unit_died(unit: Node2D, killer: Node2D)
 
 enum GatherState { NONE, MOVING_TO_RESOURCE, GATHERING, MOVING_TO_DROP_OFF, DEPOSITING }
 enum CombatState { NONE, PURSUING, ATTACKING, ATTACK_MOVING, PATROLLING }
@@ -24,6 +24,7 @@ var stats: UnitStats = null
 var selected: bool = false
 var hp: int = 0
 var max_hp: int = 0
+var kill_count: int = 0
 var _target_pos: Vector2 = Vector2.ZERO
 var _moving: bool = false
 var _path: Array[Vector2] = []
@@ -74,6 +75,9 @@ var _pending_feed_target_name: String = ""
 
 # Formation speed override — when > 0, caps get_move_speed()
 var _formation_speed_override: float = 0.0
+
+var _is_dead: bool = false
+var _last_attacker: Node2D = null
 
 
 func _ready() -> void:
@@ -173,6 +177,8 @@ func _load_combat_config() -> void:
 
 
 func _process(delta: float) -> void:
+	if _is_dead:
+		return
 	var game_delta := GameManager.get_game_delta(delta)
 	if game_delta == 0.0:
 		return
@@ -815,9 +821,12 @@ func _build_target_stats_dict(target: Node2D) -> Dictionary:
 
 
 func take_damage(amount: int, attacker: Node2D) -> void:
+	if _is_dead:
+		return
 	hp -= amount
 	if hp < 0:
 		hp = 0
+	_last_attacker = attacker
 	queue_redraw()
 	# Retaliate if defensive stance and idle
 	var stance_cfg := _get_stance_config()
@@ -837,14 +846,43 @@ func take_damage(amount: int, attacker: Node2D) -> void:
 
 
 func _die() -> void:
+	if _is_dead:
+		return
+	_is_dead = true
 	_cancel_feed()
-	unit_died.emit(self)
+	_cancel_gather()
+	_cancel_combat()
+	# Increment killer's kill count
+	var killer: Node2D = _last_attacker
+	if killer != null and is_instance_valid(killer) and "kill_count" in killer:
+		killer.kill_count += 1
+	# Emit signal with killer reference
+	unit_died.emit(self, killer)
+	# Make non-interactive
+	selected = false
 	set_process(false)
+	# Play death fade animation, then enter corpse state
 	var tween := CombatVisual.play_death_animation(self, _combat_config)
 	if tween != null:
-		tween.finished.connect(queue_free)
+		tween.finished.connect(_enter_corpse_state)
 	else:
-		queue_free()
+		_enter_corpse_state()
+
+
+func _enter_corpse_state() -> void:
+	# Apply corpse appearance (grey, semi-transparent)
+	var corpse_color_arr: Array = _combat_config.get("corpse_modulate", [0.4, 0.4, 0.4, 0.5])
+	if corpse_color_arr.size() == 4:
+		modulate = Color(corpse_color_arr[0], corpse_color_arr[1], corpse_color_arr[2], corpse_color_arr[3])
+	else:
+		modulate = Color(0.4, 0.4, 0.4, 0.5)
+	queue_redraw()
+	# Schedule corpse fade and removal
+	var corpse_time: float = float(_combat_config.get("corpse_duration", 30.0))
+	var corpse_tween := create_tween()
+	corpse_tween.tween_interval(corpse_time)
+	corpse_tween.tween_property(self, "modulate:a", 0.0, 1.0)
+	corpse_tween.tween_callback(queue_free)
 
 
 func attack_move_to(world_pos: Vector2) -> void:
@@ -1045,6 +1083,8 @@ func follow_path(waypoints: Array[Vector2]) -> void:
 
 
 func select() -> void:
+	if _is_dead:
+		return
 	selected = true
 	queue_redraw()
 
@@ -1055,6 +1095,8 @@ func deselect() -> void:
 
 
 func is_point_inside(point: Vector2) -> bool:
+	if _is_dead:
+		return false
 	return point.distance_to(global_position) <= RADIUS * 1.5
 
 
@@ -1089,6 +1131,7 @@ func save_state() -> Dictionary:
 		"feed_timer": _feed_timer,
 		"gather_rate_multiplier": _gather_rate_multiplier,
 		"formation_speed_override": _formation_speed_override,
+		"kill_count": kill_count,
 	}
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
@@ -1141,6 +1184,7 @@ func load_state(data: Dictionary) -> void:
 	_feed_timer = float(data.get("feed_timer", 0.0))
 	_gather_rate_multiplier = float(data.get("gather_rate_multiplier", 1.0))
 	_formation_speed_override = float(data.get("formation_speed_override", 0.0))
+	kill_count = int(data.get("kill_count", 0))
 	if data.has("stats"):
 		if stats == null:
 			stats = UnitStats.new()
