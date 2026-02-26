@@ -49,6 +49,18 @@
     "flavor_text": "Woven reeds multiply what hands can carry."
   },
   {
+    "id": "agriculture",
+    "name": "Agriculture",
+    "age": 0,
+    "cost": { "food": 50 },
+    "research_time": 35,
+    "prerequisites": [],
+    "effects": {
+      "economic_bonus": { "farm_food_rate": 0.25 }
+    },
+    "flavor_text": "Planted seeds promise a future beyond foraging."
+  },
+  {
     "id": "bronze_working",
     "name": "Bronze Working",
     "age": 1,
@@ -144,6 +156,18 @@
       "unlock_units": ["fishing_boat", "merchant_ship"]
     },
     "flavor_text": "The horizon beckons."
+  },
+  {
+    "id": "the_wheel",
+    "name": "The Wheel",
+    "age": 1,
+    "cost": { "wood": 100, "stone": 50 },
+    "research_time": 40,
+    "prerequisites": ["agriculture"],
+    "effects": {
+      "stat_modifiers": { "unit_speed": 0.15 }
+    },
+    "flavor_text": "Round and round, the world moves faster."
   },
   {
     "id": "iron_working",
@@ -254,6 +278,30 @@
       "stat_modifiers": { "hp_regen_ooc": 0.5 }
     },
     "flavor_text": "Willow bark eases fever; garlic wards infection."
+  },
+  {
+    "id": "road_building",
+    "name": "Road Building",
+    "age": 2,
+    "cost": { "stone": 150, "wood": 75 },
+    "research_time": 55,
+    "prerequisites": ["the_wheel"],
+    "effects": {
+      "stat_modifiers": { "territory_movement_speed": 0.20 }
+    },
+    "flavor_text": "Paved roads bind villages into kingdoms."
+  },
+  {
+    "id": "astronomy",
+    "name": "Astronomy",
+    "age": 2,
+    "cost": { "knowledge": 200 },
+    "research_time": 60,
+    "prerequisites": ["mathematics"],
+    "effects": {
+      "stat_modifiers": { "unit_los": 0.20 }
+    },
+    "flavor_text": "Charted stars guide travelers and scholars alike."
   },
   {
     "id": "steel_working",
@@ -412,6 +460,42 @@
       "economic_bonus": { "farm_output": 0.30 }
     },
     "flavor_text": "Turnips restore what wheat has taken."
+  },
+  {
+    "id": "mechanical_power",
+    "name": "Mechanical Power",
+    "age": 3,
+    "cost": { "wood": 200, "stone": 100 },
+    "research_time": 65,
+    "prerequisites": ["engineering"],
+    "effects": {
+      "economic_bonus": { "gather_rate": 0.25 }
+    },
+    "flavor_text": "Wind and water turn millstones day and night."
+  },
+  {
+    "id": "optics",
+    "name": "Optics",
+    "age": 3,
+    "cost": { "knowledge": 250, "gold": 100 },
+    "research_time": 60,
+    "prerequisites": ["astronomy"],
+    "effects": {
+      "stat_modifiers": { "archer_range": 0.30 }
+    },
+    "flavor_text": "Ground glass bends light to the archer's advantage."
+  },
+  {
+    "id": "trade_routes",
+    "name": "Trade Routes",
+    "age": 3,
+    "cost": { "gold": 200, "wood": 150 },
+    "research_time": 60,
+    "prerequisites": ["sailing"],
+    "effects": {
+      "economic_bonus": { "trade_gold_income": 0.50 }
+    },
+    "flavor_text": "Silk and spice flow along paths of profit."
   },
   {
     "id": "steam_power",
@@ -596,6 +680,42 @@
     },
     "war_spillover": { "navigation": 0.10 },
     "flavor_text": "Calculated arcs turn artillery into science."
+  },
+  {
+    "id": "telegraph_comm",
+    "name": "Telegraph",
+    "age": 4,
+    "cost": { "gold": 300, "knowledge": 200 },
+    "research_time": 70,
+    "prerequisites": ["electricity"],
+    "effects": {
+      "research_bonus": 0.15
+    },
+    "flavor_text": "Dots and dashes outrun the fastest horse."
+  },
+  {
+    "id": "aviation",
+    "name": "Aviation",
+    "age": 4,
+    "cost": { "wood": 400, "gold": 300 },
+    "research_time": 80,
+    "prerequisites": ["steam_power"],
+    "effects": {
+      "unlock_units": ["scout_plane"]
+    },
+    "flavor_text": "Heavier than air, yet humanity soars."
+  },
+  {
+    "id": "democracy",
+    "name": "Democracy",
+    "age": 4,
+    "cost": { "knowledge": 300, "gold": 200 },
+    "research_time": 75,
+    "prerequisites": ["philosophy"],
+    "effects": {
+      "corruption_reduction": 0.20
+    },
+    "flavor_text": "Government of the people, by the people, for the people."
   },
   {
     "id": "atomic_theory",
@@ -806,6 +926,30 @@
     "flavor_text": "Digital walls guard digital knowledge."
   },
   {
+    "id": "spaceflight",
+    "name": "Spaceflight",
+    "age": 5,
+    "cost": { "gold": 500, "knowledge": 500 },
+    "research_time": 85,
+    "prerequisites": ["rocketry"],
+    "effects": {
+      "economic_bonus": { "knowledge_rate": 0.50 }
+    },
+    "flavor_text": "One small step for a villager, one giant leap for civilization."
+  },
+  {
+    "id": "renewable_energy",
+    "name": "Renewable Energy",
+    "age": 5,
+    "cost": { "knowledge": 400, "gold": 300 },
+    "research_time": 75,
+    "prerequisites": ["electricity"],
+    "effects": {
+      "economic_bonus": { "building_cost_reduction": 0.30 }
+    },
+    "flavor_text": "Sun and wind replace coal and oil."
+  },
+  {
     "id": "neural_networks",
     "name": "Neural Networks",
     "age": 6,
@@ -905,6 +1049,18 @@
       "notification": "{civ} has pioneered Transformer Architecture — the intelligence explosion begins.",
       "survives_knowledge_burning": true
     }
+  },
+  {
+    "id": "brain_computer_interface",
+    "name": "Brain-Computer Interface",
+    "age": 6,
+    "cost": { "knowledge": 1000, "gold": 500 },
+    "research_time": 75,
+    "prerequisites": ["machine_learning"],
+    "effects": {
+      "research_bonus": 1.0
+    },
+    "flavor_text": "Thought becomes code; code becomes thought."
   },
   {
     "id": "alignment_research",
