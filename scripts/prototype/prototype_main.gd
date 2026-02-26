@@ -25,6 +25,7 @@ const VictoryScreenScript := preload("res://scripts/ui/victory_screen.gd")
 const TechTreeViewerScript := preload("res://scripts/ui/tech_tree_viewer.gd")
 const SingularityRegressionScript := preload("res://scripts/prototype/singularity_regression.gd")
 const AISingularityScript := preload("res://scripts/ai/ai_singularity.gd")
+const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -56,6 +57,7 @@ var _knowledge_burning_vfx: Node = null
 var _tech_tree_viewer: PanelContainer = null
 var _singularity_regression: Node = null
 var _ai_singularity: Node = null
+var _civ_selection_screen: PanelContainer = null
 
 
 func _ready() -> void:
@@ -67,6 +69,29 @@ func _ready() -> void:
 	_setup_input()
 	_setup_building_placer()
 	_setup_population()
+	_show_civ_selection()
+
+
+func _show_civ_selection() -> void:
+	var civ_layer := CanvasLayer.new()
+	civ_layer.name = "CivSelectionLayer"
+	civ_layer.layer = 25
+	add_child(civ_layer)
+	_civ_selection_screen = PanelContainer.new()
+	_civ_selection_screen.name = "CivSelectionScreen"
+	_civ_selection_screen.set_script(CivSelectionScreenScript)
+	civ_layer.add_child(_civ_selection_screen)
+	_civ_selection_screen.civ_selected.connect(_on_civ_selected)
+	_civ_selection_screen.show_screen()
+
+
+func _on_civ_selected(player_civ: String, ai_civ: String) -> void:
+	GameManager.set_player_civilization(0, player_civ)
+	GameManager.set_player_civilization(1, ai_civ)
+	_start_game()
+
+
+func _start_game() -> void:
 	_setup_civilizations()
 	_setup_units()
 	_setup_demo_entities()
@@ -228,8 +253,14 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _setup_civilizations() -> void:
-	CivBonusManager.apply_civ_bonuses(0, "mesopotamia")
-	CivBonusManager.apply_civ_bonuses(1, "rome")
+	var player_civ: String = GameManager.get_player_civilization(0)
+	var ai_civ: String = GameManager.get_player_civilization(1)
+	if player_civ == "":
+		player_civ = "mesopotamia"
+	if ai_civ == "":
+		ai_civ = "rome"
+	CivBonusManager.apply_civ_bonuses(0, player_civ)
+	CivBonusManager.apply_civ_bonuses(1, ai_civ)
 	CivBonusManager.apply_starting_bonuses(0)
 	CivBonusManager.apply_starting_bonuses(1)
 
