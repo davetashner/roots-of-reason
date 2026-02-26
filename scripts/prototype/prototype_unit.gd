@@ -40,6 +40,7 @@ var _gather_state: GatherState = GatherState.NONE
 var _gather_type: String = ""
 var _carried_amount: int = 0
 var _carry_capacity: int = 10
+var _gather_rate_multiplier: float = 1.0
 var _gather_rates: Dictionary = {}
 var _gather_reach: float = 80.0
 var _drop_off_reach: float = 80.0
@@ -243,7 +244,7 @@ func _tick_gathering(game_delta: float) -> void:
 			_try_find_replacement_resource()
 		return
 	var rate: float = float(_gather_rates.get(_gather_type, 0.0))
-	_gather_accumulator += rate * game_delta
+	_gather_accumulator += rate * _gather_rate_multiplier * game_delta
 	if _gather_accumulator >= 1.0:
 		var whole := int(_gather_accumulator)
 		var room := _carry_capacity - _carried_amount
@@ -957,13 +958,21 @@ func _draw() -> void:
 		)
 
 	# Unit body
-	draw_circle(Vector2.ZERO, RADIUS, unit_color)
+	if entity_category == "dog":
+		# Dog: smaller circle with collar arc in player color
+		var dog_radius := RADIUS * 0.8
+		draw_circle(Vector2.ZERO, dog_radius, unit_color)
+		var collar_color := Color(0.2, 0.4, 0.9) if owner_id == 0 else Color(0.9, 0.2, 0.2)
+		draw_arc(Vector2.ZERO, dog_radius + 1.0, 0.0, PI, 16, collar_color, 2.5)
+	else:
+		draw_circle(Vector2.ZERO, RADIUS, unit_color)
 
 	# Direction triangle (points toward facing direction)
 	var dir := _facing
-	var tip := dir * (RADIUS + 4.0)
-	var left := dir.rotated(2.5) * RADIUS * 0.5
-	var right := dir.rotated(-2.5) * RADIUS * 0.5
+	var draw_radius := RADIUS * 0.8 if entity_category == "dog" else RADIUS
+	var tip := dir * (draw_radius + 4.0)
+	var left := dir.rotated(2.5) * draw_radius * 0.5
+	var right := dir.rotated(-2.5) * draw_radius * 0.5
 	draw_colored_polygon(PackedVector2Array([tip, left, right]), Color(1, 1, 1, 0.9))
 
 	# Movement target indicator
@@ -1056,6 +1065,7 @@ func save_state() -> Dictionary:
 		"attack_cooldown": _attack_cooldown,
 		"is_feeding": _is_feeding,
 		"feed_timer": _feed_timer,
+		"gather_rate_multiplier": _gather_rate_multiplier,
 	}
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
@@ -1106,6 +1116,7 @@ func load_state(data: Dictionary) -> void:
 	_pending_feed_target_name = str(data.get("feed_target_name", ""))
 	_is_feeding = bool(data.get("is_feeding", false))
 	_feed_timer = float(data.get("feed_timer", 0.0))
+	_gather_rate_multiplier = float(data.get("gather_rate_multiplier", 1.0))
 	if data.has("stats"):
 		if stats == null:
 			stats = UnitStats.new()

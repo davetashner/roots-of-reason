@@ -43,6 +43,8 @@ func update_visibility(player_id: int, units: Array) -> void:
 			var stat_los: float = unit.get_stat("los")
 			if stat_los > 0.0:
 				los_radius = int(stat_los)
+		elif unit.has_method("get_los"):
+			los_radius = unit.get_los()
 		elif "los" in unit:
 			los_radius = int(unit.los)
 

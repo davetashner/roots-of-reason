@@ -12,6 +12,7 @@ const AITechScript := preload("res://scripts/ai/ai_tech.gd")
 const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
 const WolfAIScript := preload("res://scripts/fauna/wolf_ai.gd")
+const DogAIScript := preload("res://scripts/fauna/dog_ai.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -92,7 +93,13 @@ func _update_fog_of_war() -> void:
 			continue
 		if "hp" in child and child.hp <= 0:
 			continue
-		player_units.append(child)
+		# Include buildings with dog LOS bonus
+		if child.has_method("get_los") and child.get_los() > 0:
+			player_units.append(child)
+			continue
+		# Include normal units
+		if child.has_method("get_stat"):
+			player_units.append(child)
 	_visibility_manager.update_visibility(0, player_units)
 
 
@@ -303,9 +310,28 @@ func _on_wolf_domesticated(wolf_unit: Node2D, feeder_owner_id: int) -> void:
 	wolf_unit.owner_id = feeder_owner_id
 	wolf_unit.entity_category = "dog"
 	wolf_unit.unit_color = Color(0.6, 0.4, 0.2)  # Brown
+	# Remove WolfAI and attach DogAI
+	var wolf_ai := wolf_unit.get_node_or_null("WolfAI")
+	if wolf_ai != null:
+		wolf_unit.remove_child(wolf_ai)
+		wolf_ai.queue_free()
+	# Reinit stats to dog type
+	wolf_unit.unit_type = "dog"
+	wolf_unit._init_stats()
+	# Create DogAI
+	var dog_ai := Node.new()
+	dog_ai.name = "DogAI"
+	dog_ai.set_script(DogAIScript)
+	wolf_unit.add_child(dog_ai)
+	dog_ai.danger_alert.connect(_on_dog_danger_alert)
 	wolf_unit.queue_redraw()
 	if _input_handler != null and _input_handler.has_method("register_unit"):
 		_input_handler.register_unit(wolf_unit)
+
+
+func _on_dog_danger_alert(_alert_position: Vector2, _player_id: int) -> void:
+	# Stub for future minimap ping / audio bark integration
+	pass
 
 
 func _on_building_placed(building: Node2D) -> void:
