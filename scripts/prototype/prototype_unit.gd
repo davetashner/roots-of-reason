@@ -63,6 +63,14 @@ var _combat_config: Dictionary = {}
 var _pending_combat_target_name: String = ""
 var _visibility_manager: Node = null
 
+# Feed state
+var _feed_target: Node2D = null
+var _feed_timer: float = 0.0
+var _feed_duration: float = 5.0
+var _feed_reach: float = 128.0
+var _is_feeding: bool = false
+var _pending_feed_target_name: String = ""
+
 
 func _ready() -> void:
 	_target_pos = position
@@ -165,6 +173,7 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	_tick_build(game_delta)
 	_tick_gather(game_delta)
+	_tick_feed(game_delta)
 	_tick_combat(game_delta)
 
 
@@ -364,6 +373,8 @@ func assign_gather_target(node: Node2D) -> void:
 	_pending_build_target_name = ""
 	# Cancel combat
 	_cancel_combat()
+	# Cancel feed
+	_cancel_feed()
 	# Set up gather
 	_gather_target = node
 	_gather_type = node.resource_type if "resource_type" in node else ""
@@ -379,6 +390,8 @@ func assign_build_target(building: Node2D) -> void:
 	_cancel_gather()
 	# Cancel combat
 	_cancel_combat()
+	# Cancel feed
+	_cancel_feed()
 	_build_target = building
 	move_to(building.global_position)
 
@@ -389,6 +402,7 @@ func is_idle() -> bool:
 		and _build_target == null
 		and _gather_state == GatherState.NONE
 		and _combat_state == CombatState.NONE
+		and _feed_target == null
 	)
 
 
@@ -408,6 +422,95 @@ func resolve_gather_target(scene_root: Node) -> void:
 	if target is Node2D:
 		_gather_target = target
 	_pending_gather_target_name = ""
+
+
+# -- Feed --
+
+
+func _tick_feed(game_delta: float) -> void:
+	if _feed_target == null:
+		return
+	if not is_instance_valid(_feed_target):
+		_clear_feed_state()
+		return
+	var wolf_ai: Node = _feed_target.get_node_or_null("WolfAI")
+	if wolf_ai == null:
+		_clear_feed_state()
+		return
+	var dist: float = position.distance_to(_feed_target.global_position)
+	if dist > _feed_reach:
+		return
+	# In range — start feeding if not already
+	if not _is_feeding:
+		_moving = false
+		_path.clear()
+		_path_index = 0
+		if not wolf_ai.begin_feeding(self, owner_id):
+			_clear_feed_state()
+			return
+		_is_feeding = true
+		_feed_timer = 0.0
+	# Tick feed timer
+	_feed_timer += game_delta
+	if _feed_timer >= _feed_duration:
+		wolf_ai.complete_feeding()
+		_clear_feed_state()
+
+
+func _cancel_feed() -> void:
+	if _feed_target == null:
+		return
+	if is_instance_valid(_feed_target):
+		var wolf_ai: Node = _feed_target.get_node_or_null("WolfAI")
+		if wolf_ai != null:
+			if _is_feeding:
+				wolf_ai.cancel_feeding()
+			else:
+				wolf_ai.unregister_pending_feeder(self)
+	_clear_feed_state()
+
+
+func _clear_feed_state() -> void:
+	_feed_target = null
+	_feed_timer = 0.0
+	_is_feeding = false
+	_pending_feed_target_name = ""
+
+
+func assign_feed_target(wolf: Node2D) -> void:
+	# Cancel other tasks
+	_cancel_gather()
+	_cancel_combat()
+	_build_target = null
+	_pending_build_target_name = ""
+	# Load feed config from fauna settings
+	var fauna_cfg: Dictionary = _dl_settings("fauna")
+	var wolf_cfg: Dictionary = fauna_cfg.get("wolf", {})
+	_feed_duration = float(wolf_cfg.get("feed_duration", 5.0))
+	_feed_reach = float(wolf_cfg.get("feed_distance_tiles", 2)) * TILE_SIZE
+	# Check food cost
+	var cost: int = int(wolf_cfg.get("feed_cost", 25))
+	var costs: Dictionary = {ResourceManager.ResourceType.FOOD: cost}
+	if not ResourceManager.can_afford(owner_id, costs):
+		return
+	ResourceManager.spend(owner_id, costs)
+	_feed_target = wolf
+	_feed_timer = 0.0
+	_is_feeding = false
+	# Register as pending feeder for aggro suppression
+	var wolf_ai: Node = wolf.get_node_or_null("WolfAI")
+	if wolf_ai != null:
+		wolf_ai.register_pending_feeder(self)
+	move_to(wolf.global_position)
+
+
+func resolve_feed_target(scene_root: Node) -> void:
+	if _pending_feed_target_name == "":
+		return
+	var target := scene_root.get_node_or_null(_pending_feed_target_name)
+	if target is Node2D:
+		_feed_target = target
+	_pending_feed_target_name = ""
 
 
 # -- Combat --
@@ -711,6 +814,7 @@ func take_damage(amount: int, attacker: Node2D) -> void:
 
 
 func _die() -> void:
+	_cancel_feed()
 	unit_died.emit(self)
 	set_process(false)
 	var tween := CombatVisual.play_death_animation(self, _combat_config)
@@ -950,6 +1054,8 @@ func save_state() -> Dictionary:
 		"patrol_point_b_y": _patrol_point_b.y,
 		"patrol_heading_to_b": _patrol_heading_to_b,
 		"attack_cooldown": _attack_cooldown,
+		"is_feeding": _is_feeding,
+		"feed_timer": _feed_timer,
 	}
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
@@ -957,6 +1063,8 @@ func save_state() -> Dictionary:
 		state["gather_target_name"] = str(_gather_target.name)
 	if _combat_target != null and is_instance_valid(_combat_target):
 		state["combat_target_name"] = str(_combat_target.name)
+	if _feed_target != null and is_instance_valid(_feed_target):
+		state["feed_target_name"] = str(_feed_target.name)
 	if stats != null:
 		state["stats"] = stats.save_state()
 	return state
@@ -994,6 +1102,10 @@ func load_state(data: Dictionary) -> void:
 	_patrol_heading_to_b = bool(data.get("patrol_heading_to_b", true))
 	_attack_cooldown = float(data.get("attack_cooldown", 0.0))
 	_pending_combat_target_name = str(data.get("combat_target_name", ""))
+	# Restore feed state
+	_pending_feed_target_name = str(data.get("feed_target_name", ""))
+	_is_feeding = bool(data.get("is_feeding", false))
+	_feed_timer = float(data.get("feed_timer", 0.0))
 	if data.has("stats"):
 		if stats == null:
 			stats = UnitStats.new()

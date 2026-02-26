@@ -16,6 +16,13 @@
     "attack_speed_pixels": 192.0,
     "patrol_speed_pixels": 96.0,
     "scan_interval": 0.5,
-    "carcass_resource_name": "wolf_carcass"
+    "carcass_resource_name": "wolf_carcass",
+    "feed_distance_tiles": 2,
+    "feed_duration": 5.0,
+    "feed_cooldown_per_wolf": 5.0,
+    "feeds_required": 3,
+    "feed_cost": 25,
+    "decay_interval": 10.0,
+    "decay_rate": 0.1
   }
 }
