@@ -267,6 +267,18 @@
     "flavor_text": "Three banks of oars drive a floating fortress."
   },
   {
+    "id": "herbal_medicine",
+    "name": "Herbal Medicine",
+    "age": 1,
+    "cost": { "food": 100, "knowledge": 50 },
+    "research_time": 40,
+    "prerequisites": ["agriculture"],
+    "effects": {
+      "war_survival": { "chance": 0.10, "hp_flat": 1 }
+    },
+    "flavor_text": "Poultices and tinctures pull soldiers back from the brink."
+  },
+  {
     "id": "herbalism",
     "name": "Herbalism",
     "age": 2,
@@ -398,6 +410,18 @@
       "stat_modifiers": { "fortification_hp": 0.30 }
     },
     "flavor_text": "Concentric walls multiply the defender's advantage."
+  },
+  {
+    "id": "surgery",
+    "name": "Surgery",
+    "age": 3,
+    "cost": { "knowledge": 200, "gold": 100 },
+    "research_time": 60,
+    "prerequisites": ["herbal_medicine"],
+    "effects": {
+      "war_survival": { "chance": 0.20, "hp_percent": 0.05 }
+    },
+    "flavor_text": "Trained hands stitch what battle has torn."
   },
   {
     "id": "gunpowder",
@@ -602,6 +626,18 @@
       "economic_bonus": { "population_growth": 0.25 }
     },
     "flavor_text": "Clean water saves more lives than any army."
+  },
+  {
+    "id": "modern_medicine",
+    "name": "Modern Medicine",
+    "age": 4,
+    "cost": { "knowledge": 400, "gold": 200 },
+    "research_time": 75,
+    "prerequisites": ["surgery"],
+    "effects": {
+      "war_survival": { "chance": 0.30, "hp_percent": 0.10 }
+    },
+    "flavor_text": "Anaesthesia and antiseptics transform the field hospital."
   },
   {
     "id": "pasteurization",

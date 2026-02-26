@@ -13,5 +13,28 @@
     "stabilize_hp": 1,
     "stabilize_cooldown_seconds": 60,
     "villager_pandemic_death_immunity": true
-  }
+  },
+  "survival_cooldown": 30.0,
+  "tiers": [
+    {
+      "tech_id": "herbal_medicine",
+      "chance": 0.10,
+      "hp_percent": 0.0,
+      "hp_flat": 1
+    },
+    {
+      "tech_id": "surgery",
+      "chance": 0.20,
+      "hp_percent": 0.05,
+      "hp_flat": 0
+    },
+    {
+      "tech_id": "modern_medicine",
+      "chance": 0.30,
+      "hp_percent": 0.10,
+      "hp_flat": 0
+    }
+  ],
+  "flash_color": [0.2, 1.0, 0.2, 0.8],
+  "flash_duration": 0.5
 }

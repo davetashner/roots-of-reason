@@ -78,6 +78,7 @@ var _formation_speed_override: float = 0.0
 
 var _is_dead: bool = false
 var _last_attacker: Node2D = null
+var _war_survival: Node = null
 
 
 func _ready() -> void:
@@ -823,12 +824,21 @@ func _build_target_stats_dict(target: Node2D) -> Dictionary:
 func take_damage(amount: int, attacker: Node2D) -> void:
 	if _is_dead:
 		return
-	hp -= amount
-	if hp < 0:
-		hp = 0
 	_last_attacker = attacker
+	# Check war survival before applying lethal damage
+	if hp > 0 and amount >= hp and _war_survival != null:
+		if _war_survival.roll_survival(self, amount):
+			queue_redraw()
+			_try_retaliate(attacker)
+			return
+	hp = maxi(0, hp - amount)
 	queue_redraw()
-	# Retaliate if defensive stance and idle
+	_try_retaliate(attacker)
+	if hp <= 0:
+		_die()
+
+
+func _try_retaliate(attacker: Node2D) -> void:
 	var stance_cfg := _get_stance_config()
 	if (
 		stance_cfg.get("retaliate", false)
@@ -840,9 +850,6 @@ func take_damage(amount: int, attacker: Node2D) -> void:
 		_leash_origin = position
 		_combat_state = CombatState.PURSUING
 		move_to(attacker.global_position)
-	# Die if HP depleted
-	if hp <= 0:
-		_die()
 
 
 func _die() -> void:

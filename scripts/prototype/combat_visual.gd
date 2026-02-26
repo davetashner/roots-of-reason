@@ -48,6 +48,13 @@ static func play_attack_flash(node: Node2D, config: Dictionary) -> void:
 	tween.tween_property(node, "scale", Vector2(1.0, 1.0), duration * 0.5)
 
 
+static func play_survival_flash(node: Node2D, flash_color: Color, duration: float) -> void:
+	var original_modulate: Color = node.modulate
+	var tween := node.create_tween()
+	tween.tween_property(node, "modulate", flash_color, duration * 0.25)
+	tween.tween_property(node, "modulate", original_modulate, duration * 0.75)
+
+
 static func play_death_animation(node: Node2D, config: Dictionary) -> Tween:
 	var duration: float = float(config.get("death_fade_duration", 0.5))
 	if duration <= 0.0:
