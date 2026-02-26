@@ -164,8 +164,14 @@ func test_tooltip_contains_cost_info() -> void:
 func test_tooltip_contains_prereq_info() -> void:
 	var tm := _create_tech_manager()
 	_give_resources(0, 0)
+	# Research stone_tools so animal_husbandry becomes visible with full tooltip
+	_give_resources(0, 1000)
+	tm.start_research(0, "stone_tools")
+	tm._research_progress[0] = 9999.0
+	tm._complete_research(0)
+	_give_resources(0, 0)
 	var viewer := _create_viewer(tm)
-	# animal_husbandry requires stone_tools
+	# animal_husbandry requires stone_tools (now researched) — visible with prereq info
 	var btn: Button = viewer.get_tech_button("animal_husbandry")
 	var tooltip: String = btn.tooltip_text
 	assert_str(tooltip).contains("Requires:")
