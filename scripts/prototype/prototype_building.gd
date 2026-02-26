@@ -39,6 +39,8 @@ var _garrison_arrow_timer: float = 0.0
 var _garrison_config: Dictionary = {}
 var _pending_garrison_names: Array[String] = []
 
+var _dog_los_bonus: int = 0
+
 var _combat_config: Dictionary = {}
 var _construction_alpha: float = 0.4
 var _bar_width: float = 40.0
@@ -186,6 +188,14 @@ func get_entity_category() -> String:
 	if under_construction:
 		return "construction_site"
 	return entity_category
+
+
+func set_dog_los_bonus(bonus: int) -> void:
+	_dog_los_bonus = bonus
+
+
+func get_los() -> int:
+	return _dog_los_bonus
 
 
 func apply_build_work(amount: float) -> void:
@@ -506,6 +516,7 @@ func save_state() -> Dictionary:
 		"ruins_timer": _ruins_timer,
 		"garrison_capacity": garrison_capacity,
 		"garrisoned_units": garrisoned_names,
+		"dog_los_bonus": _dog_los_bonus,
 	}
 
 
@@ -528,6 +539,7 @@ func load_state(data: Dictionary) -> void:
 	_is_ruins = bool(data.get("is_ruins", false))
 	_ruins_timer = float(data.get("ruins_timer", 0.0))
 	garrison_capacity = int(data.get("garrison_capacity", 0))
+	_dog_los_bonus = int(data.get("dog_los_bonus", 0))
 	_pending_garrison_names.clear()
 	var g_names: Array = data.get("garrisoned_units", [])
 	for n in g_names:
