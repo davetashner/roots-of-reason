@@ -22,6 +22,7 @@ const VictoryManagerScript := preload("res://scripts/prototype/victory_manager.g
 const KnowledgeBurningVFXScript := preload("res://scripts/prototype/knowledge_burning_vfx.gd")
 const WarSurvivalScript := preload("res://scripts/prototype/war_survival.gd")
 const VictoryScreenScript := preload("res://scripts/ui/victory_screen.gd")
+const TechTreeViewerScript := preload("res://scripts/ui/tech_tree_viewer.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -50,6 +51,7 @@ var _victory_manager: Node = null
 var _war_survival: Node = null
 var _victory_screen: PanelContainer = null
 var _knowledge_burning_vfx: Node = null
+var _tech_tree_viewer: PanelContainer = null
 
 
 func _ready() -> void:
@@ -211,9 +213,13 @@ func _setup_building_placer() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey:
 		var key := event as InputEventKey
-		if key.pressed and not key.echo and key.keycode == KEY_B:
-			if _building_placer != null and not _building_placer.is_active():
-				_building_placer.start_placement("house", 0)
+		if key.pressed and not key.echo:
+			if key.keycode == KEY_B:
+				if _building_placer != null and not _building_placer.is_active():
+					_building_placer.start_placement("house", 0)
+			elif key.keycode == KEY_T:
+				if _tech_tree_viewer != null:
+					_tech_tree_viewer.toggle_visible()
 
 
 func _setup_units() -> void:
@@ -804,6 +810,16 @@ func _setup_hud() -> void:
 	_victory_screen.name = "VictoryScreen"
 	_victory_screen.set_script(VictoryScreenScript)
 	victory_layer.add_child(_victory_screen)
+	# Tech tree viewer overlay
+	var tech_viewer_layer := CanvasLayer.new()
+	tech_viewer_layer.name = "TechTreeViewerLayer"
+	tech_viewer_layer.layer = 15
+	add_child(tech_viewer_layer)
+	_tech_tree_viewer = PanelContainer.new()
+	_tech_tree_viewer.name = "TechTreeViewer"
+	_tech_tree_viewer.set_script(TechTreeViewerScript)
+	tech_viewer_layer.add_child(_tech_tree_viewer)
+	_tech_tree_viewer.setup(_tech_manager, 0)
 
 
 func _setup_resource_bar() -> void:
