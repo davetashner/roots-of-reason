@@ -5,14 +5,16 @@
       "enemy_building": "attack",
       "own_building": "garrison",
       "resource_node": "move",
-      "construction_site": "move"
+      "construction_site": "move",
+      "wild_fauna": "attack"
     },
     "villager": {
       "enemy_unit": "attack",
       "enemy_building": "attack",
       "own_building": "garrison",
       "resource_node": "gather",
-      "construction_site": "build"
+      "construction_site": "build",
+      "wild_fauna": "attack"
     }
   },
   "cursor_labels": {
@@ -22,7 +24,8 @@
     "move":     { "text": "[MOV]", "color": [1.0, 1.0, 0.0, 1.0] },
     "build":       { "text": "[BLD]",   "color": [0.9, 0.6, 0.1, 1.0] },
     "attack_move": { "text": "[A-MOV]", "color": [1.0, 0.4, 0.0, 1.0] },
-    "patrol":      { "text": "[PAT]",   "color": [0.4, 0.4, 1.0, 1.0] }
+    "patrol":      { "text": "[PAT]",   "color": [0.4, 0.4, 1.0, 1.0] },
+    "feed":        { "text": "[FEED]",  "color": [0.8, 0.6, 0.2, 1.0] }
   },
   "click_marker_colors": {
     "attack":   [1.0, 0.2, 0.2, 1.0],
@@ -31,6 +34,7 @@
     "move":     [1.0, 1.0, 0.0, 1.0],
     "build":       [0.9, 0.6, 0.1, 1.0],
     "attack_move": [1.0, 0.4, 0.0, 1.0],
-    "patrol":      [0.4, 0.4, 1.0, 1.0]
+    "patrol":      [0.4, 0.4, 1.0, 1.0],
+    "feed":        [0.8, 0.6, 0.2, 1.0]
   }
 }
