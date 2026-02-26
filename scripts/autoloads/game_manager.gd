@@ -149,6 +149,16 @@ func get_player_civilization(player_id: int) -> String:
 	return player_civilizations.get(player_id, "")
 
 
+func reset_game_state() -> void:
+	game_time = 0.0
+	game_speed = _speed_steps[0] if not _speed_steps.is_empty() else 1.0
+	_speed_index = 0
+	is_paused = false
+	current_age = 0
+	player_civilizations.clear()
+	ai_difficulty = "normal"
+
+
 func save_state() -> Dictionary:
 	return {
 		"game_time": game_time,

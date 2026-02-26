@@ -122,6 +122,11 @@ func apply_starting_bonuses(player_id: int) -> void:
 			ResourceManager.add_resource(player_id, res_type, amount)
 
 
+func reset() -> void:
+	_active_civs.clear()
+	_civ_cache.clear()
+
+
 func save_state() -> Dictionary:
 	return {"active_civs": _active_civs.duplicate()}
 

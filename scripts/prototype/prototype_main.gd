@@ -69,7 +69,11 @@ func _ready() -> void:
 	_setup_input()
 	_setup_building_placer()
 	_setup_population()
-	_show_civ_selection()
+	# If civs are pre-set (launched from menu), skip selection and start directly
+	if GameManager.get_player_civilization(0) != "":
+		_start_game()
+	else:
+		_show_civ_selection()
 
 
 func _show_civ_selection() -> void:

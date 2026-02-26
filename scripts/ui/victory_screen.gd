@@ -109,4 +109,7 @@ func _on_continue_pressed() -> void:
 
 func _on_menu_pressed() -> void:
 	menu_pressed.emit()
-	print("Return to menu requested (not yet implemented)")
+	GameManager.reset_game_state()
+	ResourceManager.reset()
+	CivBonusManager.reset()
+	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
