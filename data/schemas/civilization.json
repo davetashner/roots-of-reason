@@ -27,7 +27,8 @@
     },
     "unique_techs": {
       "type": "array",
-      "items": { "type": "object" }
+      "items": { "type": "string" },
+      "description": "Tech IDs exclusive to this civilization (defined in tech_tree.json with civ_exclusive field)"
     }
   },
   "additionalProperties": false
