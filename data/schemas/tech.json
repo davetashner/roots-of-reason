@@ -18,6 +18,7 @@
     "flavor_text": { "type": "string" },
     "singularity_chain": { "type": "boolean" },
     "public_alert": { "type": "boolean" },
+    "victory_tech": { "type": "boolean" },
     "war_spillover": { "type": "object" },
     "pioneer_bonus": {
       "type": "object",
