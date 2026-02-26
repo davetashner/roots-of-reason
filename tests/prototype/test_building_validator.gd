@@ -196,3 +196,114 @@ func test_unknown_constraint_passes_with_warning() -> void:
 	var pf := _create_pathfinder(20, grid)
 	# Unknown constraint should pass (with a warning)
 	assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "near_volcano")).is_true()
+
+
+# -- Water-aware mock map --
+
+
+class WaterMockMap:
+	extends Node2D
+	var _tile_grid: Dictionary = {}
+	var _river_tiles: Dictionary = {}
+	var _map_size: int = 20
+
+	func get_terrain_at(grid_pos: Vector2i) -> String:
+		return _tile_grid.get(grid_pos, "")
+
+	func get_map_size() -> int:
+		return _map_size
+
+	func is_river(grid_pos: Vector2i) -> bool:
+		return _river_tiles.has(grid_pos)
+
+	func is_buildable(grid_pos: Vector2i) -> bool:
+		var terrain := get_terrain_at(grid_pos)
+		return terrain != "water" and terrain != "shallows" and terrain != "deep_water"
+
+
+func _create_water_map(grid: Dictionary) -> Node2D:
+	var map := WaterMockMap.new()
+	map._tile_grid = grid
+	return auto_free(map)
+
+
+# -- Placement constraint: adjacent_to_water --
+
+
+func test_valid_placement_adjacent_to_water_cardinal() -> void:
+	var grid := _build_grass_grid(20)
+	grid[Vector2i(5, 4)] = "water"
+	var map := _create_water_map(grid)
+	var pf := _create_pathfinder(20, grid)
+	# Shore tile at (5,5) with water to the north
+	(
+		assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "adjacent_to_water"))
+		. is_true()
+	)
+
+
+func test_valid_placement_adjacent_to_shallows_diagonal() -> void:
+	var grid := _build_grass_grid(20)
+	grid[Vector2i(6, 6)] = "shallows"
+	var map := _create_water_map(grid)
+	var pf := _create_pathfinder(20, grid)
+	# Shore tile at (5,5) with shallows to SE
+	(
+		assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "adjacent_to_water"))
+		. is_true()
+	)
+
+
+func test_invalid_placement_no_water_nearby() -> void:
+	var grid := _build_grass_grid(20)
+	grid[Vector2i(0, 0)] = "water"
+	var map := _create_water_map(grid)
+	var pf := _create_pathfinder(20, grid)
+	# No water adjacent to (10,10)
+	(
+		assert_bool(
+			BuildingValidator.is_placement_valid(Vector2i(10, 10), Vector2i(1, 1), map, pf, "adjacent_to_water")
+		)
+		. is_false()
+	)
+
+
+func test_dock_footprint_on_water_fails() -> void:
+	var grid := _build_grass_grid(20)
+	# Place water at one of the dock's footprint cells
+	grid[Vector2i(5, 5)] = "water"
+	grid[Vector2i(5, 4)] = "water"
+	var map := _create_water_map(grid)
+	var pf := _create_pathfinder(20, grid)
+	# 1x1 at (5,5) is water — unbuildable, fails before constraint check
+	(
+		assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "adjacent_to_water"))
+		. is_false()
+	)
+
+
+func test_dock_footprint_shore_with_deep_water_neighbor() -> void:
+	var grid := _build_grass_grid(20)
+	grid[Vector2i(5, 4)] = "deep_water"
+	var map := _create_water_map(grid)
+	var pf := _create_pathfinder(20, grid)
+	# Shore at (5,5) with deep_water neighbor to the north
+	(
+		assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "adjacent_to_water"))
+		. is_true()
+	)
+
+
+func test_adjacent_to_river_does_not_satisfy_adjacent_to_water() -> void:
+	var grid := _build_grass_grid(20)
+	# Only river nearby, no water/shallows/deep_water
+	grid[Vector2i(5, 4)] = "river"
+	var map := WaterMockMap.new()
+	map._tile_grid = grid
+	map._river_tiles[Vector2i(5, 4)] = true
+	auto_free(map)
+	var pf := _create_pathfinder(20, grid)
+	(
+		assert_bool(BuildingValidator.is_placement_valid(Vector2i(5, 5), Vector2i(1, 1), map, pf, "adjacent_to_water"))
+		. is_false()
+	)

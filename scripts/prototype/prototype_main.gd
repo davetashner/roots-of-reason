@@ -732,6 +732,12 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 	var spawn_grid: Vector2i = Vector2i.ZERO
 	if "grid_pos" in building:
 		spawn_grid = building.grid_pos + offset
+	# Naval units spawn on adjacent water tile instead of land
+	var unit_stats: Dictionary = DataLoader.get_unit_stats(resolved_type)
+	if unit_stats.get("movement_type", "") == "water" and _map_node != null:
+		var naval_spawn := _find_naval_spawn_point(building)
+		if naval_spawn != Vector2i(-1, -1):
+			spawn_grid = naval_spawn
 	unit.position = IsoUtils.grid_to_screen(Vector2(spawn_grid))
 	add_child(unit)
 	unit._scene_root = self
@@ -999,6 +1005,37 @@ func _on_pause_menu_quit_to_desktop() -> void:
 func _on_minimap_move_command(world_pos: Vector2) -> void:
 	if _input_handler != null and _input_handler.has_method("_move_selected"):
 		_input_handler._move_selected(world_pos)
+
+
+func _find_naval_spawn_point(building: Node2D) -> Vector2i:
+	if _map_node == null or not _map_node.has_method("get_terrain_at"):
+		return Vector2i(-1, -1)
+	var footprint := Vector2i(1, 1)
+	if "footprint" in building:
+		footprint = building.footprint
+	var origin := Vector2i.ZERO
+	if "grid_pos" in building:
+		origin = building.grid_pos
+	var cells := BuildingValidator.get_footprint_cells(origin, footprint)
+	var water_terrains: Array[String] = ["water", "shallows", "deep_water"]
+	var directions: Array[Vector2i] = [
+		Vector2i(0, -1),
+		Vector2i(1, 0),
+		Vector2i(0, 1),
+		Vector2i(-1, 0),
+		Vector2i(-1, -1),
+		Vector2i(1, -1),
+		Vector2i(-1, 1),
+		Vector2i(1, 1),
+	]
+	for cell in cells:
+		for dir in directions:
+			var neighbor := cell + dir
+			if neighbor in cells:
+				continue
+			if _map_node.get_terrain_at(neighbor) in water_terrains:
+				return neighbor
+	return Vector2i(-1, -1)
 
 
 func _get_player_start_position() -> Vector2i:

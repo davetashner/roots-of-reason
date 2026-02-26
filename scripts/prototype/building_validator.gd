@@ -59,6 +59,8 @@ static func _check_placement_constraint(cells: Array[Vector2i], map_node: Node, 
 	match constraint:
 		"adjacent_to_river":
 			return _has_adjacent_river(cells, map_node)
+		"adjacent_to_water":
+			return _has_adjacent_water(cells, map_node)
 		_:
 			push_warning("BuildingValidator: unknown placement_constraint '%s'" % constraint)
 			return true
@@ -81,5 +83,27 @@ static func _has_adjacent_river(cells: Array[Vector2i], map_node: Node) -> bool:
 		for dir in directions:
 			var neighbor := cell + dir
 			if map_node.is_river(neighbor):
+				return true
+	return false
+
+
+static func _has_adjacent_water(cells: Array[Vector2i], map_node: Node) -> bool:
+	if map_node == null or not map_node.has_method("get_terrain_at"):
+		return false
+	var water_terrains: Array[String] = ["water", "shallows", "deep_water"]
+	var directions: Array[Vector2i] = [
+		Vector2i(-1, -1),
+		Vector2i(0, -1),
+		Vector2i(1, -1),
+		Vector2i(-1, 0),
+		Vector2i(1, 0),
+		Vector2i(-1, 1),
+		Vector2i(0, 1),
+		Vector2i(1, 1),
+	]
+	for cell in cells:
+		for dir in directions:
+			var neighbor := cell + dir
+			if map_node.get_terrain_at(neighbor) in water_terrains:
 				return true
 	return false

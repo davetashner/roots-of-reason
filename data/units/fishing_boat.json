@@ -1,0 +1,21 @@
+{
+  "name": "Fishing Boat",
+  "hp": 45,
+  "attack": 0,
+  "defense": 1,
+  "speed": 1.6,
+  "range": 0,
+  "los": 5,
+  "population_cost": 1,
+  "train_time": 25,
+  "train_cost": { "wood": 75 },
+  "bonus_vs": {},
+  "armor_type": "none",
+  "attack_speed": 0,
+  "attack_type": "melee",
+  "movement_type": "water",
+  "unit_category": "civilian",
+  "default_stance": "defensive",
+  "carry_capacity": 15,
+  "gather_rates": { "food": 0.5 }
+}
