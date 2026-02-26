@@ -5,6 +5,8 @@ extends GdUnitTestSuite
 const UNIQUE_TECH_IDS: Array[String] = [
 	"cuneiform_writing",
 	"hanging_gardens_legacy",
+	"roman_roads",
+	"testudo",
 ]
 
 
@@ -139,12 +141,12 @@ func test_unique_techs_have_costs() -> void:
 		assert_dict(data["cost"]).is_not_empty()
 
 
-# -- Total tech count (84 base + 2 unique = 86) --
+# -- Total tech count (84 base + 4 unique = 88) --
 
 
-func test_total_tech_count_is_86() -> void:
+func test_total_tech_count_is_88() -> void:
 	var data: Variant = DataLoader.load_json("res://data/tech/tech_tree.json")
-	assert_int(data.size()).is_equal(86)
+	assert_int(data.size()).is_equal(88)
 
 
 # -- Mesopotamia civ data references unique techs --
@@ -157,3 +159,67 @@ func test_mesopotamia_civ_has_unique_techs_array() -> void:
 	assert_int(techs.size()).is_equal(2)
 	assert_bool("cuneiform_writing" in techs).is_true()
 	assert_bool("hanging_gardens_legacy" in techs).is_true()
+
+
+# -- Rome unique techs --
+
+
+func test_roman_roads_exists() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("roman_roads")
+	assert_dict(data).is_not_empty()
+	assert_str(data.get("id", "")).is_equal("roman_roads")
+
+
+func test_testudo_exists() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("testudo")
+	assert_dict(data).is_not_empty()
+	assert_str(data.get("id", "")).is_equal("testudo")
+
+
+func test_roman_roads_is_iron_age() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("roman_roads")
+	assert_int(int(data["age"])).is_equal(2)
+
+
+func test_testudo_is_classical_age() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("testudo")
+	assert_int(int(data["age"])).is_equal(3)
+
+
+func test_roman_roads_has_speed_bonus() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("roman_roads")
+	assert_float(float(data["effects"]["unit_speed_bonus"])).is_equal_approx(0.15, 0.001)
+
+
+func test_testudo_has_ranged_defense_bonus() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("testudo")
+	assert_float(float(data["effects"]["ranged_defense_bonus"])).is_equal_approx(0.20, 0.001)
+
+
+func test_roman_roads_is_rome_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("roman_roads")
+	assert_str(data.get("civ_exclusive", "")).is_equal("rome")
+
+
+func test_testudo_is_rome_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("testudo")
+	assert_str(data.get("civ_exclusive", "")).is_equal("rome")
+
+
+func test_roman_roads_requires_engineering() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("roman_roads")
+	assert_bool("engineering" in data["prerequisites"]).is_true()
+
+
+func test_testudo_requires_iron_working() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("testudo")
+	assert_bool("iron_working" in data["prerequisites"]).is_true()
+
+
+func test_rome_civ_has_unique_techs_array() -> void:
+	var civ_data: Dictionary = DataLoader.get_civ_data("rome")
+	assert_bool(civ_data.has("unique_techs")).is_true()
+	var techs: Array = civ_data["unique_techs"]
+	assert_int(techs.size()).is_equal(2)
+	assert_bool("roman_roads" in techs).is_true()
+	assert_bool("testudo" in techs).is_true()

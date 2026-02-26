@@ -16,6 +16,6 @@
     "defense_bonus": 3,
     "shield_wall": true
   },
-  "unique_techs": [],
+  "unique_techs": ["roman_roads", "testudo"],
   "starting_bonuses": {}
 }
