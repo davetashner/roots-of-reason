@@ -14,6 +14,8 @@ const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_
 const WolfAIScript := preload("res://scripts/fauna/wolf_ai.gd")
 const DogAIScript := preload("res://scripts/fauna/dog_ai.gd")
 const RiverTransportScript := preload("res://scripts/prototype/river_transport.gd")
+const TradeManagerScript := preload("res://scripts/prototype/trade_manager.gd")
+const TradeCartAIScript := preload("res://scripts/prototype/trade_cart_ai.gd")
 const NotificationPanelScript := preload("res://scripts/ui/notification_panel.gd")
 const RiverOverlayScript := preload("res://scripts/ui/river_overlay.gd")
 
@@ -37,6 +39,7 @@ var _unit_upgrade_manager: Node = null
 var _corruption_manager: Node = null
 var _fog_layer: Node = null
 var _river_transport: Node = null
+var _trade_manager: Node = null
 var _notification_panel: Control = null
 var _river_overlay: Node2D = null
 
@@ -56,6 +59,7 @@ func _ready() -> void:
 	_setup_tech()
 	_setup_corruption()
 	_setup_river_transport()
+	_setup_trade()
 	_setup_ai()
 	_setup_hud()
 	# Initial visibility update after all units are placed
@@ -392,6 +396,14 @@ func _setup_river_transport() -> void:
 	_river_transport.barge_destroyed_with_resources.connect(_on_barge_destroyed_with_resources)
 
 
+func _setup_trade() -> void:
+	_trade_manager = Node.new()
+	_trade_manager.name = "TradeManager"
+	_trade_manager.set_script(TradeManagerScript)
+	add_child(_trade_manager)
+	_trade_manager.setup(_building_placer)
+
+
 func _on_barge_destroyed_with_resources(barge: Node2D, resources: Dictionary) -> void:
 	if _notification_panel == null:
 		return
@@ -559,6 +571,12 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 		_population_manager.register_unit(unit, owner_id)
 	if _unit_upgrade_manager != null:
 		_unit_upgrade_manager.apply_upgrades_to_unit(unit, owner_id)
+	# Attach trade AI for trade carts and merchant ships
+	if unit_type == "trade_cart" or unit_type == "merchant_ship":
+		var trade_ai := Node.new()
+		trade_ai.name = "TradeCartAI"
+		trade_ai.set_script(TradeCartAIScript)
+		unit.add_child(trade_ai)
 
 
 func _on_resource_depleted(node: Node2D) -> void:
@@ -640,7 +658,7 @@ func _setup_hud() -> void:
 	_info_panel.name = "InfoPanelWidget"
 	_info_panel.set_script(load("res://scripts/ui/info_panel.gd"))
 	info_panel_layer.add_child(_info_panel)
-	_info_panel.setup(_input_handler, _target_detector, _river_transport)
+	_info_panel.setup(_input_handler, _target_detector, _river_transport, _trade_manager)
 	# Command panel
 	var cmd_panel_layer := CanvasLayer.new()
 	cmd_panel_layer.name = "CommandPanel"
@@ -650,7 +668,7 @@ func _setup_hud() -> void:
 	cmd_panel.name = "CommandPanelWidget"
 	cmd_panel.set_script(load("res://scripts/ui/command_panel.gd"))
 	cmd_panel_layer.add_child(cmd_panel)
-	cmd_panel.setup(_input_handler, _building_placer)
+	cmd_panel.setup(_input_handler, _building_placer, _trade_manager)
 	# Cursor overlay for command context labels
 	_cursor_overlay = CanvasLayer.new()
 	_cursor_overlay.name = "CursorOverlay"

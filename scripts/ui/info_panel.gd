@@ -16,6 +16,7 @@ var _is_multi: bool = false
 var _hovered_entity: Node = null
 var _is_hovering_resource: bool = false
 var _is_hovering_wolf: bool = false
+var _trade_manager: Node = null
 
 # Config loaded from data/settings/info_panel.json
 var _hp_green_threshold: float = 0.6
@@ -132,10 +133,16 @@ func _build_ui() -> void:
 	vbox.add_child(_stats_label)
 
 
-func setup(input_handler: Node, target_detector: Node = null, river_transport: Node = null) -> void:
+func setup(
+	input_handler: Node,
+	target_detector: Node = null,
+	river_transport: Node = null,
+	trade_manager: Node = null,
+) -> void:
 	_input_handler = input_handler
 	_target_detector = target_detector
 	_river_transport = river_transport
+	_trade_manager = trade_manager
 
 
 func show_unit(unit: Node2D) -> void:
@@ -201,6 +208,16 @@ func show_building(building: Node2D) -> void:
 				var barges: int = dock_info.get("active_barge_count", 0)
 				var countdown: float = dock_info.get("time_until_next_dispatch", 0.0)
 				state_text = "Queued: %d  Barges: %d  Next: %.0fs" % [queued, barges, countdown]
+		# Market trade info
+		if _trade_manager != null and building.building_name == "market":
+			var market_info: Dictionary = _trade_manager.get_market_info(building)
+			if not market_info.is_empty():
+				var rates: Dictionary = market_info.get("rates", {})
+				var carts: int = market_info.get("active_cart_count", 0)
+				var rate_parts: Array[String] = []
+				for res_name: String in rates:
+					rate_parts.append("%s: %d" % [res_name.capitalize(), int(rates[res_name])])
+				state_text = ", ".join(rate_parts) + "  Carts: %d" % carts
 		_stats_label.text = state_text
 	_update_building_hp(building)
 

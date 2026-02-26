@@ -7,7 +7,7 @@
   "population_bonus": 0,
   "is_drop_off": true,
   "drop_off_types": ["food"],
-  "units_produced": ["fishing_boat", "transport_ship", "war_galley"],
+  "units_produced": ["fishing_boat", "transport_ship", "war_galley", "merchant_ship"],
   "age_required": 1,
   "placement_constraint": "adjacent_to_water"
 }

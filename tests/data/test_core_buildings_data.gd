@@ -120,9 +120,9 @@ func test_market_has_trade_rates() -> void:
 	assert_bool(rates.has("gold")).is_true()
 
 
-func test_market_age_required_is_two() -> void:
+func test_market_age_required_is_one() -> void:
 	var stats := DataLoader.get_building_stats("market")
-	assert_float(stats["age_required"]).is_equal(2.0)
+	assert_float(stats["age_required"]).is_equal(1.0)
 
 
 # --- Library ---
@@ -184,7 +184,7 @@ func test_age_requirements_correct() -> void:
 		"town_center": 0,
 		"barracks": 1,
 		"dock": 1,
-		"market": 2,
+		"market": 1,
 		"library": 2,
 		"wonder": 5,
 	}

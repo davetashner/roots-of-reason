@@ -8,6 +8,7 @@ class StubUnit:
 	extends Node2D
 	var selected: bool = false
 	var unit_type: String = "villager"
+	var building_name: String = ""
 	var owner_id: int = 0
 
 	func select() -> void:
@@ -190,3 +191,104 @@ func test_save_load_state() -> void:
 	panel._player_id = 0
 	panel.load_state(state)
 	assert_that(panel._player_id).is_equal(2)
+
+
+func test_building_name_lookup_returns_market_commands() -> void:
+	var panel := _create_panel()
+	var unit := StubUnit.new()
+	unit.building_name = "market"
+	unit.selected = true
+	add_child(unit)
+	auto_free(unit)
+	var commands: Array = panel._get_commands_for_selection([unit])
+	assert_that(commands.size()).is_greater(0)
+	var ids: Array[String] = []
+	for cmd: Dictionary in commands:
+		ids.append(cmd.get("id", ""))
+	assert_that(ids).contains(["sell_food"])
+
+
+class StubTradeManager:
+	extends Node
+	var last_sell_resource: String = ""
+	var last_sell_amount: int = 0
+	var last_player_id: int = -1
+
+	func execute_exchange(player_id: int, sell_resource: String, amount: int) -> bool:
+		last_player_id = player_id
+		last_sell_resource = sell_resource
+		last_sell_amount = amount
+		return true
+
+
+func test_trade_action_fires_execute_exchange() -> void:
+	var panel := _create_panel()
+	var tm := StubTradeManager.new()
+	add_child(tm)
+	auto_free(tm)
+	var handler := StubInputHandler.new()
+	add_child(handler)
+	auto_free(handler)
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	panel.setup(handler, placer, tm)
+	var command := {
+		"id": "sell_food",
+		"action": "trade",
+		"sell_resource": "food",
+		"sell_amount": 100,
+	}
+	panel._on_command_pressed(command)
+	assert_that(tm.last_sell_resource).is_equal("food")
+	assert_that(tm.last_sell_amount).is_equal(100)
+
+
+func test_trade_affordability_with_resources_returns_true() -> void:
+	var panel := _create_panel()
+	(
+		ResourceManager
+		. init_player(
+			0,
+			{
+				ResourceManager.ResourceType.FOOD: 200,
+				ResourceManager.ResourceType.WOOD: 0,
+				ResourceManager.ResourceType.STONE: 0,
+				ResourceManager.ResourceType.GOLD: 0,
+				ResourceManager.ResourceType.KNOWLEDGE: 0,
+			}
+		)
+	)
+	var command := {
+		"id": "sell_food",
+		"action": "trade",
+		"sell_resource": "food",
+		"sell_amount": 100,
+	}
+	var result: bool = panel._check_affordability(command)
+	assert_that(result).is_true()
+
+
+func test_trade_affordability_insufficient_returns_false() -> void:
+	var panel := _create_panel()
+	(
+		ResourceManager
+		. init_player(
+			0,
+			{
+				ResourceManager.ResourceType.FOOD: 50,
+				ResourceManager.ResourceType.WOOD: 0,
+				ResourceManager.ResourceType.STONE: 0,
+				ResourceManager.ResourceType.GOLD: 0,
+				ResourceManager.ResourceType.KNOWLEDGE: 0,
+			}
+		)
+	)
+	var command := {
+		"id": "sell_food",
+		"action": "trade",
+		"sell_resource": "food",
+		"sell_amount": 100,
+	}
+	var result: bool = panel._check_affordability(command)
+	assert_that(result).is_false()

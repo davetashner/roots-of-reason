@@ -12,6 +12,7 @@ const RESOURCE_NAME_TO_TYPE: Dictionary = {
 
 var _input_handler: Node = null
 var _building_placer: Node = null
+var _trade_manager: Node = null
 var _grid: GridContainer = null
 var _config: Dictionary = {}
 var _last_selection_hash: int = -1
@@ -64,9 +65,14 @@ func _setup_layout() -> void:
 	add_child(_grid)
 
 
-func setup(input_handler: Node, building_placer: Node) -> void:
+func setup(
+	input_handler: Node,
+	building_placer: Node,
+	trade_manager: Node = null,
+) -> void:
 	_input_handler = input_handler
 	_building_placer = building_placer
+	_trade_manager = trade_manager
 
 
 func _process(_delta: float) -> void:
@@ -113,14 +119,18 @@ func _get_commands_for_selection(units: Array) -> Array:
 	if units.is_empty():
 		return []
 	var commands_map: Dictionary = _config.get("commands", {})
-	# Determine the primary unit type
-	var unit_type: String = "default"
+	# Determine the primary lookup key — buildings use building_name, units use unit_type
+	var lookup_key: String = "default"
 	for unit in units:
-		if is_instance_valid(unit) and "unit_type" in unit:
-			unit_type = unit.unit_type
-			break
-	if commands_map.has(unit_type):
-		return commands_map[unit_type]
+		if is_instance_valid(unit):
+			if "building_name" in unit and unit.building_name != "":
+				lookup_key = unit.building_name
+				break
+			if "unit_type" in unit:
+				lookup_key = unit.unit_type
+				break
+	if commands_map.has(lookup_key):
+		return commands_map[lookup_key]
 	return commands_map.get("default", [])
 
 
@@ -176,6 +186,8 @@ func _on_command_pressed(command: Dictionary) -> void:
 			var building_name: String = command.get("building", "")
 			if building_name != "" and _building_placer != null:
 				_building_placer.start_placement(building_name, _player_id)
+		"trade":
+			_execute_trade(command)
 		"stop":
 			_issue_stop()
 		"hold":
@@ -200,10 +212,26 @@ func _issue_hold() -> void:
 			unit.hold_position()
 
 
+func _execute_trade(command: Dictionary) -> void:
+	if _trade_manager == null:
+		return
+	var sell_resource: String = command.get("sell_resource", "")
+	var sell_amount: int = int(command.get("sell_amount", 0))
+	if sell_resource == "" or sell_amount <= 0:
+		return
+	_trade_manager.execute_exchange(_player_id, sell_resource, sell_amount)
+
+
 func _check_affordability(command: Dictionary) -> bool:
 	var action: String = command.get("action", "")
-	if action != "build":
-		return true
+	if action == "build":
+		return _check_build_affordability(command)
+	if action == "trade":
+		return _check_trade_affordability(command)
+	return true
+
+
+func _check_build_affordability(command: Dictionary) -> bool:
 	var building_name: String = command.get("building", "")
 	if building_name == "":
 		return true
@@ -213,6 +241,18 @@ func _check_affordability(command: Dictionary) -> bool:
 	var raw_costs: Dictionary = stats.get("build_cost", {})
 	var costs: Dictionary = _parse_costs(raw_costs)
 	return ResourceManager.can_afford(_player_id, costs)
+
+
+func _check_trade_affordability(command: Dictionary) -> bool:
+	var sell_resource: String = command.get("sell_resource", "")
+	var sell_amount: int = int(command.get("sell_amount", 0))
+	if sell_resource == "" or sell_amount <= 0:
+		return true
+	if not RESOURCE_NAME_TO_TYPE.has(sell_resource):
+		return true
+	var res_type: int = RESOURCE_NAME_TO_TYPE[sell_resource]
+	var current: int = ResourceManager.get_amount(_player_id, res_type)
+	return current >= sell_amount
 
 
 func _update_button_states() -> void:

@@ -498,12 +498,18 @@ func get_selected_count() -> int:
 
 
 func _filter_barges(units: Array[Node]) -> Array[Node]:
-	## Remove barge entities from a unit list — barges cannot receive move/context commands.
+	## Remove barges and auto-trading units from a unit list — they cannot
+	## receive manual move/context commands.
 	var result: Array[Node] = []
 	for unit in units:
 		if "entity_category" in unit:
 			var cat: String = unit.entity_category
 			if cat == "own_barge" or cat == "enemy_barge":
+				continue
+		# Filter out trade carts and merchant ships (driven by TradeCartAI)
+		if "unit_type" in unit:
+			var utype: String = unit.unit_type
+			if utype == "trade_cart" or utype == "merchant_ship":
 				continue
 		result.append(unit)
 	return result

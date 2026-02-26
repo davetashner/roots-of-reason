@@ -60,6 +60,9 @@ func start_placement(building_name: String, player_id: int = 0) -> bool:
 	_building_stats = _load_building_stats(building_name)
 	if _building_stats.is_empty():
 		return false
+	var age_req: int = int(_building_stats.get("age_required", 0))
+	if age_req > GameManager.current_age:
+		return false
 	var costs := _parse_costs(_building_stats.get("build_cost", {}))
 	if not ResourceManager.can_afford(_player_id, costs):
 		return false
