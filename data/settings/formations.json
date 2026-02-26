@@ -1,0 +1,5 @@
+{
+  "default_formation": "staggered",
+  "spacing": 40.0,
+  "speed_sync": true
+}

@@ -72,6 +72,9 @@ var _feed_reach: float = 128.0
 var _is_feeding: bool = false
 var _pending_feed_target_name: String = ""
 
+# Formation speed override — when > 0, caps get_move_speed()
+var _formation_speed_override: float = 0.0
+
 
 func _ready() -> void:
 	_target_pos = position
@@ -90,6 +93,24 @@ func get_stat(stat_name: String) -> float:
 	if stats == null:
 		return 0.0
 	return stats.get_stat(stat_name)
+
+
+func get_move_speed() -> float:
+	var base := MOVE_SPEED
+	var speed_stat := get_stat("speed")
+	if speed_stat > 0.0:
+		base = MOVE_SPEED * speed_stat
+	if _formation_speed_override > 0.0:
+		return minf(base, _formation_speed_override)
+	return base
+
+
+func set_formation_speed(speed: float) -> void:
+	_formation_speed_override = speed
+
+
+func clear_formation_speed() -> void:
+	_formation_speed_override = 0.0
 
 
 func _dl_unit_stats(id: String) -> Dictionary:
@@ -167,10 +188,11 @@ func _process(delta: float) -> void:
 				_moving = false
 				_path.clear()
 				_path_index = 0
+				clear_formation_speed()
 		else:
 			var direction := (_target_pos - position).normalized()
 			_facing = direction
-			position = position.move_toward(_target_pos, MOVE_SPEED * game_delta)
+			position = position.move_toward(_target_pos, get_move_speed() * game_delta)
 		queue_redraw()
 	_tick_build(game_delta)
 	_tick_gather(game_delta)
@@ -1066,6 +1088,7 @@ func save_state() -> Dictionary:
 		"is_feeding": _is_feeding,
 		"feed_timer": _feed_timer,
 		"gather_rate_multiplier": _gather_rate_multiplier,
+		"formation_speed_override": _formation_speed_override,
 	}
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
@@ -1117,6 +1140,7 @@ func load_state(data: Dictionary) -> void:
 	_is_feeding = bool(data.get("is_feeding", false))
 	_feed_timer = float(data.get("feed_timer", 0.0))
 	_gather_rate_multiplier = float(data.get("gather_rate_multiplier", 1.0))
+	_formation_speed_override = float(data.get("formation_speed_override", 0.0))
 	if data.has("stats"):
 		if stats == null:
 			stats = UnitStats.new()

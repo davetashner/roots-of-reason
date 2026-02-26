@@ -83,28 +83,40 @@ func find_path_world(from_world: Vector2, to_world: Vector2) -> Array[Vector2]:
 	return world_path
 
 
-func get_formation_targets(center: Vector2i, count: int) -> Array[Vector2i]:
+func get_formation_targets(
+	center: Vector2i,
+	count: int,
+	formation_type: int = -1,
+	facing: Vector2 = Vector2.RIGHT,
+) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	if count <= 0:
 		return result
-	# Try center first
-	if _is_valid_cell(center) and not _astar.is_point_solid(center):
-		result.append(center)
-	if result.size() >= count:
-		return result
-	# Spiral outward
-	var radius := 1
-	while result.size() < count and radius <= _map_size:
-		for dx in range(-radius, radius + 1):
-			for dy in range(-radius, radius + 1):
-				if abs(dx) != radius and abs(dy) != radius:
-					continue  # Only check the ring perimeter
-				var pos := center + Vector2i(dx, dy)
-				if _is_valid_cell(pos) and not _astar.is_point_solid(pos) and pos not in result:
-					result.append(pos)
-					if result.size() >= count:
-						return result
-		radius += 1
+	# Use FormationManager for shape computation
+	var fm := preload("res://scripts/prototype/formation_manager.gd").new()
+	if formation_type < 0:
+		formation_type = fm.FormationType.STAGGERED
+	var offsets: Array[Vector2] = fm.get_offsets(formation_type, count, facing)
+	# Convert pixel offsets to grid cell offsets and validate
+	for offset in offsets:
+		var grid_offset := Vector2i(roundi(offset.x / 64.0), roundi(offset.y / 64.0))
+		var pos := center + grid_offset
+		if _is_valid_cell(pos) and not _astar.is_point_solid(pos) and pos not in result:
+			result.append(pos)
+	# Fill remaining with spiral fallback if some slots were solid
+	if result.size() < count:
+		var radius := 1
+		while result.size() < count and radius <= _map_size:
+			for dx in range(-radius, radius + 1):
+				for dy in range(-radius, radius + 1):
+					if abs(dx) != radius and abs(dy) != radius:
+						continue
+					var pos := center + Vector2i(dx, dy)
+					if _is_valid_cell(pos) and not _astar.is_point_solid(pos) and pos not in result:
+						result.append(pos)
+						if result.size() >= count:
+							return result
+			radius += 1
 	return result
 
 

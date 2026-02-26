@@ -3,6 +3,8 @@ extends Node
 
 signal command_issued(units: Array[Node], command_type: String, target: Node, world_pos: Vector2)
 
+const FormationManagerScript := preload("res://scripts/prototype/formation_manager.gd")
+
 var _units: Array[Node] = []
 var _box_selecting: bool = false
 var _box_start: Vector2 = Vector2.ZERO
@@ -22,11 +24,14 @@ var _command_config: Dictionary = {}
 var _attack_move_mode: bool = false
 var _patrol_mode: bool = false
 var _patrol_first_point: Vector2 = Vector2.ZERO
+var _formation_manager: RefCounted = null
+var _formation_type: int = 0  # FormationManager.FormationType.STAGGERED
 
 
 func _ready() -> void:
 	_load_config()
 	_load_command_config()
+	_load_formation_config()
 	# Gather all units from parent scene
 	_refresh_units()
 	# Create a node for drawing selection box
@@ -60,6 +65,23 @@ func _load_command_config() -> void:
 			cfg = dl.get_settings("commands")
 	if not cfg.is_empty():
 		_command_config = cfg
+
+
+func _load_formation_config() -> void:
+	_formation_manager = FormationManagerScript.new()
+	var cfg: Dictionary = {}
+	if Engine.has_singleton("DataLoader"):
+		cfg = DataLoader.get_settings("formations")
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_settings"):
+			cfg = dl.get_settings("formations")
+	if cfg.is_empty():
+		return
+	_formation_manager.spacing = float(cfg.get("spacing", _formation_manager.spacing))
+	_formation_manager.speed_sync = bool(cfg.get("speed_sync", true))
+	var default_type: String = str(cfg.get("default_formation", "staggered"))
+	_formation_type = FormationManagerScript.type_from_string(default_type)
 
 
 func setup(
@@ -283,30 +305,65 @@ func _move_selected(world_pos: Vector2) -> void:
 	if selected.is_empty():
 		return
 	_show_click_marker(world_pos)
-	# Pathfinder-based movement with formation spread
+	# Compute formation offsets
+	var first_pos: Vector2 = (selected[0] as Node2D).global_position
+	var facing: Vector2 = (world_pos - first_pos).normalized()
+	if facing.length() < 0.1:
+		facing = Vector2.RIGHT
+	var fm: RefCounted = _formation_manager
+	if fm == null:
+		fm = FormationManagerScript.new()
+	var offsets: Array[Vector2] = fm.get_offsets(_formation_type, selected.size(), facing)
+	# Compute formation speed and apply
+	if fm.speed_sync and selected.size() > 1:
+		var group_speed: float = fm.get_formation_speed(selected)
+		for unit in selected:
+			if unit.has_method("set_formation_speed"):
+				unit.set_formation_speed(group_speed)
+	# Assign units to nearest slot (greedy)
+	var slot_positions: Array[Vector2] = []
+	for offset in offsets:
+		slot_positions.append(world_pos + offset)
+	var assignments: Array[Vector2] = _assign_slots(selected, slot_positions)
+	# Move each unit to its assigned slot
 	if _pathfinder != null and _pathfinder.has_method("find_path_world"):
-		var target_grid := IsoUtils.snap_to_grid(world_pos)
-		var targets: Array[Vector2i] = _pathfinder.get_formation_targets(target_grid, selected.size())
 		for i in selected.size():
-			var dest_world: Vector2
-			if i < targets.size():
-				dest_world = IsoUtils.grid_to_screen(Vector2(targets[i]))
-			else:
-				dest_world = world_pos
-			var path: Array[Vector2] = _pathfinder.find_path_world(selected[i].global_position, dest_world)
+			var dest: Vector2 = assignments[i]
+			var unit_pos: Vector2 = (selected[i] as Node2D).global_position
+			var path: Array[Vector2] = _pathfinder.find_path_world(unit_pos, dest)
 			if path.size() > 0 and selected[i].has_method("follow_path"):
 				selected[i].follow_path(path)
 			elif selected[i].has_method("move_to"):
-				selected[i].move_to(dest_world)
+				selected[i].move_to(dest)
 		return
-	# Fallback: direct movement with circular spread
+	# Fallback: direct movement
 	for i in selected.size():
-		var offset := Vector2.ZERO
-		if selected.size() > 1:
-			var angle := TAU * i / selected.size()
-			offset = Vector2(cos(angle), sin(angle)) * 20.0
 		if selected[i].has_method("move_to"):
-			selected[i].move_to(world_pos + offset)
+			selected[i].move_to(assignments[i])
+
+
+func _assign_slots(units: Array[Node], slots: Array[Vector2]) -> Array[Vector2]:
+	## Greedy nearest-neighbor slot assignment to minimize total distance.
+	var result: Array[Vector2] = []
+	result.resize(units.size())
+	var used: Array[bool] = []
+	used.resize(slots.size())
+	for i in used.size():
+		used[i] = false
+	for i in units.size():
+		var best_idx := 0
+		var best_dist := INF
+		var unit_pos: Vector2 = (units[i] as Node2D).global_position
+		for j in slots.size():
+			if used[j]:
+				continue
+			var dist: float = unit_pos.distance_to(slots[j])
+			if dist < best_dist:
+				best_dist = dist
+				best_idx = j
+		used[best_idx] = true
+		result[i] = slots[best_idx]
+	return result
 
 
 func _issue_context_command(world_pos: Vector2) -> void:
