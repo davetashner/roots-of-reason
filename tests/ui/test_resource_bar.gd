@@ -125,3 +125,71 @@ func test_resource_update_via_signal() -> void:
 	var bar := _create_resource_bar()
 	ResourceManager.add_resource(0, ResourceManager.ResourceType.FOOD, 100)
 	assert_str(bar._resource_labels["Food"].text).is_equal("300")
+
+
+# --- Transit label tests ---
+
+
+class MockRiverTransport:
+	extends Node
+	var _transit: Dictionary = {}
+
+	func get_in_transit_resources(player_id: int) -> Dictionary:
+		return _transit.get(player_id, {})
+
+
+func test_transit_labels_exist() -> void:
+	var bar := _create_resource_bar()
+	assert_int(bar._transit_labels.size()).is_equal(5)
+	for res_name in ["Food", "Wood", "Stone", "Gold", "Knowledge"]:
+		assert_bool(bar._transit_labels.has(res_name)).is_true()
+
+
+func test_transit_labels_initially_hidden() -> void:
+	var bar := _create_resource_bar()
+	for res_name in bar._transit_labels:
+		var lbl: Label = bar._transit_labels[res_name]
+		assert_bool(lbl.visible).is_false()
+
+
+func _create_mock_transport(transit_data: Dictionary = {}) -> Node:
+	var mock := MockRiverTransport.new()
+	mock._transit = transit_data
+	add_child(mock)
+	auto_free(mock)
+	return mock
+
+
+func test_transit_labels_show_when_resources_in_transit() -> void:
+	var bar := _create_resource_bar()
+	var mock_transport := _create_mock_transport({0: {0: 25}})
+	bar.setup_transit(mock_transport)
+	bar._update_transit_labels()
+	var food_transit: Label = bar._transit_labels["Food"]
+	assert_bool(food_transit.visible).is_true()
+	assert_str(food_transit.text).is_equal("(+25)")
+
+
+func test_transit_labels_hidden_when_no_transit() -> void:
+	var bar := _create_resource_bar()
+	var mock_transport := _create_mock_transport({0: {}})
+	bar.setup_transit(mock_transport)
+	bar._update_transit_labels()
+	var food_transit: Label = bar._transit_labels["Food"]
+	assert_bool(food_transit.visible).is_false()
+
+
+func test_transit_labels_format_thousands() -> void:
+	var bar := _create_resource_bar()
+	var mock_transport := _create_mock_transport({0: {1: 1500}})
+	bar.setup_transit(mock_transport)
+	bar._update_transit_labels()
+	var wood_transit: Label = bar._transit_labels["Wood"]
+	assert_str(wood_transit.text).is_equal("(+1.5k)")
+
+
+func test_transit_null_safety() -> void:
+	var bar := _create_resource_bar()
+	# No river transport set — should not crash
+	bar._update_transit_labels()
+	assert_bool(is_instance_valid(bar)).is_true()

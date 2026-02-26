@@ -2,5 +2,18 @@
   "base_barge_speed": 180.0,
   "max_downstream_search_depth": 200,
   "depot_river_proximity": 2,
-  "barge_visual_size": 24
+  "barge_visual_size": 24,
+  "barge_pool_size": 8,
+  "flag_height": 12,
+  "flag_width": 8,
+  "wake_trail_length": 5,
+  "damage_flash_duration": 0.3,
+  "damage_flash_color": [1.0, 0.3, 0.3, 0.8],
+  "destruction_splash_radius": 20,
+  "destruction_splash_duration": 0.6,
+  "destruction_splash_color": [0.3, 0.6, 1.0, 0.7],
+  "resource_scatter_radius": 30,
+  "resource_scatter_dot_count": 6,
+  "resource_scatter_duration": 0.8,
+  "selection_ring_radius": 18
 }

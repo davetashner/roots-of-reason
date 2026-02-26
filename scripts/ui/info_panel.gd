@@ -9,6 +9,7 @@ const PORTRAIT_SIZE: float = 64.0
 
 var _input_handler: Node = null
 var _target_detector: Node = null
+var _river_transport: Node = null
 var _tracked_entity: Node = null
 var _tracked_entities: Array = []
 var _is_multi: bool = false
@@ -131,9 +132,10 @@ func _build_ui() -> void:
 	vbox.add_child(_stats_label)
 
 
-func setup(input_handler: Node, target_detector: Node = null) -> void:
+func setup(input_handler: Node, target_detector: Node = null, river_transport: Node = null) -> void:
 	_input_handler = input_handler
 	_target_detector = target_detector
+	_river_transport = river_transport
 
 
 func show_unit(unit: Node2D) -> void:
@@ -191,8 +193,45 @@ func show_building(building: Node2D) -> void:
 		if building.has_method("get_damage_state"):
 			var state: String = building.get_damage_state()
 			state_text = state.capitalize()
+		# Dock transport info
+		if _river_transport != null and building.building_name == "river_dock":
+			var dock_info: Dictionary = _river_transport.get_dock_info(building)
+			if not dock_info.is_empty():
+				var queued: int = dock_info.get("queued_total", 0)
+				var barges: int = dock_info.get("active_barge_count", 0)
+				var countdown: float = dock_info.get("time_until_next_dispatch", 0.0)
+				state_text = "Queued: %d  Barges: %d  Next: %.0fs" % [queued, barges, countdown]
 		_stats_label.text = state_text
 	_update_building_hp(building)
+
+
+func show_barge(barge: Node2D) -> void:
+	_tracked_entity = barge
+	_tracked_entities.clear()
+	_is_multi = false
+	_clear_hover()
+	visible = true
+	# Portrait color
+	if barge.owner_id == 0:
+		_portrait.color = Color(0.6, 0.4, 0.2)
+	else:
+		_portrait.color = Color(0.8, 0.3, 0.3)
+	_name_label.text = "Barge"
+	# Cargo display
+	var cargo_parts: Array[String] = []
+	for res_type: int in barge.carried_resources:
+		var amount: int = barge.carried_resources[res_type]
+		if amount > 0:
+			cargo_parts.append("%s: %d" % [_resource_type_name(res_type), amount])
+	if cargo_parts.is_empty():
+		_stats_label.text = "Empty"
+	else:
+		_stats_label.text = ", ".join(cargo_parts)
+	# HP
+	var current_hp: int = barge.hp
+	var max_hp_val: int = barge.max_hp
+	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
+	_set_hp_bar(ratio, current_hp, max_hp_val)
 
 
 func show_multi_select(units: Array) -> void:
@@ -285,7 +324,9 @@ func _process(_delta: float) -> void:
 	if selected.size() == 1:
 		var entity: Node = selected[0]
 		if _is_multi or _tracked_entity != entity:
-			if _is_building(entity):
+			if _is_barge(entity):
+				show_barge(entity as Node2D)
+			elif _is_building(entity):
 				show_building(entity as Node2D)
 			else:
 				show_unit(entity as Node2D)
@@ -496,6 +537,28 @@ func _get_building_display_name(building: Node2D) -> String:
 
 func _is_building(entity: Node) -> bool:
 	return "building_name" in entity
+
+
+func _is_barge(entity: Node) -> bool:
+	if "entity_category" not in entity:
+		return false
+	var cat: String = entity.entity_category
+	return cat == "own_barge" or cat == "enemy_barge"
+
+
+func _resource_type_name(res_type: int) -> String:
+	match res_type:
+		0:
+			return "Food"
+		1:
+			return "Wood"
+		2:
+			return "Stone"
+		3:
+			return "Gold"
+		4:
+			return "Knowledge"
+	return "Res%d" % res_type
 
 
 func save_state() -> Dictionary:

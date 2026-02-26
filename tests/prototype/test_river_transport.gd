@@ -1,17 +1,29 @@
 extends GdUnitTestSuite
-## Tests for river_transport.gd — barge dispatching, routing, and resource tracking.
+## Tests for river_transport.gd — barge dispatching, routing, pooling, and resource tracking.
 
 const TransportScript := preload("res://scripts/prototype/river_transport.gd")
 
 var _signal_count: int = 0
+var _last_resources: Dictionary = {}
 
 
 func _reset_counter() -> void:
 	_signal_count = 0
+	_last_resources = {}
 
 
 func _increment_counter(_barge: Node2D) -> void:
 	_signal_count += 1
+
+
+func _on_destroyed_with_resources(_barge: Node2D, resources: Dictionary) -> void:
+	_signal_count += 1
+	_last_resources = resources.duplicate()
+
+
+func _on_arrived_with_resources(_barge: Node2D, resources: Dictionary) -> void:
+	_signal_count += 1
+	_last_resources = resources.duplicate()
 
 
 # -- Mock map node with configurable river/flow data --
@@ -109,7 +121,38 @@ func _create_transport(mock_map: MockMap, mock_placer: MockBuildingPlacer) -> No
 	transport._max_downstream_search_depth = 200
 	transport._depot_river_proximity = 2
 	transport._barge_visual_size = 24.0
+	transport._barge_pool_size = 4
 	return transport
+
+
+func _setup_dock_and_tc(_mock_map: MockMap, mock_placer: MockBuildingPlacer) -> Array:
+	var dock := _create_dock(Vector2i(4, 0))
+	(
+		mock_placer
+		. _placed_buildings
+		. append(
+			{
+				"building_name": "river_dock",
+				"grid_pos": [4, 0],
+				"player_id": 0,
+				"node": dock,
+			}
+		)
+	)
+	var tc := _create_tc(Vector2i(4, 9))
+	(
+		mock_placer
+		. _placed_buildings
+		. append(
+			{
+				"building_name": "town_center",
+				"grid_pos": [4, 9],
+				"player_id": 0,
+				"node": tc,
+			}
+		)
+	)
+	return [dock, tc]
 
 
 func test_find_dock_river_tile_finds_adjacent_river() -> void:
@@ -217,32 +260,8 @@ func test_dispatch_creates_barge_with_queued_resources() -> void:
 	add_child(mock_placer)
 	auto_free(mock_placer)
 
-	var dock := _create_dock(Vector2i(4, 0))
-	(
-		mock_placer
-		. _placed_buildings
-		. append(
-			{
-				"building_name": "river_dock",
-				"grid_pos": [4, 0],
-				"player_id": 0,
-				"node": dock,
-			}
-		)
-	)
-	var tc := _create_tc(Vector2i(4, 9))
-	(
-		mock_placer
-		. _placed_buildings
-		. append(
-			{
-				"building_name": "town_center",
-				"grid_pos": [4, 9],
-				"player_id": 0,
-				"node": tc,
-			}
-		)
-	)
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
 
 	var transport := _create_transport(mock_map, mock_placer)
 	transport.register_dock(dock)
@@ -265,32 +284,8 @@ func test_dispatch_respects_capacity_limit() -> void:
 	add_child(mock_placer)
 	auto_free(mock_placer)
 
-	var dock := _create_dock(Vector2i(4, 0))
-	(
-		mock_placer
-		. _placed_buildings
-		. append(
-			{
-				"building_name": "river_dock",
-				"grid_pos": [4, 0],
-				"player_id": 0,
-				"node": dock,
-			}
-		)
-	)
-	var tc := _create_tc(Vector2i(4, 9))
-	(
-		mock_placer
-		. _placed_buildings
-		. append(
-			{
-				"building_name": "town_center",
-				"grid_pos": [4, 9],
-				"player_id": 0,
-				"node": tc,
-			}
-		)
-	)
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
 
 	var transport := _create_transport(mock_map, mock_placer)
 	transport.register_dock(dock)
@@ -314,32 +309,8 @@ func test_dispatch_respects_interval() -> void:
 	add_child(mock_placer)
 	auto_free(mock_placer)
 
-	var dock := _create_dock(Vector2i(4, 0))
-	(
-		mock_placer
-		. _placed_buildings
-		. append(
-			{
-				"building_name": "river_dock",
-				"grid_pos": [4, 0],
-				"player_id": 0,
-				"node": dock,
-			}
-		)
-	)
-	var tc := _create_tc(Vector2i(4, 9))
-	(
-		mock_placer
-		. _placed_buildings
-		. append(
-			{
-				"building_name": "town_center",
-				"grid_pos": [4, 9],
-				"player_id": 0,
-				"node": tc,
-			}
-		)
-	)
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
 
 	var transport := _create_transport(mock_map, mock_placer)
 	transport.register_dock(dock)
@@ -412,32 +383,8 @@ func test_barge_arrival_is_noop() -> void:
 	add_child(mock_placer)
 	auto_free(mock_placer)
 
-	var dock := _create_dock(Vector2i(4, 0))
-	(
-		mock_placer
-		. _placed_buildings
-		. append(
-			{
-				"building_name": "river_dock",
-				"grid_pos": [4, 0],
-				"player_id": 0,
-				"node": dock,
-			}
-		)
-	)
-	var tc := _create_tc(Vector2i(4, 9))
-	(
-		mock_placer
-		. _placed_buildings
-		. append(
-			{
-				"building_name": "town_center",
-				"grid_pos": [4, 9],
-				"player_id": 0,
-				"node": tc,
-			}
-		)
-	)
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
 
 	var transport := _create_transport(mock_map, mock_placer)
 	transport.register_dock(dock)
@@ -520,3 +467,187 @@ func test_notify_resource_deposited_accumulates() -> void:
 	var queued: Dictionary = info.get("queued_resources", {})
 	assert_int(queued.get(0, 0)).is_equal(8)
 	assert_int(queued.get(1, 0)).is_equal(2)
+
+
+# --- Pool tests ---
+
+
+func test_pool_reuses_released_barges() -> void:
+	var mock_map := _create_river_chain(Vector2i(5, 0), 10)
+	var mock_placer := MockBuildingPlacer.new()
+	add_child(mock_placer)
+	auto_free(mock_placer)
+
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
+
+	var transport := _create_transport(mock_map, mock_placer)
+	transport.register_dock(dock)
+	transport.notify_resource_deposited(dock, 0, 10)
+
+	# Dispatch first barge
+	transport._update_dock_timers(6.0)
+	var barges: Array[Node2D] = transport.get_active_barges()
+	assert_int(barges.size()).is_equal(1)
+
+	# Force arrival to return to pool
+	barges[0].arrived.emit(barges[0])
+	assert_int(transport.get_active_barges().size()).is_equal(0)
+	assert_int(transport._barge_pool.size()).is_equal(1)
+
+	# Dispatch second barge — should reuse pooled barge
+	transport.notify_resource_deposited(dock, 0, 10)
+	transport._update_dock_timers(6.0)
+	barges = transport.get_active_barges()
+	assert_int(barges.size()).is_equal(1)
+	# Pool should now be empty (reused)
+	assert_int(transport._barge_pool.size()).is_equal(0)
+
+
+func test_pool_caps_at_pool_size() -> void:
+	var mock_map := _create_river_chain(Vector2i(5, 0), 10)
+	var mock_placer := MockBuildingPlacer.new()
+	add_child(mock_placer)
+	auto_free(mock_placer)
+
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
+
+	var transport := _create_transport(mock_map, mock_placer)
+	transport._barge_pool_size = 2  # Small cap for testing
+	transport.register_dock(dock)
+
+	# Dispatch and arrive multiple barges to fill pool
+	for _i in 5:
+		transport.notify_resource_deposited(dock, 0, 5)
+		transport._update_dock_timers(6.0)
+		var barges: Array[Node2D] = transport.get_active_barges()
+		if not barges.is_empty():
+			barges[barges.size() - 1].arrived.emit(barges[barges.size() - 1])
+	# Pool should be capped at 2
+	assert_int(transport._barge_pool.size()).is_less_equal(2)
+
+
+# --- In-transit resource query ---
+
+
+func test_get_in_transit_resources_returns_cargo() -> void:
+	var mock_map := _create_river_chain(Vector2i(5, 0), 10)
+	var mock_placer := MockBuildingPlacer.new()
+	add_child(mock_placer)
+	auto_free(mock_placer)
+
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
+
+	var transport := _create_transport(mock_map, mock_placer)
+	transport.register_dock(dock)
+	transport.notify_resource_deposited(dock, 0, 10)
+	transport.notify_resource_deposited(dock, 1, 5)
+	transport._update_dock_timers(6.0)
+
+	var in_transit: Dictionary = transport.get_in_transit_resources(0)
+	assert_int(in_transit.get(0, 0)).is_equal(10)
+	assert_int(in_transit.get(1, 0)).is_equal(5)
+
+
+func test_get_in_transit_resources_empty_when_no_barges() -> void:
+	var mock_map := MockMap.new()
+	add_child(mock_map)
+	auto_free(mock_map)
+	var mock_placer := MockBuildingPlacer.new()
+	add_child(mock_placer)
+	auto_free(mock_placer)
+
+	var transport := _create_transport(mock_map, mock_placer)
+	var in_transit: Dictionary = transport.get_in_transit_resources(0)
+	assert_int(in_transit.size()).is_equal(0)
+
+
+# --- Dock info query ---
+
+
+func test_get_dock_info_returns_summary() -> void:
+	var mock_map := MockMap.new()
+	add_child(mock_map)
+	auto_free(mock_map)
+	var mock_placer := MockBuildingPlacer.new()
+	add_child(mock_placer)
+	auto_free(mock_placer)
+
+	var transport := _create_transport(mock_map, mock_placer)
+	var dock := _create_dock(Vector2i(3, 3))
+	transport.register_dock(dock)
+	transport.notify_resource_deposited(dock, 0, 12)
+
+	var info: Dictionary = transport.get_dock_info(dock)
+	assert_bool(info.has("queued_total")).is_true()
+	assert_int(info.get("queued_total", 0)).is_equal(12)
+	assert_bool(info.has("active_barge_count")).is_true()
+	assert_bool(info.has("time_until_next_dispatch")).is_true()
+
+
+func test_get_dock_info_returns_empty_for_unknown_dock() -> void:
+	var mock_map := MockMap.new()
+	add_child(mock_map)
+	auto_free(mock_map)
+	var mock_placer := MockBuildingPlacer.new()
+	add_child(mock_placer)
+	auto_free(mock_placer)
+
+	var transport := _create_transport(mock_map, mock_placer)
+	var dock := _create_dock(Vector2i(3, 3))
+
+	var info: Dictionary = transport.get_dock_info(dock)
+	assert_int(info.size()).is_equal(0)
+
+
+# --- Enhanced signals ---
+
+
+func test_barge_destroyed_with_resources_signal() -> void:
+	var mock_map := _create_river_chain(Vector2i(5, 0), 10)
+	var mock_placer := MockBuildingPlacer.new()
+	add_child(mock_placer)
+	auto_free(mock_placer)
+
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
+
+	var transport := _create_transport(mock_map, mock_placer)
+	transport.register_dock(dock)
+	transport.notify_resource_deposited(dock, 0, 10)
+	transport._update_dock_timers(6.0)
+
+	_reset_counter()
+	transport.barge_destroyed_with_resources.connect(_on_destroyed_with_resources)
+
+	var barges: Array[Node2D] = transport.get_active_barges()
+	barges[0].take_damage(barges[0].hp)
+
+	assert_int(_signal_count).is_equal(1)
+	assert_int(_last_resources.get(0, 0)).is_equal(10)
+
+
+func test_barge_arrived_with_resources_signal() -> void:
+	var mock_map := _create_river_chain(Vector2i(5, 0), 10)
+	var mock_placer := MockBuildingPlacer.new()
+	add_child(mock_placer)
+	auto_free(mock_placer)
+
+	var entities: Array = _setup_dock_and_tc(mock_map, mock_placer)
+	var dock: Node2D = entities[0]
+
+	var transport := _create_transport(mock_map, mock_placer)
+	transport.register_dock(dock)
+	transport.notify_resource_deposited(dock, 0, 10)
+	transport._update_dock_timers(6.0)
+
+	_reset_counter()
+	transport.barge_arrived_with_resources.connect(_on_arrived_with_resources)
+
+	var barges: Array[Node2D] = transport.get_active_barges()
+	barges[0].arrived.emit(barges[0])
+
+	assert_int(_signal_count).is_equal(1)
+	assert_int(_last_resources.get(0, 0)).is_equal(10)

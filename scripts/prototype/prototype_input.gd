@@ -26,6 +26,7 @@ var _patrol_mode: bool = false
 var _patrol_first_point: Vector2 = Vector2.ZERO
 var _formation_manager: RefCounted = null
 var _formation_type: int = 0  # FormationManager.FormationType.STAGGERED
+var _river_overlay: Node = null
 
 
 func _ready() -> void:
@@ -142,6 +143,11 @@ func _handle_key(key: InputEventKey) -> void:
 			_patrol_first_point = Vector2.ZERO
 			if _cursor_overlay != null and _cursor_overlay.has_method("update_command"):
 				_cursor_overlay.update_command("patrol", _command_config.get("cursor_labels", {}))
+		return
+	# River overlay toggle
+	if keycode == KEY_R:
+		if _river_overlay != null and _river_overlay.has_method("toggle"):
+			_river_overlay.toggle()
 		return
 	# Escape cancels modes
 	if keycode == KEY_ESCAPE:
@@ -302,6 +308,7 @@ func get_active_group() -> int:
 
 func _move_selected(world_pos: Vector2) -> void:
 	var selected := _get_selected_units()
+	selected = _filter_barges(selected)
 	if selected.is_empty():
 		return
 	_show_click_marker(world_pos)
@@ -368,6 +375,7 @@ func _assign_slots(units: Array[Node], slots: Array[Vector2]) -> Array[Vector2]:
 
 func _issue_context_command(world_pos: Vector2) -> void:
 	var selected := _get_selected_units()
+	selected = _filter_barges(selected)
 	if selected.is_empty():
 		return
 	var target: Node = null
@@ -487,6 +495,18 @@ func get_selected_count() -> int:
 		if is_instance_valid(unit) and "selected" in unit and unit.selected:
 			count += 1
 	return count
+
+
+func _filter_barges(units: Array[Node]) -> Array[Node]:
+	## Remove barge entities from a unit list — barges cannot receive move/context commands.
+	var result: Array[Node] = []
+	for unit in units:
+		if "entity_category" in unit:
+			var cat: String = unit.entity_category
+			if cat == "own_barge" or cat == "enemy_barge":
+				continue
+		result.append(unit)
+	return result
 
 
 func save_state() -> Dictionary:
