@@ -230,3 +230,79 @@ func test_type_to_string_roundtrip() -> void:
 	]:
 		var s: String = FormationManagerScript.type_to_string(t)
 		assert_int(FormationManagerScript.type_from_string(s)).is_equal(t)
+
+
+# -- Sorted slot assignment --
+
+
+func test_assign_slots_sorted_empty_units() -> void:
+	var unit_pos: Array[Vector2] = []
+	var slots: Array[Vector2] = [Vector2(100, 0)]
+	var result: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_pos, slots)
+	assert_int(result.size()).is_equal(0)
+
+
+func test_assign_slots_sorted_empty_slots() -> void:
+	var unit_pos: Array[Vector2] = [Vector2(0, 0)]
+	var slots: Array[Vector2] = []
+	var result: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_pos, slots)
+	assert_int(result.size()).is_equal(1)
+
+
+func test_assign_slots_sorted_single_unit() -> void:
+	var unit_pos: Array[Vector2] = [Vector2(10, 0)]
+	var slots: Array[Vector2] = [Vector2(50, 0)]
+	var result: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_pos, slots)
+	assert_int(result.size()).is_equal(1)
+	assert_object(result[0]).is_equal(Vector2(50, 0))
+
+
+func test_assign_slots_sorted_preserves_order() -> void:
+	# Units are already sorted left-to-right; slots left-to-right.
+	# Unit 0 (leftmost) should get slot 0 (leftmost), etc.
+	var unit_pos: Array[Vector2] = [Vector2(0, 0), Vector2(100, 0), Vector2(200, 0)]
+	var slots: Array[Vector2] = [Vector2(10, 10), Vector2(110, 10), Vector2(210, 10)]
+	var result: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_pos, slots, Vector2.RIGHT)
+	assert_int(result.size()).is_equal(3)
+	assert_object(result[0]).is_equal(Vector2(10, 10))
+	assert_object(result[1]).is_equal(Vector2(110, 10))
+	assert_object(result[2]).is_equal(Vector2(210, 10))
+
+
+func test_assign_slots_sorted_reversed_units() -> void:
+	# Units in reverse order — rightmost unit should still get rightmost slot.
+	var unit_pos: Array[Vector2] = [Vector2(200, 0), Vector2(100, 0), Vector2(0, 0)]
+	var slots: Array[Vector2] = [Vector2(10, 10), Vector2(110, 10), Vector2(210, 10)]
+	var result: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_pos, slots, Vector2.RIGHT)
+	assert_int(result.size()).is_equal(3)
+	# Unit 0 at x=200 → rightmost slot
+	assert_object(result[0]).is_equal(Vector2(210, 10))
+	# Unit 1 at x=100 → middle slot
+	assert_object(result[1]).is_equal(Vector2(110, 10))
+	# Unit 2 at x=0 → leftmost slot
+	assert_object(result[2]).is_equal(Vector2(10, 10))
+
+
+func test_assign_slots_sorted_more_units_than_slots() -> void:
+	var unit_pos: Array[Vector2] = [Vector2(0, 0), Vector2(50, 0), Vector2(100, 0)]
+	var slots: Array[Vector2] = [Vector2(10, 10), Vector2(110, 10)]
+	var result: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_pos, slots, Vector2.RIGHT)
+	assert_int(result.size()).is_equal(3)
+	# First two units get the two slots; third gets the last slot
+	assert_object(result[0]).is_equal(Vector2(10, 10))
+	assert_object(result[1]).is_equal(Vector2(110, 10))
+	assert_object(result[2]).is_equal(Vector2(110, 10))
+
+
+func test_assign_slots_sorted_vertical_facing() -> void:
+	# Facing UP — sort by dot with UP = sort by -y (lower y = higher projection)
+	var unit_pos: Array[Vector2] = [Vector2(0, 100), Vector2(0, 0), Vector2(0, 50)]
+	var slots: Array[Vector2] = [Vector2(10, 0), Vector2(10, 50), Vector2(10, 100)]
+	var result: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_pos, slots, Vector2.UP)
+	assert_int(result.size()).is_equal(3)
+	# Unit 0 at y=100 has dot(UP) = -100 → lowest projection → gets lowest-proj slot (10, 100)
+	# Unit 1 at y=0 has dot(UP) = 0 → highest projection → gets highest-proj slot (10, 0)
+	# Unit 2 at y=50 has dot(UP) = -50 → middle projection → gets middle slot (10, 50)
+	assert_object(result[0]).is_equal(Vector2(10, 100))
+	assert_object(result[1]).is_equal(Vector2(10, 0))
+	assert_object(result[2]).is_equal(Vector2(10, 50))
