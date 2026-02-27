@@ -5,8 +5,10 @@
   "build_time": 25,
   "build_cost": { "wood": 25 },
   "population_bonus": 5,
+  "garrison_capacity": 0,
   "is_drop_off": false,
   "drop_off_types": [],
   "units_produced": [],
-  "age_required": 0
+  "age_required": 0,
+  "placement_constraint": ""
 }
