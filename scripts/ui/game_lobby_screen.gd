@@ -214,7 +214,7 @@ func _populate_difficulty_picker() -> void:
 
 
 func _populate_map_size_picker() -> void:
-	var data: Dictionary = DataLoader.load_json("res://data/settings/map_generation.json")
+	var data: Dictionary = DataLoader.load_json("res://data/settings/map/map_generation.json")
 	var sizes: Dictionary = data.get("map_sizes", {})
 	var default_size: String = data.get("default_size", "dev")
 	var default_idx: int = 0

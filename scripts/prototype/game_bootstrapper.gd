@@ -354,7 +354,7 @@ func setup_game_stats_tracker() -> void:
 	_root._game_stats_tracker.name = "GameStatsTracker"
 	_root._game_stats_tracker.set_script(GameStatsTrackerScript)
 	_root.add_child(_root._game_stats_tracker)
-	var config: Dictionary = DataLoader.load_json("res://data/settings/postgame_stats.json")
+	var config: Dictionary = DataLoader.load_json("res://data/settings/ui/postgame_stats.json")
 	_root._game_stats_tracker.setup(config, _root._tech_manager)
 	_root._game_stats_tracker.init_player(0)
 	_root._game_stats_tracker.init_player(1)
@@ -527,7 +527,7 @@ func get_start_position(player_index: int) -> Vector2i:
 
 func get_villager_offsets() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
-	var cfg: Dictionary = DataLoader.load_json("res://data/settings/map_generation.json")
+	var cfg: Dictionary = DataLoader.load_json("res://data/settings/map/map_generation.json")
 	var start_cfg: Dictionary = cfg.get("starting_locations", {})
 	var raw_offsets: Array = start_cfg.get("villager_offsets", [[-1, 0], [0, -1], [-1, -1], [1, -1], [-1, 1]])
 	for offset in raw_offsets:

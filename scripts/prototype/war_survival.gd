@@ -9,7 +9,7 @@ signal unit_survived(unit: Node2D, hp_remaining: int)
 ## Reference to TechManager for checking researched techs
 var _tech_manager: Node = null
 
-## Config loaded from data/settings/war_survival.json
+## Config loaded from data/settings/combat/war_survival.json
 var _survival_cooldown: float = 30.0
 var _tiers: Array = []
 var _flash_color: Color = Color(0.2, 1.0, 0.2, 0.8)

@@ -2,7 +2,7 @@ class_name PopulationManager
 extends Node
 ## Tracks current population and housing-based population cap per player.
 ## Each completed housing building (House, Town Center) adds its population_bonus
-## to the cap. Hard cap and starting cap are loaded from data/settings/population.json.
+## to the cap. Hard cap and starting cap are loaded from data/settings/economy/population.json.
 
 signal population_changed(player_id: int, current: int, cap: int)
 signal near_cap_warning(player_id: int)

@@ -9,7 +9,7 @@ signal wonder_countdown_started(player_id: int, duration: float)
 signal wonder_countdown_cancelled(player_id: int)
 signal agi_core_built(player_id: int)
 
-# Config loaded from data/settings/victory.json
+# Config loaded from data/settings/game/victory.json
 var _wonder_countdown_duration: float = 600.0
 var _defeat_delay: float = 5.0
 var _allow_continue: bool = true
@@ -63,7 +63,9 @@ func _load_settings(settings_name: String) -> Dictionary:
 		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
 		if dl and dl.has_method("get_settings"):
 			return dl.get_settings(settings_name)
-	var path := "res://data/settings/%s.json" % settings_name
+	var dl_class: GDScript = load("res://scripts/autoloads/data_loader.gd")
+	var subpath: String = dl_class.SETTINGS_PATHS.get(settings_name, settings_name)
+	var path := "res://data/settings/%s.json" % subpath
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {}

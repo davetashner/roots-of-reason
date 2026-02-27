@@ -56,7 +56,9 @@ func _load_settings(settings_name: String) -> Dictionary:
 		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
 		if dl and dl.has_method("get_settings"):
 			return dl.get_settings(settings_name)
-	var path := "res://data/settings/%s.json" % settings_name
+	var dl_class: GDScript = load("res://scripts/autoloads/data_loader.gd")
+	var subpath: String = dl_class.SETTINGS_PATHS.get(settings_name, settings_name)
+	var path := "res://data/settings/%s.json" % subpath
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {}
