@@ -309,11 +309,14 @@ func _move_selected(world_pos: Vector2) -> void:
 		for unit in selected:
 			if unit.has_method("set_formation_speed"):
 				unit.set_formation_speed(group_speed)
-	# Assign units to nearest slot (greedy)
+	# Assign units to nearest slot (sorted greedy — O(n log n))
 	var slot_positions: Array[Vector2] = []
 	for offset in offsets:
 		slot_positions.append(world_pos + offset)
-	var assignments: Array[Vector2] = _assign_slots(selected, slot_positions)
+	var unit_positions: Array[Vector2] = []
+	for unit in selected:
+		unit_positions.append((unit as Node2D).global_position)
+	var assignments: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_positions, slot_positions, facing)
 	# Move each unit to its assigned slot
 	if _pathfinder != null and _pathfinder.has_method("find_path_world"):
 		for i in selected.size():
@@ -329,30 +332,6 @@ func _move_selected(world_pos: Vector2) -> void:
 	for i in selected.size():
 		if selected[i].has_method("move_to"):
 			selected[i].move_to(assignments[i])
-
-
-func _assign_slots(units: Array[Node], slots: Array[Vector2]) -> Array[Vector2]:
-	## Greedy nearest-neighbor slot assignment to minimize total distance.
-	var result: Array[Vector2] = []
-	result.resize(units.size())
-	var used: Array[bool] = []
-	used.resize(slots.size())
-	for i in used.size():
-		used[i] = false
-	for i in units.size():
-		var best_idx := 0
-		var best_dist := INF
-		var unit_pos: Vector2 = (units[i] as Node2D).global_position
-		for j in slots.size():
-			if used[j]:
-				continue
-			var dist: float = unit_pos.distance_to(slots[j])
-			if dist < best_dist:
-				best_dist = dist
-				best_idx = j
-		used[best_idx] = true
-		result[i] = slots[best_idx]
-	return result
 
 
 func _issue_context_command(world_pos: Vector2) -> void:
