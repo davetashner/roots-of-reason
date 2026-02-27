@@ -69,20 +69,26 @@ func update_fog(
 	explored_tiles: Dictionary,
 	prev_visible_tiles: Dictionary = {},
 ) -> void:
+	# Collect all changes into batches before applying.
+	# Each batch is an array of tiles that need the same operation.
+	var cells_to_dim: Array[Vector2i] = []
+	var cells_to_black: Array[Vector2i] = []
+	var cells_to_clear: Array[Vector2i] = []
+
 	# Tiles that were visible but no longer are → dim (if explored) or black
 	for tile: Vector2i in prev_visible_tiles:
 		if not visible_tiles.has(tile):
 			if explored_tiles.has(tile):
 				if _source_id_dim >= 0:
-					set_cell(tile, _source_id_dim, Vector2i.ZERO)
+					cells_to_dim.append(tile)
 			else:
 				if _source_id_black >= 0:
-					set_cell(tile, _source_id_black, Vector2i.ZERO)
+					cells_to_black.append(tile)
 
 	# Tiles that are now visible → clear (erase cell)
 	for tile: Vector2i in visible_tiles:
 		if not prev_visible_tiles.has(tile):
-			erase_cell(tile)
+			cells_to_clear.append(tile)
 
 	# Newly explored tiles that aren't visible → dim
 	# (handles first-time exploration when prev_visible was empty)
@@ -90,4 +96,25 @@ func update_fog(
 		for tile: Vector2i in explored_tiles:
 			if not visible_tiles.has(tile):
 				if _source_id_dim >= 0:
-					set_cell(tile, _source_id_dim, Vector2i.ZERO)
+					cells_to_dim.append(tile)
+
+	# Apply batched changes — skip tiles already in the correct state
+	_apply_batch_set(cells_to_dim, _source_id_dim)
+	_apply_batch_set(cells_to_black, _source_id_black)
+	_apply_batch_erase(cells_to_clear)
+
+
+func _apply_batch_set(tiles: Array[Vector2i], source_id: int) -> void:
+	if tiles.is_empty() or source_id < 0:
+		return
+	for tile: Vector2i in tiles:
+		if get_cell_source_id(tile) != source_id:
+			set_cell(tile, source_id, Vector2i.ZERO)
+
+
+func _apply_batch_erase(tiles: Array[Vector2i]) -> void:
+	if tiles.is_empty():
+		return
+	for tile: Vector2i in tiles:
+		if get_cell_source_id(tile) != -1:
+			erase_cell(tile)

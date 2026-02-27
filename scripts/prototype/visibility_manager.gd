@@ -14,6 +14,7 @@ var _map_width: int = 64
 var _map_height: int = 64
 var _update_timer: float = 0.0
 var _update_interval: float = 0.2  # 200ms
+var _dirty: Dictionary = {}  # player_id -> bool — true when visibility changed
 
 
 func setup(map_width: int, map_height: int, blocks_los_fn: Callable) -> void:
@@ -66,8 +67,21 @@ func update_visibility(player_id: int, units: Array) -> void:
 			new_visible[tile] = true
 			_explored[player_id][tile] = true
 
+	# Check if visibility actually changed before emitting signal
+	var old_visible: Dictionary = _prev_visible.get(player_id, {})
+	var changed := false
+	if new_visible.size() != old_visible.size():
+		changed = true
+	else:
+		for tile: Vector2i in new_visible:
+			if not old_visible.has(tile):
+				changed = true
+				break
+
 	_visible[player_id] = new_visible
-	visibility_changed.emit(player_id)
+	_dirty[player_id] = changed
+	if changed:
+		visibility_changed.emit(player_id)
 
 
 func is_visible(player_id: int, tile: Vector2i) -> bool:
@@ -90,6 +104,14 @@ func get_explored_tiles(player_id: int) -> Dictionary:
 
 func get_prev_visible_tiles(player_id: int) -> Dictionary:
 	return _prev_visible.get(player_id, {})
+
+
+func has_changes(player_id: int) -> bool:
+	return _dirty.get(player_id, false)
+
+
+func clear_dirty(player_id: int) -> void:
+	_dirty[player_id] = false
 
 
 func _screen_to_grid(screen_pos: Vector2) -> Vector2i:
@@ -123,6 +145,7 @@ func load_state(state: Dictionary) -> void:
 	_explored.clear()
 	_visible.clear()
 	_prev_visible.clear()
+	_dirty.clear()
 
 	var explored_data: Dictionary = state.get("explored", {})
 	for player_id_str: String in explored_data:
