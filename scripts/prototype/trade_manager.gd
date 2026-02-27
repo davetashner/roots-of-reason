@@ -13,7 +13,7 @@ const RESOURCE_NAME_TO_TYPE: Dictionary = {
 	"knowledge": ResourceManager.ResourceType.KNOWLEDGE,
 }
 
-# Config loaded from data/settings/trade.json
+# Config loaded from data/settings/economy/trade.json
 var _base_exchange_rates: Dictionary = {}
 var _route_base_gold: int = 25
 var _route_reference_distance: int = 20
@@ -60,7 +60,9 @@ func _load_settings(settings_name: String) -> Dictionary:
 		if dl and dl.has_method("get_settings"):
 			return dl.get_settings(settings_name)
 	# Direct file fallback for tests
-	var path := "res://data/settings/%s.json" % settings_name
+	var dl_class: GDScript = load("res://scripts/autoloads/data_loader.gd")
+	var subpath: String = dl_class.SETTINGS_PATHS.get(settings_name, settings_name)
+	var path := "res://data/settings/%s.json" % subpath
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {}

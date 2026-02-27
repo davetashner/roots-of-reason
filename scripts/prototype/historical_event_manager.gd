@@ -2,7 +2,7 @@ class_name HistoricalEventManager
 extends Node
 ## Manages named historical events: Black Plague (guaranteed mega-pandemic in
 ## Medieval Age) and Renaissance (per-player golden age on tech milestones).
-## Config loaded from data/settings/historical_events.json.
+## Config loaded from data/settings/events/historical_events.json.
 
 signal event_started(event_id: String, player_id: int)
 signal event_ended(event_id: String, player_id: int)

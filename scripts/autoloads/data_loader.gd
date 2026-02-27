@@ -3,6 +3,47 @@ extends Node
 
 const RESOURCE_NAMES := ["berry_bush", "tree", "stone_mine", "gold_mine", "fish"]
 
+## Maps settings file names to their subdirectory under data/settings/.
+const SETTINGS_PATHS: Dictionary = {
+	"ai_economy": "ai/ai_economy",
+	"building_destruction": "buildings/building_destruction",
+	"combat": "combat/combat",
+	"formations": "combat/formations",
+	"war_survival": "combat/war_survival",
+	"construction": "economy/construction",
+	"corruption": "economy/corruption",
+	"gathering": "economy/gathering",
+	"population": "economy/population",
+	"production": "economy/production",
+	"trade": "economy/trade",
+	"historical_events": "events/historical_events",
+	"knowledge_burning": "events/knowledge_burning",
+	"pandemics": "events/pandemics",
+	"pirates": "events/pirates",
+	"singularity_cinematic": "events/singularity_cinematic",
+	"singularity_regression": "events/singularity_regression",
+	"game_clock": "game/game_clock",
+	"victory": "game/victory",
+	"fauna": "map/fauna",
+	"map_generation": "map/map_generation",
+	"river_overlay": "map/river_overlay",
+	"river_transport": "map/river_transport",
+	"terrain": "map/terrain",
+	"transport": "map/transport",
+	"research": "tech/research",
+	"tech_research": "tech/tech_research",
+	"tech_visibility": "tech/tech_visibility",
+	"unit_upgrades": "tech/unit_upgrades",
+	"camera": "ui/camera",
+	"command_panel": "ui/command_panel",
+	"commands": "ui/commands",
+	"hud": "ui/hud",
+	"info_panel": "ui/info_panel",
+	"notifications": "ui/notifications",
+	"postgame_stats": "ui/postgame_stats",
+	"selection": "ui/selection",
+}
+
 var _cache: Dictionary = {}
 var _tech_index: Dictionary = {}
 
@@ -88,7 +129,8 @@ func get_resource_config_data() -> Dictionary:
 
 
 func get_settings(settings_name: String) -> Dictionary:
-	var data: Variant = load_json("res://data/settings/%s.json" % settings_name)
+	var subpath: String = SETTINGS_PATHS.get(settings_name, settings_name)
+	var data: Variant = load_json("res://data/settings/%s.json" % subpath)
 	if data == null:
 		return {}
 	return data
@@ -96,6 +138,11 @@ func get_settings(settings_name: String) -> Dictionary:
 
 func get_setting(settings_name: String) -> Dictionary:
 	return get_settings(settings_name)
+
+
+func get_settings_path(settings_name: String) -> String:
+	var subpath: String = SETTINGS_PATHS.get(settings_name, settings_name)
+	return "res://data/settings/%s.json" % subpath
 
 
 func clear_cache() -> void:

@@ -1,6 +1,6 @@
 extends Node
 ## A* pathfinding wrapper for the isometric grid.
-## Uses Godot's AStarGrid2D with terrain costs from data/settings/terrain.json.
+## Uses Godot's AStarGrid2D with terrain costs from data/settings/map/terrain.json.
 
 var _astar: AStarGrid2D
 var _map_size: int = 0

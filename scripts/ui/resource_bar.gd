@@ -1,6 +1,6 @@
 extends PanelContainer
 ## Top-of-screen resource bar showing all resource amounts, population, and age.
-## Reads configuration from data/settings/hud.json.
+## Reads configuration from data/settings/ui/hud.json.
 
 const PLAYER_ID: int = 0
 const RESOURCE_ORDER: Array[String] = ["Food", "Wood", "Stone", "Gold", "Knowledge"]
