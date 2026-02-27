@@ -1,9 +1,22 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Building",
-  "description": "Building stats definition",
+  "description": "Building stats definition. All standard fields are required. Building-specific fields (e.g. knowledge_rate, trade_rates) are optional via additionalProperties.",
   "type": "object",
-  "required": ["name", "hp", "footprint", "build_time", "build_cost"],
+  "required": [
+    "name",
+    "hp",
+    "footprint",
+    "build_time",
+    "build_cost",
+    "population_bonus",
+    "garrison_capacity",
+    "is_drop_off",
+    "drop_off_types",
+    "units_produced",
+    "age_required",
+    "placement_constraint"
+  ],
   "properties": {
     "name": { "type": "string" },
     "hp": { "type": "number", "minimum": 1 },
@@ -16,6 +29,7 @@
     "build_time": { "type": "number", "minimum": 0 },
     "build_cost": { "type": "object" },
     "population_bonus": { "type": "integer", "minimum": 0 },
+    "garrison_capacity": { "type": "integer", "minimum": 0 },
     "is_drop_off": { "type": "boolean" },
     "drop_off_types": {
       "type": "array",

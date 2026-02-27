@@ -5,9 +5,11 @@
   "build_time": 600,
   "build_cost": { "wood": 2000, "stone": 2000, "gold": 2000 },
   "population_bonus": 0,
+  "garrison_capacity": 0,
   "is_drop_off": false,
   "drop_off_types": [],
   "units_produced": [],
   "age_required": 3,
+  "placement_constraint": "",
   "victory_countdown": 600
 }

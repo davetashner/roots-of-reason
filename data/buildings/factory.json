@@ -4,6 +4,11 @@
   "footprint": [3, 3],
   "build_time": 70,
   "build_cost": { "wood": 200, "stone": 150, "gold": 100 },
+  "population_bonus": 0,
+  "garrison_capacity": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
   "units_produced": ["tank", "artillery"],
-  "age_required": 4
+  "age_required": 4,
+  "placement_constraint": ""
 }
