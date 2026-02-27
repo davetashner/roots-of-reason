@@ -118,8 +118,8 @@ func test_rome_bonus_not_applied_to_villager() -> void:
 
 func test_polynesia_speed_applied_to_naval() -> void:
 	CivBonusManager.apply_civ_bonuses(0, "polynesia")
-	var stats := UnitStats.new("naval", {"speed": 1.8})
-	CivBonusManager.apply_bonus_to_unit(stats, "naval", 0)
+	var stats := UnitStats.new("war_galley", {"speed": 1.8})
+	CivBonusManager.apply_bonus_to_unit(stats, "war_galley", 0)
 	# 20% speed bonus: 1.8 * 1.20 = 2.16
 	assert_float(stats.get_stat("speed")).is_equal_approx(2.16, 0.01)
 
@@ -289,5 +289,5 @@ func test_rome_infantry_resolves_to_legionnaire() -> void:
 
 func test_polynesia_naval_resolves_to_war_canoe() -> void:
 	CivBonusManager.apply_civ_bonuses(0, "polynesia")
-	var resolved := CivBonusManager.get_resolved_unit_id(0, "naval")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "war_galley")
 	assert_str(resolved).is_equal("war_canoe")

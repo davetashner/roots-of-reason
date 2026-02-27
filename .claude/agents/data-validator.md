@@ -22,7 +22,9 @@ data/
     archer.json          — Individual unit stat files
     cavalry.json
     infantry.json
-    naval.json
+    war_galley.json
+    transport_ship.json
+    cannon_ship.json
     siege.json
     villager.json
     wolf.json

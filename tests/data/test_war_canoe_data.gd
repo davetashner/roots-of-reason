@@ -14,7 +14,7 @@ func test_war_canoe_name() -> void:
 
 func test_war_canoe_speed_is_faster() -> void:
 	var stats := DataLoader.get_unit_stats("war_canoe")
-	var naval_stats := DataLoader.get_unit_stats("naval")
+	var naval_stats := DataLoader.get_unit_stats("war_galley")
 	assert_bool(float(stats.get("speed", 0)) > float(naval_stats.get("speed", 0))).is_true()
 
 

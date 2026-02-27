@@ -11,7 +11,7 @@
   },
   "unique_unit": {
     "name": "War Canoe",
-    "base_unit": "naval",
+    "base_unit": "war_galley",
     "speed_bonus": 0.3,
     "transport_capacity": 5
   },
