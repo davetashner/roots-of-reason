@@ -28,6 +28,9 @@ var _market_data: Dictionary = {}
 # Rate fluctuation: resource_name -> Array of [timestamp, amount]
 var _volume_history: Dictionary = {}
 
+# Event-driven trade income multiplier: player_id -> float (default 1.0)
+var _trade_income_multiplier: Dictionary = {}
+
 # References
 var _building_placer: Node = null
 
@@ -100,6 +103,7 @@ func execute_exchange(player_id: int, sell_resource: String, amount: int) -> boo
 		return false
 	var rate: float = get_current_rate(sell_resource)
 	var gold_earned: int = int(float(amount) * rate / 100.0)
+	gold_earned = int(float(gold_earned) * _trade_income_multiplier.get(player_id, 1.0))
 	if gold_earned <= 0:
 		return false
 	# Deduct resource and add gold
@@ -137,6 +141,7 @@ func notify_route_completed(home_market: Node2D, away_market: Node2D, owner_id: 
 		return
 	var ref_dist: int = maxi(_route_reference_distance, 1)
 	var gold: int = int(float(_route_base_gold) * float(distance) / float(ref_dist))
+	gold = int(float(gold) * _trade_income_multiplier.get(owner_id, 1.0))
 	if gold <= 0:
 		gold = 1
 	ResourceManager.add_resource(owner_id, ResourceManager.ResourceType.GOLD, gold)
@@ -166,6 +171,14 @@ func get_markets_for_player(player_id: int) -> Array:
 		if info.get("owner_id", -1) == player_id:
 			result.append(market)
 	return result
+
+
+func set_trade_income_multiplier(player_id: int, mult: float) -> void:
+	_trade_income_multiplier[player_id] = mult
+
+
+func clear_trade_income_multiplier(player_id: int) -> void:
+	_trade_income_multiplier.erase(player_id)
 
 
 func _count_active_carts(owner_id: int) -> int:
