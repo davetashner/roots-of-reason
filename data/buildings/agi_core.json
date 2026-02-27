@@ -1,0 +1,14 @@
+{
+  "name": "AGI Core",
+  "hp": 5000,
+  "footprint": [4, 4],
+  "build_time": 600,
+  "build_cost": { "knowledge": 10000, "gold": 5000, "stone": 2000 },
+  "population_bonus": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 6,
+  "required_techs": ["agi_core"],
+  "required_buildings": ["gpu_foundry"]
+}

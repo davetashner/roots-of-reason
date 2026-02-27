@@ -525,6 +525,9 @@ func _setup_victory() -> void:
 	# Connect victory/defeat signals
 	_victory_manager.player_defeated.connect(_on_player_defeated)
 	_victory_manager.player_victorious.connect(_on_player_victorious)
+	_victory_manager.agi_core_built.connect(_on_agi_core_built)
+	_victory_manager.wonder_countdown_started.connect(_on_wonder_countdown_started)
+	_victory_manager.wonder_countdown_cancelled.connect(_on_wonder_countdown_cancelled)
 	# Connect age advancement for singularity check
 	GameManager.age_advanced.connect(_victory_manager.on_age_advanced)
 
@@ -559,6 +562,34 @@ func _on_singularity_cinematic_complete() -> void:
 		var tid: String = str(_pending_victory_tech[1])
 		_pending_victory_tech = []
 		_victory_manager.on_victory_tech_completed(pid, tid)
+
+
+func _on_agi_core_built(player_id: int) -> void:
+	if player_id == 0 and _singularity_cinematic != null:
+		get_tree().paused = true
+		_singularity_cinematic.process_mode = Node.PROCESS_MODE_ALWAYS
+		_singularity_cinematic.play_cinematic()
+		_singularity_cinematic.cinematic_complete.connect(
+			func() -> void:
+				get_tree().paused = false
+				_victory_manager._trigger_victory(player_id, "singularity"),
+			CONNECT_ONE_SHOT,
+		)
+	else:
+		_victory_manager._trigger_victory(player_id, "singularity")
+
+
+func _on_wonder_countdown_started(_player_id: int, duration: float) -> void:
+	if _notification_panel == null:
+		return
+	var minutes: int = int(duration) / 60
+	_notification_panel.notify("A Wonder has been completed! %d minutes remain." % minutes, "alert")
+
+
+func _on_wonder_countdown_cancelled(_player_id: int) -> void:
+	if _notification_panel == null:
+		return
+	_notification_panel.notify("Wonder destroyed! Countdown cancelled.", "alert")
 
 
 func _setup_river_transport() -> void:
@@ -860,6 +891,9 @@ func _setup_tech() -> void:
 	_singularity_regression.setup(_tech_manager, _notification_panel)
 	# Wire victory tech completion signal for singularity cinematic
 	_tech_manager.victory_tech_completed.connect(_on_victory_tech_completed)
+	# Provide tech_manager to building placer for prerequisite checks
+	if _building_placer != null:
+		_building_placer._tech_manager = _tech_manager
 
 
 func _setup_corruption() -> void:

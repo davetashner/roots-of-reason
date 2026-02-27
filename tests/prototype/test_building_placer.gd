@@ -218,3 +218,113 @@ func test_start_placement_succeeds_at_correct_age() -> void:
 	var result: bool = placer.start_placement("market", 0)
 	assert_bool(result).is_true()
 	assert_bool(placer.is_active()).is_true()
+
+
+# -- Prerequisite checks --
+
+
+class MockTechManager:
+	extends Node
+	var _researched: Dictionary = {}
+
+	func is_tech_researched(tech_id: String, _player_id: int = 0) -> bool:
+		return _researched.has(tech_id)
+
+	func mark_researched(tech_id: String) -> void:
+		_researched[tech_id] = true
+
+
+func _create_placer_with_tech_manager() -> Array:
+	var placer := _create_placer()
+	var tm := MockTechManager.new()
+	tm.name = "MockTechManager"
+	add_child(tm)
+	auto_free(tm)
+	placer._tech_manager = tm
+	return [placer, tm]
+
+
+func test_required_techs_blocks_placement() -> void:
+	var pair := _create_placer_with_tech_manager()
+	var placer: Node = pair[0]
+	GameManager.current_age = 6
+	var starting: Dictionary = {
+		ResourceManager.ResourceType.KNOWLEDGE: 99999,
+		ResourceManager.ResourceType.GOLD: 99999,
+		ResourceManager.ResourceType.STONE: 99999,
+	}
+	ResourceManager.init_player(0, starting)
+	# AGI Core requires agi_core tech — not researched
+	var result: bool = placer.start_placement("agi_core", 0)
+	assert_bool(result).is_false()
+
+
+func test_required_techs_allows_placement() -> void:
+	var pair := _create_placer_with_tech_manager()
+	var placer: Node = pair[0]
+	var tm: MockTechManager = pair[1]
+	GameManager.current_age = 6
+	var starting: Dictionary = {
+		ResourceManager.ResourceType.KNOWLEDGE: 99999,
+		ResourceManager.ResourceType.GOLD: 99999,
+		ResourceManager.ResourceType.STONE: 99999,
+	}
+	ResourceManager.init_player(0, starting)
+	# Research the required tech
+	tm.mark_researched("agi_core")
+	# Still needs gpu_foundry building — place one first
+	placer.start_placement("gpu_foundry", 0)
+	placer._current_grid_pos = Vector2i(2, 2)
+	placer._is_valid = true
+	placer._confirm_placement()
+	# Mark it as completed
+	for entry: Dictionary in placer._placed_buildings:
+		var node: Node2D = entry.get("node")
+		if is_instance_valid(node) and node.building_name == "gpu_foundry":
+			node.under_construction = false
+	# Now AGI Core should be placeable
+	var result: bool = placer.start_placement("agi_core", 0)
+	assert_bool(result).is_true()
+
+
+func test_required_buildings_blocks_placement() -> void:
+	var pair := _create_placer_with_tech_manager()
+	var placer: Node = pair[0]
+	var tm: MockTechManager = pair[1]
+	GameManager.current_age = 6
+	var starting: Dictionary = {
+		ResourceManager.ResourceType.KNOWLEDGE: 99999,
+		ResourceManager.ResourceType.GOLD: 99999,
+		ResourceManager.ResourceType.STONE: 99999,
+	}
+	ResourceManager.init_player(0, starting)
+	tm.mark_researched("agi_core")
+	# No gpu_foundry built — should fail
+	var result: bool = placer.start_placement("agi_core", 0)
+	assert_bool(result).is_false()
+
+
+func test_required_buildings_allows_when_built() -> void:
+	var pair := _create_placer_with_tech_manager()
+	var placer: Node = pair[0]
+	var tm: MockTechManager = pair[1]
+	GameManager.current_age = 6
+	var starting: Dictionary = {
+		ResourceManager.ResourceType.KNOWLEDGE: 99999,
+		ResourceManager.ResourceType.GOLD: 99999,
+		ResourceManager.ResourceType.STONE: 99999,
+	}
+	ResourceManager.init_player(0, starting)
+	tm.mark_researched("agi_core")
+	# Build gpu_foundry first
+	placer.start_placement("gpu_foundry", 0)
+	placer._current_grid_pos = Vector2i(2, 2)
+	placer._is_valid = true
+	placer._confirm_placement()
+	# Mark as completed
+	for entry: Dictionary in placer._placed_buildings:
+		var node: Node2D = entry.get("node")
+		if is_instance_valid(node) and node.building_name == "gpu_foundry":
+			node.under_construction = false
+	var result: bool = placer.start_placement("agi_core", 0)
+	assert_bool(result).is_true()
