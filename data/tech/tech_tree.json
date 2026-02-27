@@ -1168,9 +1168,10 @@
     "cost": { "knowledge": 5000, "gold": 3000 },
     "research_time": 300,
     "prerequisites": ["transformer_lab"],
-    "effects": {},
+    "effects": {
+      "unlock_buildings": ["agi_core"]
+    },
     "singularity_chain": true,
-    "victory_tech": true,
     "public_alert": true,
     "flavor_text": "The last invention humanity needs to make."
   },

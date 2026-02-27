@@ -7,6 +7,7 @@ signal player_defeated(player_id: int)
 signal player_victorious(player_id: int, condition: String)
 signal wonder_countdown_started(player_id: int, duration: float)
 signal wonder_countdown_cancelled(player_id: int)
+signal agi_core_built(player_id: int)
 
 # Config loaded from data/settings/victory.json
 var _wonder_countdown_duration: float = 600.0
@@ -255,6 +256,11 @@ func _on_building_placed(building: Node2D) -> void:
 			building.construction_complete.connect(_on_wonder_construction_complete)
 		else:
 			start_wonder_countdown(pid, building)
+	elif building.building_name == "agi_core":
+		if building.under_construction:
+			building.construction_complete.connect(_on_agi_core_construction_complete)
+		else:
+			_trigger_singularity_from_building(building.owner_id)
 	# Listen for destruction
 	if building.has_signal("building_destroyed"):
 		building.building_destroyed.connect(_on_building_destroyed)
@@ -266,6 +272,18 @@ func _on_tc_construction_complete(building: Node2D) -> void:
 
 func _on_wonder_construction_complete(building: Node2D) -> void:
 	start_wonder_countdown(building.owner_id, building)
+
+
+func _on_agi_core_construction_complete(building: Node2D) -> void:
+	_trigger_singularity_from_building(building.owner_id)
+
+
+func _trigger_singularity_from_building(player_id: int) -> void:
+	if _game_over:
+		return
+	if _defeated_players.has(player_id):
+		return
+	agi_core_built.emit(player_id)
 
 
 func _on_building_destroyed(building: Node2D) -> void:

@@ -53,6 +53,11 @@ class MockBuilding:
 	var max_hp: int = 100
 	var last_attacker_id: int = -1
 
+	func complete_construction() -> void:
+		under_construction = false
+		hp = max_hp
+		construction_complete.emit(self)
+
 
 func _create_manager(placer: Node = null) -> Node:
 	var mgr := Node.new()
@@ -80,6 +85,17 @@ func _create_tc(pid: int, gpos: Vector2i = Vector2i.ZERO) -> Node2D:
 	b.building_name = "town_center"
 	b.owner_id = pid
 	b.grid_pos = gpos
+	add_child(b)
+	auto_free(b)
+	return b
+
+
+func _create_agi_core(pid: int, gpos: Vector2i = Vector2i.ZERO, under_constr: bool = false) -> Node2D:
+	var b := MockBuilding.new()
+	b.building_name = "agi_core"
+	b.owner_id = pid
+	b.grid_pos = gpos
+	b.under_construction = under_constr
 	add_child(b)
 	auto_free(b)
 	return b
@@ -303,3 +319,51 @@ func test_defeat_delay_timer() -> void:
 	# Tick past delay
 	mgr._tick_defeat_timers(3.0)
 	assert_array(_defeated_ids).contains([1])
+
+
+# -- AGI Core building victory --
+
+
+func test_agi_core_building_triggers_singularity_victory() -> void:
+	var placer := MockBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	var mgr := _create_manager(placer)
+	var agi := _create_agi_core(0)
+	# Emit via building_placed signal — completed building
+	var agi_built_ids: Array = []
+	mgr.agi_core_built.connect(func(pid: int) -> void: agi_built_ids.append(pid))
+	placer.building_placed.emit(agi)
+	assert_int(agi_built_ids.size()).is_equal(1)
+	assert_int(agi_built_ids[0]).is_equal(0)
+
+
+func test_agi_core_under_construction_triggers_on_complete() -> void:
+	var placer := MockBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	var mgr := _create_manager(placer)
+	var agi := _create_agi_core(0, Vector2i.ZERO, true)
+	var agi_built_ids: Array = []
+	mgr.agi_core_built.connect(func(pid: int) -> void: agi_built_ids.append(pid))
+	# Place under construction — should not emit yet
+	placer.building_placed.emit(agi)
+	assert_int(agi_built_ids.size()).is_equal(0)
+	# Complete construction — should emit now
+	agi.complete_construction()
+	assert_int(agi_built_ids.size()).is_equal(1)
+	assert_int(agi_built_ids[0]).is_equal(0)
+
+
+func test_agi_core_built_signal_not_emitted_when_defeated() -> void:
+	var placer := MockBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	var mgr := _create_manager(placer)
+	# Defeat player 0 first
+	mgr._defeated_players[0] = true
+	var agi := _create_agi_core(0)
+	var agi_built_ids: Array = []
+	mgr.agi_core_built.connect(func(pid: int) -> void: agi_built_ids.append(pid))
+	placer.building_placed.emit(agi)
+	assert_int(agi_built_ids.size()).is_equal(0)
