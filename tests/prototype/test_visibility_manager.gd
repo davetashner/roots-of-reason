@@ -189,3 +189,80 @@ func test_signal_not_emitted_when_unchanged() -> void:
 	signal_fired[0] = false
 	mgr.update_visibility(0, [unit])
 	assert_bool(signal_fired[0]).is_false()
+
+
+# -- FOV cache tests --
+
+
+func test_cache_populated_after_update() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+	assert_int(mgr.get_fov_cache_size()).is_equal(1)
+
+
+func test_cache_reused_when_unit_stationary() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+
+	var visible_first: Dictionary = mgr.get_visible_tiles(0).duplicate()
+
+	# Update again without moving — result should be identical
+	mgr.update_visibility(0, [unit])
+
+	var visible_second: Dictionary = mgr.get_visible_tiles(0)
+	assert_int(visible_second.size()).is_equal(visible_first.size())
+	for tile: Vector2i in visible_first:
+		assert_bool(visible_second.has(tile)).is_true()
+
+
+func test_cache_invalidated_when_unit_moves() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+
+	# Should see origin
+	assert_bool(mgr.is_visible(0, Vector2i(16, 16))).is_true()
+
+	# Move unit to a different grid cell
+	unit.position = Vector2(0.0, 640.0)  # ~grid (10, 10)
+	mgr.update_visibility(0, [unit])
+
+	# Old origin should no longer be visible; new position should be
+	assert_bool(mgr.is_visible(0, Vector2i(16, 16))).is_false()
+	assert_bool(mgr.is_visible(0, Vector2i(10, 10))).is_true()
+	# Cache should still have exactly 1 entry (updated, not duplicated)
+	assert_int(mgr.get_fov_cache_size()).is_equal(1)
+
+
+func test_cache_evicts_removed_units() -> void:
+	var mgr := _make_manager()
+	var unit_a := _make_mock_unit(10, 10, 2)
+	var unit_b := _make_mock_unit(20, 20, 2)
+	mgr.update_visibility(0, [unit_a, unit_b])
+	assert_int(mgr.get_fov_cache_size()).is_equal(2)
+
+	# Remove unit_b from the list
+	mgr.update_visibility(0, [unit_a])
+	assert_int(mgr.get_fov_cache_size()).is_equal(1)
+
+
+func test_invalidate_fov_cache_clears_all() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+	assert_int(mgr.get_fov_cache_size()).is_equal(1)
+
+	mgr.invalidate_fov_cache()
+	assert_int(mgr.get_fov_cache_size()).is_equal(0)
+
+
+func test_load_state_clears_cache() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+	assert_int(mgr.get_fov_cache_size()).is_equal(1)
+
+	mgr.load_state({})
+	assert_int(mgr.get_fov_cache_size()).is_equal(0)
