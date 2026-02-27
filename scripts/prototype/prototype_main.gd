@@ -70,15 +70,12 @@ func _ready() -> void:
 	_setup_pathfinding()
 	_setup_input()
 	_setup_building_placer()
+	tree_exiting.connect(_on_tree_exiting)
 	if GameManager.get_player_civilization(0) != "":
 		_start_game()
 	else:
 		_show_civ_selection()
-
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE:
-		_free_orphaned_nodes()
+	_print_orphan_count("after _ready")
 
 
 func _show_civ_selection() -> void:
@@ -124,6 +121,7 @@ func _start_game() -> void:
 	_save_handler.setup(self)
 	SaveManager.register_scene_provider(self)
 	tree_exiting.connect(func() -> void: SaveManager.register_scene_provider(null))
+	_print_orphan_count("after _start_game")
 
 
 # -- Save / load -------------------------------------------------------------
@@ -143,64 +141,28 @@ func load_state(data: Dictionary) -> void:
 # -- Cleanup -----------------------------------------------------------------
 
 
-func _free_orphaned_nodes() -> void:
-	# Release RefCounted helpers first so they drop their references to child
-	# nodes before the tree tears down.  This prevents stale _root references
-	# from interfering with the scene-tree's deletion order.
+func _on_tree_exiting() -> void:
+	_print_orphan_count("tree_exiting (before cleanup)")
+	# Release RefCounted helpers so they drop _root references before
+	# the scene tree tears children down.
 	_bootstrapper = null
 	_flow = null
 	_save_handler = null
 	_entity_registry = null
+	# Explicitly free all children now, before Godot's default teardown.
+	# This prevents shutdown ordering issues from leaving orphaned nodes.
+	var count := get_child_count()
+	for i in range(count - 1, -1, -1):
+		var child := get_child(i)
+		if is_instance_valid(child):
+			child.free()
+	_print_orphan_count("tree_exiting (after cleanup)")
 
-	# Free any Node instance-vars that ended up outside the scene tree.
-	# Normally every node is a child of `self` and freed automatically, but
-	# ordering edge-cases during shutdown can leave orphans.
-	var refs: Array = [
-		_camera,
-		_input_handler,
-		_map_node,
-		_pathfinder,
-		_target_detector,
-		_cursor_overlay,
-		_building_placer,
-		_info_panel,
-		_population_manager,
-		_resource_bar,
-		_tech_manager,
-		_war_bonus,
-		_ai_economy,
-		_ai_military,
-		_ai_tech,
-		_visibility_manager,
-		_unit_upgrade_manager,
-		_corruption_manager,
-		_fog_layer,
-		_river_transport,
-		_trade_manager,
-		_notification_panel,
-		_river_overlay,
-		_victory_manager,
-		_war_survival,
-		_victory_screen,
-		_knowledge_burning_vfx,
-		_tech_tree_viewer,
-		_singularity_regression,
-		_ai_singularity,
-		_civ_selection_screen,
-		_pause_menu,
-		_minimap,
-		_singularity_cinematic,
-		_pirate_manager,
-		_pandemic_manager,
-		_pandemic_vfx,
-		_historical_event_manager,
-		_historical_event_vfx,
-		_game_stats_tracker,
-		_postgame_stats_screen,
-	]
-	for node in refs:
-		if node is Node and is_instance_valid(node) and not node.is_inside_tree():
-			node.free()
+
+static func _print_orphan_count(label: String) -> void:
+	var orphans := int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))
+	if orphans > 0:
+		print("[leak-debug] %s: %d orphan node(s)" % [label, orphans])
 
 
 # -- Infrastructure setup (runs before game start) ---------------------------
