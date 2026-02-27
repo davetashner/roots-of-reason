@@ -10,7 +10,7 @@ Usage:
 
 Examples:
     # Split grass quad into 128x64 tiles
-    python3 tools/split_spritesheet.py assets/tiles/terrain/grass-quad.png \\
+    python3 tools/split_spritesheet.py assets/raw/terrain/grass_quad.png \\
         --tile-size 128x64 --output-dir assets/tiles/terrain/prototype \\
         --prefix grass_flat
 
@@ -97,7 +97,7 @@ def parse_tile_size(s: str) -> tuple[int, int]:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Split a spritesheet into individual tiles by detecting non-transparent sprites.",
-        epilog="Example: %(prog)s grass-quad.png --tile-size 128x64 --output-dir out/ --prefix grass_flat",
+        epilog="Example: %(prog)s assets/raw/terrain/grass_quad.png --tile-size 128x64 --output-dir out/ --prefix grass_flat",
     )
     parser.add_argument("input", type=Path, help="Input PNG spritesheet with transparent background")
     parser.add_argument(

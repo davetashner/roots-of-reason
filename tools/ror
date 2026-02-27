@@ -634,7 +634,7 @@ ${BOLD}COMMANDS${RESET}
                         ror data-check --verbose    — show per-file detail
   split-sprites <input.png> [opts]
                       Split a spritesheet into individual tiles
-                        ror split-sprites grass-quad.png --tile-size 128x64
+                        ror split-sprites assets/raw/terrain/grass_quad.png --tile-size 128x64
                         ror split-sprites input.png --output-dir out/ --prefix name
   help                Show this help message
 
