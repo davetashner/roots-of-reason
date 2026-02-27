@@ -265,24 +265,13 @@ func _draw() -> void:
 
 
 func _draw_progress_bar() -> void:
-	var bar_x := -_bar_width / 2.0
-	var bar_y := _bar_offset_y
-	# Background
-	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(0.1, 0.1, 0.1, 0.8))
-	# Fill
-	var fill_width := _bar_width * build_progress
-	draw_rect(Rect2(bar_x, bar_y, fill_width, _bar_height), Color(0.2, 0.8, 0.2, 0.9))
-	# Border
-	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(1, 1, 1, 0.5), false)
+	var bar_pos := Vector2(-_bar_width / 2.0, _bar_offset_y)
+	var bar_size := Vector2(_bar_width, _bar_height)
+	BarDrawer.draw_bar(self, bar_pos, bar_size, build_progress, Color(0.2, 0.8, 0.2, 0.9))
 
 
 func _draw_hp_bar() -> void:
-	var bar_x := -_bar_width / 2.0
-	var bar_y := _bar_offset_y
 	var ratio: float = float(hp) / float(max_hp)
-	# Background
-	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(0.1, 0.1, 0.1, 0.8))
-	# Fill with 3-tier color
 	var hp_color: Color
 	if ratio > _intact_threshold:
 		hp_color = _hp_intact_color
@@ -290,9 +279,9 @@ func _draw_hp_bar() -> void:
 		hp_color = _hp_damaged_color
 	else:
 		hp_color = _hp_critical_color
-	draw_rect(Rect2(bar_x, bar_y, _bar_width * ratio, _bar_height), hp_color)
-	# Border
-	draw_rect(Rect2(bar_x, bar_y, _bar_width, _bar_height), Color(1, 1, 1, 0.5), false)
+	var bar_pos := Vector2(-_bar_width / 2.0, _bar_offset_y)
+	var bar_size := Vector2(_bar_width, _bar_height)
+	BarDrawer.draw_bar(self, bar_pos, bar_size, ratio, hp_color)
 
 
 func _draw_iso_cell(offset: Vector2, color: Color) -> void:

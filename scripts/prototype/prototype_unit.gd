@@ -693,9 +693,10 @@ func _draw() -> void:
 		var bw: float = RADIUS * 2.5
 		var by: float = -RADIUS - 8.0
 		var r: float = float(hp) / float(max_hp)
-		draw_rect(Rect2(-bw / 2.0, by, bw, 3.0), Color(0.2, 0.2, 0.2, 0.8))
 		var hpc := Color(0.2, 0.8, 0.2) if r > 0.5 else Color(0.9, 0.2, 0.2)
-		draw_rect(Rect2(-bw / 2.0, by, bw * r, 3.0), hpc)
+		BarDrawer.draw_bar(
+			self, Vector2(-bw / 2.0, by), Vector2(bw, 3.0), r, hpc, Color(0.2, 0.2, 0.2, 0.8), Color.TRANSPARENT
+		)
 
 
 # -- Movement --
