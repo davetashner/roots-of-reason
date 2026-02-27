@@ -6,6 +6,8 @@ signal resumed
 signal quit_to_menu
 signal quit_to_desktop
 
+const SettingsPanelScript := preload("res://scripts/ui/settings_panel.gd")
+
 var _main_vbox: VBoxContainer = null
 var _save_panel: VBoxContainer = null
 var _load_panel: VBoxContainer = null
@@ -71,8 +73,9 @@ func _build_ui() -> void:
 	_settings_panel = VBoxContainer.new()
 	_settings_panel.name = "SettingsPanel"
 	_settings_panel.visible = false
+	_settings_panel.set_script(SettingsPanelScript)
 	outer_vbox.add_child(_settings_panel)
-	_build_settings_panel(_settings_panel)
+	_settings_panel.build(func() -> void: _show_main_panel())
 
 
 func _build_main_panel(parent: VBoxContainer) -> void:
@@ -209,36 +212,6 @@ func _build_load_panel(parent: VBoxContainer) -> void:
 	back_btn.custom_minimum_size = Vector2(120, 36)
 	back_btn.pressed.connect(_show_main_panel)
 	hbox.add_child(back_btn)
-
-
-func _build_settings_panel(parent: VBoxContainer) -> void:
-	var title := Label.new()
-	title.text = "Settings"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
-	parent.add_child(title)
-
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 20)
-	parent.add_child(spacer)
-
-	var placeholder := Label.new()
-	placeholder.text = "Coming Soon"
-	placeholder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	placeholder.add_theme_font_size_override("font_size", 20)
-	placeholder.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
-	parent.add_child(placeholder)
-
-	var spacer2 := Control.new()
-	spacer2.custom_minimum_size = Vector2(0, 20)
-	parent.add_child(spacer2)
-
-	var back_btn := Button.new()
-	back_btn.name = "SettingsBackButton"
-	back_btn.text = "Back"
-	back_btn.custom_minimum_size = Vector2(300, 40)
-	back_btn.pressed.connect(_show_main_panel)
-	parent.add_child(back_btn)
 
 
 func _show_main_panel() -> void:

@@ -35,7 +35,7 @@ func test_single_player_shows_lobby() -> void:
 	assert_bool(menu._lobby.visible).is_true()
 
 
-func test_settings_shows_placeholder() -> void:
+func test_settings_shows_panel() -> void:
 	var menu := _create_menu()
 	assert_bool(menu._settings_panel.visible).is_false()
 	menu._on_settings_pressed()
