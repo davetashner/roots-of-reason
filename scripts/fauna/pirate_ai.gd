@@ -38,18 +38,7 @@ func _ready() -> void:
 
 
 func _load_config() -> Dictionary:
-	var cfg: Dictionary = _dl_settings("pirates")
-	return cfg
-
-
-func _dl_settings(id: String) -> Dictionary:
-	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_settings(id)
-	if is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			return dl.get_settings(id)
-	return {}
+	return GameUtils.dl_settings("pirates")
 
 
 func _find_scene_root() -> void:
@@ -61,7 +50,7 @@ func _find_scene_root() -> void:
 
 
 func _process(delta: float) -> void:
-	var game_delta: float = _get_game_delta(delta)
+	var game_delta: float = GameUtils.get_game_delta(delta)
 	if game_delta == 0.0:
 		return
 	if _pirate == null or not is_instance_valid(_pirate):
@@ -85,16 +74,6 @@ func _process(delta: float) -> void:
 			_tick_attack(game_delta)
 		PirateState.FLEE:
 			_tick_flee(game_delta)
-
-
-func _get_game_delta(delta: float) -> float:
-	if Engine.has_singleton("GameManager"):
-		return GameManager.get_game_delta(delta)
-	var ml := Engine.get_main_loop() if is_instance_valid(Engine.get_main_loop()) else null
-	var gm: Node = ml.root.get_node_or_null("GameManager") if ml else null
-	if gm and gm.has_method("get_game_delta"):
-		return gm.get_game_delta(delta)
-	return delta
 
 
 # -- PATROL --

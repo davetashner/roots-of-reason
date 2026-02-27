@@ -76,13 +76,7 @@ func _load_building_stats() -> void:
 
 
 func _load_construction_config() -> void:
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("construction")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("construction")
+	var cfg: Dictionary = GameUtils.dl_settings("construction")
 	if cfg.is_empty():
 		return
 	_construction_alpha = float(cfg.get("construction_alpha", _construction_alpha))
@@ -92,26 +86,14 @@ func _load_construction_config() -> void:
 
 
 func _load_combat_config() -> void:
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("combat")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("combat")
+	var cfg: Dictionary = GameUtils.dl_settings("combat")
 	if not cfg.is_empty():
 		_combat_config = cfg
 		_garrison_config = cfg.get("garrison", {})
 
 
 func _load_destruction_config() -> void:
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("building_destruction")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("building_destruction")
+	var cfg: Dictionary = GameUtils.dl_settings("building_destruction")
 	if cfg.is_empty():
 		return
 	var states: Dictionary = cfg.get("damage_states", {})

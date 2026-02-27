@@ -74,7 +74,7 @@ func _process(delta: float) -> void:
 		pass
 	elif not _is_regrowing:
 		return
-	var game_delta := _get_game_delta(delta)
+	var game_delta := GameUtils.get_game_delta(delta)
 	if game_delta <= 0.0:
 		return
 	# Handle delay before regen starts
@@ -94,16 +94,6 @@ func _process(delta: float) -> void:
 		if current_yield > 0 and _is_regrowing:
 			_is_regrowing = false
 		queue_redraw()
-
-
-func _get_game_delta(delta: float) -> float:
-	if Engine.has_singleton("GameManager"):
-		return GameManager.get_game_delta(delta)
-	if is_instance_valid(Engine.get_main_loop()):
-		var gm: Node = Engine.get_main_loop().root.get_node_or_null("GameManager")
-		if gm and gm.has_method("get_game_delta"):
-			return gm.get_game_delta(delta)
-	return delta
 
 
 func get_entity_category() -> String:

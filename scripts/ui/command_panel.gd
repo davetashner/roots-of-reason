@@ -26,12 +26,7 @@ func _ready() -> void:
 
 
 func _load_config() -> void:
-	if Engine.has_singleton("DataLoader"):
-		_config = DataLoader.get_settings("command_panel")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			_config = dl.get_settings("command_panel")
+	_config = GameUtils.dl_settings("command_panel")
 	if _config.is_empty():
 		_config = {
 			"grid_columns": 3,

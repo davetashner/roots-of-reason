@@ -43,13 +43,7 @@ func _ready() -> void:
 
 
 func _load_config() -> void:
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("historical_events")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("historical_events")
+	var cfg: Dictionary = GameUtils.dl_settings("historical_events")
 	if cfg.is_empty():
 		return
 	_config = cfg
@@ -76,7 +70,7 @@ func setup(
 
 
 func _process(delta: float) -> void:
-	var game_delta: float = _get_game_delta(delta)
+	var game_delta: float = GameUtils.get_game_delta(delta)
 	if game_delta == 0.0:
 		return
 	if not _config.get("enabled", true):
@@ -525,16 +519,6 @@ func _get_game_time() -> float:
 		if gm and "game_time" in gm:
 			return float(gm.game_time)
 	return 0.0
-
-
-func _get_game_delta(delta: float) -> float:
-	if Engine.has_singleton("GameManager"):
-		return GameManager.get_game_delta(delta)
-	var ml := Engine.get_main_loop() if is_instance_valid(Engine.get_main_loop()) else null
-	var gm: Node = ml.root.get_node_or_null("GameManager") if ml else null
-	if gm and gm.has_method("get_game_delta"):
-		return gm.get_game_delta(delta)
-	return delta
 
 
 func _get_player_ids() -> Array[int]:
