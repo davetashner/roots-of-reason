@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 const InfoPanelScript := preload("res://scripts/ui/info_panel.gd")
 const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
 const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
+const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
 
 
 func _create_panel() -> PanelContainer:
@@ -162,3 +163,35 @@ func test_show_building_ruins_label() -> void:
 	b.take_damage(550, null)  # Destroy it
 	panel.show_building(b)
 	assert_str(panel._name_label.text).is_equal("Ruins")
+
+
+# -- Pirate bounty display --
+
+
+func test_pirate_bounty_shown_in_stats_label() -> void:
+	var panel := _create_panel()
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "pirate_ship"
+	unit.owner_id = -1
+	unit.hp = 80
+	unit.max_hp = 80
+	add_child(unit)
+	auto_free(unit)
+	unit.set_meta("bounty_gold", 65)
+	panel.show_unit(unit)
+	assert_str(panel._stats_label.text).contains("Bounty: 65 Gold")
+
+
+func test_non_pirate_unit_has_no_bounty_text() -> void:
+	var panel := _create_panel()
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "archer"
+	unit.owner_id = 0
+	unit.hp = 50
+	unit.max_hp = 50
+	add_child(unit)
+	auto_free(unit)
+	panel.show_unit(unit)
+	assert_str(panel._stats_label.text).not_contains("Bounty")
