@@ -5,9 +5,10 @@
   "build_time": 50,
   "build_cost": { "wood": 175 },
   "population_bonus": 0,
+  "garrison_capacity": 10,
   "is_drop_off": false,
   "drop_off_types": [],
   "units_produced": ["infantry", "archer", "cavalry"],
   "age_required": 1,
-  "garrison_capacity": 10
+  "placement_constraint": ""
 }

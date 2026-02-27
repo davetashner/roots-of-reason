@@ -5,8 +5,10 @@
   "build_time": 120,
   "build_cost": { "gold": 1500, "knowledge": 2000 },
   "population_bonus": 0,
+  "garrison_capacity": 0,
   "is_drop_off": false,
   "drop_off_types": [],
   "units_produced": [],
-  "age_required": 6
+  "age_required": 6,
+  "placement_constraint": ""
 }
