@@ -61,6 +61,9 @@ var _kb_cooldown: float = 0.0
 ## {player_id: float} — game_time of last regression per player
 var _kb_last_regression_time: Dictionary = {}
 
+## {player_id: float} — bonus from historical events (plague aftermath, renaissance)
+var _event_research_bonus: Dictionary = {}
+
 
 func _ready() -> void:
 	_load_config()
@@ -474,4 +477,13 @@ func _get_effective_speed(player_id: int) -> float:
 	var war_bonus: float = 0.0
 	if _war_bonus_node != null:
 		war_bonus = _war_bonus_node.get_war_bonus(player_id)
-	return ResearchSpeed.get_effective_speed(1.0, GameManager.current_age, _research_config, war_bonus)
+	var tech_bonuses: float = _event_research_bonus.get(player_id, 0.0)
+	return ResearchSpeed.get_effective_speed(1.0, GameManager.current_age, _research_config, war_bonus, tech_bonuses)
+
+
+func set_event_research_bonus(player_id: int, bonus: float) -> void:
+	_event_research_bonus[player_id] = bonus
+
+
+func clear_event_research_bonus(player_id: int) -> void:
+	_event_research_bonus.erase(player_id)
