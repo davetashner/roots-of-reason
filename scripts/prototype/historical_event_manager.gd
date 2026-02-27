@@ -14,28 +14,83 @@ var _trade_manager: Node = null
 var _building_placer: Node = null
 var _scene_root: Node = null
 
-# -- Black Plague state --
+# -- Black Plague global state --
 var _plague_fired: bool = false
 var _plague_delay_timer: float = -1.0  # <0 means not counting down
 var _plague_active: bool = false
 var _plague_timer: float = 0.0
 var _plague_death_timer: float = 0.0
-var _plague_original_rates: Dictionary = {}  # player_id -> {instance_id -> rate}
 var _plague_end_times: Dictionary = {}  # player_id -> game_time when plague ended
 
-# -- Plague aftermath state --
-var _aftermath_active: Dictionary = {}  # player_id -> true
-var _aftermath_timer: Dictionary = {}  # player_id -> remaining seconds
+# -- Per-player state objects --
+var _plague_states: Dictionary = {}  # player_id -> PlaguePlayerState
+var _aftermath_states: Dictionary = {}  # player_id -> AftermathState
+var _renaissance_states: Dictionary = {}  # player_id -> RenaissanceState
 
-# -- Renaissance state --
-var _renaissance_triggered: Dictionary = {}  # player_id -> true
-var _renaissance_active: Dictionary = {}  # player_id -> true
-var _renaissance_timer: Dictionary = {}  # player_id -> remaining seconds
-var _renaissance_phoenix: Dictionary = {}  # player_id -> true (if phoenix bonus active)
+# -- State inner classes --
 
-# Per-player plague mitigation tracking (set in _start_black_plague)
-var _plague_mit_death: Dictionary = {}  # player_id -> death_chance_reduction
-var _plague_mit_duration: Dictionary = {}  # player_id -> mitigated duration
+
+class PlaguePlayerState:
+	extends RefCounted
+	var death_chance_reduction: float = 0.0
+	var duration_remaining: float = 0.0
+	var original_rates: Dictionary = {}  # instance_id -> rate
+
+	func save_data() -> Dictionary:
+		var rates_out: Dictionary = {}
+		for vid: int in original_rates:
+			rates_out[str(vid)] = original_rates[vid]
+		return {
+			"death_chance_reduction": death_chance_reduction,
+			"duration_remaining": duration_remaining,
+			"original_rates": rates_out,
+		}
+
+	static func from_data(data: Dictionary) -> PlaguePlayerState:
+		var state := PlaguePlayerState.new()
+		state.death_chance_reduction = float(data.get("death_chance_reduction", 0.0))
+		state.duration_remaining = float(data.get("duration_remaining", 0.0))
+		var rates_in: Dictionary = data.get("original_rates", {})
+		for vid_str: String in rates_in:
+			state.original_rates[int(vid_str)] = float(rates_in[vid_str])
+		return state
+
+
+class AftermathState:
+	extends RefCounted
+	var timer: float = 0.0
+
+	func save_data() -> Dictionary:
+		return {"timer": timer}
+
+	static func from_data(data: Dictionary) -> AftermathState:
+		var state := AftermathState.new()
+		state.timer = float(data.get("timer", 0.0))
+		return state
+
+
+class RenaissanceState:
+	extends RefCounted
+	var triggered: bool = false
+	var active: bool = false
+	var timer: float = 0.0
+	var phoenix: bool = false
+
+	func save_data() -> Dictionary:
+		return {
+			"triggered": triggered,
+			"active": active,
+			"timer": timer,
+			"phoenix": phoenix,
+		}
+
+	static func from_data(data: Dictionary) -> RenaissanceState:
+		var state := RenaissanceState.new()
+		state.triggered = bool(data.get("triggered", false))
+		state.active = bool(data.get("active", false))
+		state.timer = float(data.get("timer", 0.0))
+		state.phoenix = bool(data.get("phoenix", false))
+		return state
 
 
 func _ready() -> void:
@@ -120,7 +175,7 @@ func _start_black_plague() -> void:
 	var trade_mult: float = 1.0 + trade_penalty
 	var mitigations: Dictionary = plague_cfg.get("tech_mitigations", {})
 	var player_ids: Array[int] = _get_player_ids()
-	_plague_original_rates.clear()
+	_plague_states.clear()
 	for pid: int in player_ids:
 		# Check vaccine immunity
 		if _has_plague_immunity(pid, mitigations):
@@ -129,43 +184,33 @@ func _start_black_plague() -> void:
 			continue
 		# Calculate per-player mitigated work rate reduction
 		var mit_work_reduction: float = 0.0
-		for tech_id: String in mitigations:
-			if _is_tech_researched(tech_id, pid):
-				var mit: Dictionary = mitigations[tech_id]
-				mit_work_reduction += float(mit.get("work_rate_penalty_reduction", 0.0))
-		# Apply work rate penalty (mitigated)
-		var effective_penalty: float = penalty * (1.0 - mit_work_reduction)
-		var villagers: Array = _get_villagers(pid)
-		var original_rates: Dictionary = {}
-		for v: Node2D in villagers:
-			var vid: int = v.get_instance_id()
-			original_rates[vid] = v._gather_rate_multiplier
-			v._gather_rate_multiplier = maxf(0.0, v._gather_rate_multiplier + effective_penalty)
-		_plague_original_rates[pid] = original_rates
-		# Apply trade income penalty
-		if _trade_manager != null and _trade_manager.has_method("set_trade_income_multiplier"):
-			_trade_manager.set_trade_income_multiplier(pid, trade_mult)
-		event_started.emit("black_plague", pid)
-	# Store per-player mitigation for death rolls (accessed during tick)
-	_plague_active = true
-	_plague_timer = duration  # Use base duration; per-player handled via immunity
-	_plague_death_timer = 0.0
-	# Store mitigated death info per player
-	# We need per-player death chance reduction — store it for _roll_plague_deaths
-	_plague_mit_death = {}
-	_plague_mit_duration = {}
-	for pid: int in player_ids:
-		if _has_plague_immunity(pid, mitigations):
-			continue
 		var death_red: float = 0.0
 		var dur: float = duration
 		for tech_id: String in mitigations:
 			if _is_tech_researched(tech_id, pid):
 				var mit: Dictionary = mitigations[tech_id]
+				mit_work_reduction += float(mit.get("work_rate_penalty_reduction", 0.0))
 				death_red += float(mit.get("death_chance_reduction", 0.0))
 				dur *= (1.0 - float(mit.get("duration_reduction", 0.0)))
-		_plague_mit_death[pid] = death_red
-		_plague_mit_duration[pid] = dur
+		# Create per-player plague state
+		var pstate := PlaguePlayerState.new()
+		pstate.death_chance_reduction = death_red
+		pstate.duration_remaining = dur
+		# Apply work rate penalty (mitigated)
+		var effective_penalty: float = penalty * (1.0 - mit_work_reduction)
+		var villagers: Array = _get_villagers(pid)
+		for v: Node2D in villagers:
+			var vid: int = v.get_instance_id()
+			pstate.original_rates[vid] = v._gather_rate_multiplier
+			v._gather_rate_multiplier = maxf(0.0, v._gather_rate_multiplier + effective_penalty)
+		_plague_states[pid] = pstate
+		# Apply trade income penalty
+		if _trade_manager != null and _trade_manager.has_method("set_trade_income_multiplier"):
+			_trade_manager.set_trade_income_multiplier(pid, trade_mult)
+		event_started.emit("black_plague", pid)
+	_plague_active = true
+	_plague_timer = duration
+	_plague_death_timer = 0.0
 
 
 func _tick_plague(game_delta: float) -> void:
@@ -185,10 +230,10 @@ func _tick_plague(game_delta: float) -> void:
 	# Check per-player end (some players may end sooner due to tech)
 	var player_ids: Array[int] = _get_player_ids()
 	for pid: int in player_ids:
-		if pid not in _plague_mit_duration:
+		if pid not in _plague_states:
 			continue
-		_plague_mit_duration[pid] -= game_delta
-		if _plague_mit_duration[pid] <= 0.0:
+		_plague_states[pid].duration_remaining -= game_delta
+		if _plague_states[pid].duration_remaining <= 0.0:
 			_end_plague_for_player(pid)
 	# End plague globally when base timer expires
 	if _plague_timer <= 0.0:
@@ -197,11 +242,11 @@ func _tick_plague(game_delta: float) -> void:
 
 func _roll_plague_deaths(effects: Dictionary) -> void:
 	var base_chance: float = float(effects.get("villager_death_chance", 0.15))
-	for pid: int in _plague_mit_duration:
-		if _plague_mit_duration[pid] <= 0.0:
+	for pid: int in _plague_states:
+		var pstate: PlaguePlayerState = _plague_states[pid]
+		if pstate.duration_remaining <= 0.0:
 			continue
-		var reduction: float = _plague_mit_death.get(pid, 0.0)
-		var chance: float = base_chance * (1.0 - reduction)
+		var chance: float = base_chance * (1.0 - pstate.death_chance_reduction)
 		if chance <= 0.0:
 			continue
 		var villagers: Array = _get_villagers(pid)
@@ -213,8 +258,9 @@ func _roll_plague_deaths(effects: Dictionary) -> void:
 func _drain_military_hp(game_delta: float, hp_drain: float) -> void:
 	if _scene_root == null:
 		return
-	for pid: int in _plague_mit_duration:
-		if _plague_mit_duration[pid] <= 0.0:
+	for pid: int in _plague_states:
+		var pstate: PlaguePlayerState = _plague_states[pid]
+		if pstate.duration_remaining <= 0.0:
 			continue
 		for child in _scene_root.get_children():
 			if not (child is Node2D):
@@ -230,18 +276,16 @@ func _drain_military_hp(game_delta: float, hp_drain: float) -> void:
 
 
 func _end_plague_for_player(pid: int) -> void:
-	if pid not in _plague_mit_duration:
+	if pid not in _plague_states:
 		return
-	_plague_mit_duration.erase(pid)
-	_plague_mit_death.erase(pid)
+	var pstate: PlaguePlayerState = _plague_states[pid]
 	# Restore work rates
-	var original_rates: Dictionary = _plague_original_rates.get(pid, {})
 	var villagers: Array = _get_villagers(pid)
 	for v: Node2D in villagers:
 		var vid: int = v.get_instance_id()
-		if vid in original_rates:
-			v._gather_rate_multiplier = float(original_rates[vid])
-	_plague_original_rates.erase(pid)
+		if vid in pstate.original_rates:
+			v._gather_rate_multiplier = float(pstate.original_rates[vid])
+	_plague_states.erase(pid)
 	# Clear trade penalty
 	if _trade_manager != null and _trade_manager.has_method("clear_trade_income_multiplier"):
 		_trade_manager.clear_trade_income_multiplier(pid)
@@ -254,7 +298,7 @@ func _end_plague_for_player(pid: int) -> void:
 
 func _end_black_plague() -> void:
 	# End for any remaining players
-	var remaining: Array = _plague_mit_duration.keys()
+	var remaining: Array = _plague_states.keys()
 	for pid: int in remaining:
 		_end_plague_for_player(pid)
 	_plague_active = false
@@ -279,15 +323,16 @@ func _start_aftermath(pid: int) -> void:
 	# Apply research speed bonus
 	if _tech_manager != null and _tech_manager.has_method("set_event_research_bonus"):
 		_tech_manager.set_event_research_bonus(pid, research_bonus)
-	_aftermath_active[pid] = true
-	_aftermath_timer[pid] = duration
+	var astate := AftermathState.new()
+	astate.timer = duration
+	_aftermath_states[pid] = astate
 
 
 func _tick_aftermath(game_delta: float) -> void:
 	var ended: Array[int] = []
-	for pid: int in _aftermath_timer:
-		_aftermath_timer[pid] -= game_delta
-		if _aftermath_timer[pid] <= 0.0:
+	for pid: int in _aftermath_states:
+		_aftermath_states[pid].timer -= game_delta
+		if _aftermath_states[pid].timer <= 0.0:
 			ended.append(pid)
 	for pid: int in ended:
 		_end_aftermath(pid)
@@ -305,21 +350,22 @@ func _end_aftermath(pid: int) -> void:
 	# Clear research speed bonus
 	if _tech_manager != null and _tech_manager.has_method("clear_event_research_bonus"):
 		_tech_manager.clear_event_research_bonus(pid)
-	_aftermath_active.erase(pid)
-	_aftermath_timer.erase(pid)
+	_aftermath_states.erase(pid)
 
 
 # -- Renaissance --
 
 
 func _on_tech_researched(player_id: int, _tech_id: String, _effects: Dictionary) -> void:
-	if player_id in _renaissance_triggered:
+	var rstate: RenaissanceState = _renaissance_states.get(player_id)
+	if rstate != null and rstate.triggered:
 		return
 	_check_renaissance(player_id)
 
 
 func _check_renaissance(player_id: int) -> void:
-	if player_id in _renaissance_triggered:
+	var rstate: RenaissanceState = _renaissance_states.get(player_id)
+	if rstate != null and rstate.triggered:
 		return
 	var ren_cfg: Dictionary = _get_event_config("renaissance")
 	if ren_cfg.is_empty():
@@ -336,8 +382,9 @@ func _check_renaissance(player_id: int) -> void:
 
 
 func _start_renaissance(player_id: int) -> void:
-	_renaissance_triggered[player_id] = true
-	_renaissance_active[player_id] = true
+	var rstate := RenaissanceState.new()
+	rstate.triggered = true
+	rstate.active = true
 	var ren_cfg: Dictionary = _get_event_config("renaissance")
 	var effects: Dictionary = ren_cfg.get("effects", {})
 	var duration: float = float(effects.get("duration_seconds", 180))
@@ -356,7 +403,7 @@ func _start_renaissance(player_id: int) -> void:
 			research_bonus *= phoenix_mult
 			gold_bonus *= phoenix_mult
 			duration *= phoenix_mult
-	_renaissance_phoenix[player_id] = is_phoenix
+	rstate.phoenix = is_phoenix
 	# Check building bonuses
 	var bonus_triggers: Dictionary = ren_cfg.get("bonus_triggers", {})
 	var library_bonus: Dictionary = bonus_triggers.get("has_library_count_3_plus", {})
@@ -375,7 +422,7 @@ func _start_renaissance(player_id: int) -> void:
 	var total_research: float = research_bonus + extra_research
 	if _tech_manager != null and _tech_manager.has_method("set_event_research_bonus"):
 		var existing: float = 0.0
-		if _aftermath_active.has(player_id):
+		if _aftermath_states.has(player_id):
 			# Aftermath bonus is already set; add renaissance on top
 			var plague_cfg: Dictionary = _get_event_config("black_plague")
 			var innovation: Dictionary = plague_cfg.get("aftermath", {}).get("innovation_pressure", {})
@@ -385,7 +432,8 @@ func _start_renaissance(player_id: int) -> void:
 	var total_gold_mult: float = 1.0 + gold_bonus + extra_gold
 	if _trade_manager != null and _trade_manager.has_method("set_trade_income_multiplier"):
 		_trade_manager.set_trade_income_multiplier(player_id, total_gold_mult)
-	_renaissance_timer[player_id] = duration
+	rstate.timer = duration
+	_renaissance_states[player_id] = rstate
 	# population_growth_halt: No growth system exists yet — flag stored but no-op
 	# knowledge_generation_bonus: No passive knowledge tick — research speed covers intent
 	# building_cost_reduction: Deferred — requires touching building_placer cost flow
@@ -394,20 +442,26 @@ func _start_renaissance(player_id: int) -> void:
 
 func _tick_renaissance(game_delta: float) -> void:
 	var ended: Array[int] = []
-	for pid: int in _renaissance_timer:
-		_renaissance_timer[pid] -= game_delta
-		if _renaissance_timer[pid] <= 0.0:
+	for pid: int in _renaissance_states:
+		var rstate: RenaissanceState = _renaissance_states[pid]
+		if not rstate.active:
+			continue
+		rstate.timer -= game_delta
+		if rstate.timer <= 0.0:
 			ended.append(pid)
 	for pid: int in ended:
 		_end_renaissance(pid)
 
 
 func _end_renaissance(player_id: int) -> void:
-	_renaissance_active.erase(player_id)
-	_renaissance_timer.erase(player_id)
+	var rstate: RenaissanceState = _renaissance_states.get(player_id)
+	if rstate == null:
+		return
+	rstate.active = false
+	rstate.phoenix = false
 	# Remove research bonus (keep aftermath if still active)
 	if _tech_manager != null and _tech_manager.has_method("set_event_research_bonus"):
-		if _aftermath_active.has(player_id):
+		if _aftermath_states.has(player_id):
 			var plague_cfg: Dictionary = _get_event_config("black_plague")
 			var innovation: Dictionary = plague_cfg.get("aftermath", {}).get("innovation_pressure", {})
 			var aftermath_bonus: float = float(innovation.get("research_speed_bonus", 0.20))
@@ -417,7 +471,6 @@ func _end_renaissance(player_id: int) -> void:
 	# Remove trade multiplier
 	if _trade_manager != null and _trade_manager.has_method("clear_trade_income_multiplier"):
 		_trade_manager.clear_trade_income_multiplier(player_id)
-	_renaissance_phoenix.erase(player_id)
 	event_ended.emit("renaissance", player_id)
 
 
@@ -533,15 +586,17 @@ func is_plague_active() -> bool:
 
 
 func is_renaissance_active(player_id: int) -> bool:
-	return _renaissance_active.has(player_id)
+	var rstate: RenaissanceState = _renaissance_states.get(player_id)
+	return rstate != null and rstate.active
 
 
 func is_phoenix_active(player_id: int) -> bool:
-	return _renaissance_phoenix.get(player_id, false)
+	var rstate: RenaissanceState = _renaissance_states.get(player_id)
+	return rstate != null and rstate.phoenix
 
 
 func is_aftermath_active(player_id: int) -> bool:
-	return _aftermath_active.has(player_id)
+	return _aftermath_states.has(player_id)
 
 
 func get_plague_time_remaining() -> float:
@@ -549,62 +604,38 @@ func get_plague_time_remaining() -> float:
 
 
 func get_renaissance_time_remaining(player_id: int) -> float:
-	return maxf(0.0, _renaissance_timer.get(player_id, 0.0))
+	var rstate: RenaissanceState = _renaissance_states.get(player_id)
+	if rstate == null:
+		return 0.0
+	return maxf(0.0, rstate.timer)
 
 
 # -- Save / Load --
 
 
 func save_state() -> Dictionary:
-	var original_rates_out: Dictionary = {}
-	for pid: int in _plague_original_rates:
-		var rates: Dictionary = {}
-		for vid: int in _plague_original_rates[pid]:
-			rates[str(vid)] = _plague_original_rates[pid][vid]
-		original_rates_out[str(pid)] = rates
+	var plague_states_out: Dictionary = {}
+	for pid: int in _plague_states:
+		plague_states_out[str(pid)] = _plague_states[pid].save_data()
 	var plague_end_times_out: Dictionary = {}
 	for pid: int in _plague_end_times:
 		plague_end_times_out[str(pid)] = _plague_end_times[pid]
-	var aftermath_timer_out: Dictionary = {}
-	for pid: int in _aftermath_timer:
-		aftermath_timer_out[str(pid)] = _aftermath_timer[pid]
-	var aftermath_active_out: Dictionary = {}
-	for pid: int in _aftermath_active:
-		aftermath_active_out[str(pid)] = true
-	var renaissance_timer_out: Dictionary = {}
-	for pid: int in _renaissance_timer:
-		renaissance_timer_out[str(pid)] = _renaissance_timer[pid]
-	var renaissance_triggered_out: Dictionary = {}
-	for pid: int in _renaissance_triggered:
-		renaissance_triggered_out[str(pid)] = true
-	var renaissance_active_out: Dictionary = {}
-	for pid: int in _renaissance_active:
-		renaissance_active_out[str(pid)] = true
-	var renaissance_phoenix_out: Dictionary = {}
-	for pid: int in _renaissance_phoenix:
-		renaissance_phoenix_out[str(pid)] = _renaissance_phoenix[pid]
-	var mit_death_out: Dictionary = {}
-	for pid: int in _plague_mit_death:
-		mit_death_out[str(pid)] = _plague_mit_death[pid]
-	var mit_duration_out: Dictionary = {}
-	for pid: int in _plague_mit_duration:
-		mit_duration_out[str(pid)] = _plague_mit_duration[pid]
+	var aftermath_states_out: Dictionary = {}
+	for pid: int in _aftermath_states:
+		aftermath_states_out[str(pid)] = _aftermath_states[pid].save_data()
+	var renaissance_states_out: Dictionary = {}
+	for pid: int in _renaissance_states:
+		renaissance_states_out[str(pid)] = _renaissance_states[pid].save_data()
 	return {
 		"plague_fired": _plague_fired,
 		"plague_delay_timer": _plague_delay_timer,
 		"plague_active": _plague_active,
 		"plague_timer": _plague_timer,
 		"plague_death_timer": _plague_death_timer,
-		"plague_original_rates": original_rates_out,
+		"plague_states": plague_states_out,
 		"plague_end_times": plague_end_times_out,
-		"plague_mit_death": mit_death_out,
-		"plague_mit_duration": mit_duration_out,
-		"aftermath_active": aftermath_active_out,
-		"aftermath_timer": aftermath_timer_out,
-		"renaissance_triggered": renaissance_triggered_out,
-		"renaissance_active": renaissance_active_out,
-		"renaissance_timer": renaissance_timer_out,
-		"renaissance_phoenix": renaissance_phoenix_out,
+		"aftermath_states": aftermath_states_out,
+		"renaissance_states": renaissance_states_out,
 	}
 
 
@@ -614,52 +645,61 @@ func load_state(data: Dictionary) -> void:
 	_plague_active = bool(data.get("plague_active", false))
 	_plague_timer = float(data.get("plague_timer", 0.0))
 	_plague_death_timer = float(data.get("plague_death_timer", 0.0))
-	# Restore original rates
-	_plague_original_rates.clear()
-	var rates_in: Dictionary = data.get("plague_original_rates", {})
-	for pid_str: String in rates_in:
-		var pid: int = int(pid_str)
-		var rates: Dictionary = {}
-		for vid_str: String in rates_in[pid_str]:
-			rates[int(vid_str)] = float(rates_in[pid_str][vid_str])
-		_plague_original_rates[pid] = rates
+	# Restore plague states
+	_plague_states.clear()
+	var plague_states_in: Dictionary = data.get("plague_states", {})
+	for pid_str: String in plague_states_in:
+		_plague_states[int(pid_str)] = PlaguePlayerState.from_data(plague_states_in[pid_str])
 	# Restore plague end times
 	_plague_end_times.clear()
 	var end_times_in: Dictionary = data.get("plague_end_times", {})
 	for pid_str: String in end_times_in:
 		_plague_end_times[int(pid_str)] = float(end_times_in[pid_str])
-	# Restore mitigation tracking
-	_plague_mit_death.clear()
-	var mit_death_in: Dictionary = data.get("plague_mit_death", {})
-	for pid_str: String in mit_death_in:
-		_plague_mit_death[int(pid_str)] = float(mit_death_in[pid_str])
-	_plague_mit_duration.clear()
-	var mit_dur_in: Dictionary = data.get("plague_mit_duration", {})
-	for pid_str: String in mit_dur_in:
-		_plague_mit_duration[int(pid_str)] = float(mit_dur_in[pid_str])
-	# Restore aftermath
-	_aftermath_active.clear()
-	var aftermath_active_in: Dictionary = data.get("aftermath_active", {})
-	for pid_str: String in aftermath_active_in:
-		_aftermath_active[int(pid_str)] = true
-	_aftermath_timer.clear()
-	var aftermath_timer_in: Dictionary = data.get("aftermath_timer", {})
-	for pid_str: String in aftermath_timer_in:
-		_aftermath_timer[int(pid_str)] = float(aftermath_timer_in[pid_str])
-	# Restore renaissance
-	_renaissance_triggered.clear()
-	var ren_triggered_in: Dictionary = data.get("renaissance_triggered", {})
-	for pid_str: String in ren_triggered_in:
-		_renaissance_triggered[int(pid_str)] = true
-	_renaissance_active.clear()
-	var ren_active_in: Dictionary = data.get("renaissance_active", {})
-	for pid_str: String in ren_active_in:
-		_renaissance_active[int(pid_str)] = true
-	_renaissance_timer.clear()
-	var ren_timer_in: Dictionary = data.get("renaissance_timer", {})
-	for pid_str: String in ren_timer_in:
-		_renaissance_timer[int(pid_str)] = float(ren_timer_in[pid_str])
-	_renaissance_phoenix.clear()
-	var ren_phoenix_in: Dictionary = data.get("renaissance_phoenix", {})
-	for pid_str: String in ren_phoenix_in:
-		_renaissance_phoenix[int(pid_str)] = bool(ren_phoenix_in[pid_str])
+	# Restore aftermath states
+	_aftermath_states.clear()
+	var aftermath_in: Dictionary = data.get("aftermath_states", {})
+	for pid_str: String in aftermath_in:
+		_aftermath_states[int(pid_str)] = AftermathState.from_data(aftermath_in[pid_str])
+	# Restore renaissance states
+	_renaissance_states.clear()
+	var renaissance_in: Dictionary = data.get("renaissance_states", {})
+	for pid_str: String in renaissance_in:
+		_renaissance_states[int(pid_str)] = RenaissanceState.from_data(renaissance_in[pid_str])
+	# -- Legacy format support (pre-refactor save files) --
+	_load_legacy_state(data)
+
+
+func _load_legacy_state(data: Dictionary) -> void:
+	# Support loading saves from before the state-object refactor
+	if data.has("plague_mit_death") and not data.has("plague_states"):
+		var mit_death_in: Dictionary = data.get("plague_mit_death", {})
+		var mit_dur_in: Dictionary = data.get("plague_mit_duration", {})
+		var rates_in: Dictionary = data.get("plague_original_rates", {})
+		for pid_str: String in mit_dur_in:
+			var pid: int = int(pid_str)
+			var pstate := PlaguePlayerState.new()
+			pstate.death_chance_reduction = float(mit_death_in.get(pid_str, 0.0))
+			pstate.duration_remaining = float(mit_dur_in[pid_str])
+			if pid_str in rates_in:
+				for vid_str: String in rates_in[pid_str]:
+					pstate.original_rates[int(vid_str)] = float(rates_in[pid_str][vid_str])
+			_plague_states[pid] = pstate
+	if data.has("aftermath_active") and not data.has("aftermath_states"):
+		var aftermath_timer_in: Dictionary = data.get("aftermath_timer", {})
+		for pid_str: String in aftermath_timer_in:
+			var astate := AftermathState.new()
+			astate.timer = float(aftermath_timer_in[pid_str])
+			_aftermath_states[int(pid_str)] = astate
+	if data.has("renaissance_triggered") and not data.has("renaissance_states"):
+		var ren_triggered_in: Dictionary = data.get("renaissance_triggered", {})
+		var ren_active_in: Dictionary = data.get("renaissance_active", {})
+		var ren_timer_in: Dictionary = data.get("renaissance_timer", {})
+		var ren_phoenix_in: Dictionary = data.get("renaissance_phoenix", {})
+		for pid_str: String in ren_triggered_in:
+			var pid: int = int(pid_str)
+			var rstate := RenaissanceState.new()
+			rstate.triggered = true
+			rstate.active = ren_active_in.has(pid_str)
+			rstate.timer = float(ren_timer_in.get(pid_str, 0.0))
+			rstate.phoenix = bool(ren_phoenix_in.get(pid_str, false))
+			_renaissance_states[pid] = rstate
