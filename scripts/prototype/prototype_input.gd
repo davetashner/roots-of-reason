@@ -4,6 +4,12 @@ extends Node
 signal command_issued(units: Array[Node], command_type: String, target: Node, world_pos: Vector2)
 
 const FormationManagerScript := preload("res://scripts/prototype/formation_manager.gd")
+const FeedCmdHandler := preload("res://scripts/prototype/feed_command_handler.gd")
+const BuildCmdHandler := preload("res://scripts/prototype/build_command_handler.gd")
+const GatherCmdHandler := preload("res://scripts/prototype/gather_command_handler.gd")
+const GarrisonCmdHandler := preload("res://scripts/prototype/garrison_command_handler.gd")
+const EmbarkCmdHandler := preload("res://scripts/prototype/embark_command_handler.gd")
+const DisembarkCmdHandler := preload("res://scripts/prototype/disembark_command_handler.gd")
 
 var _units: Array[Node] = []
 var _box_selecting: bool = false
@@ -27,12 +33,14 @@ var _patrol_first_point: Vector2 = Vector2.ZERO
 var _formation_manager: RefCounted = null
 var _formation_type: int = 0  # FormationManager.FormationType.STAGGERED
 var _river_overlay: Node = null
+var _command_handlers: Array[RefCounted] = []
 
 
 func _ready() -> void:
 	_load_config()
 	_load_command_config()
 	_load_formation_config()
+	_init_command_handlers()
 	# Gather all units from parent scene
 	_refresh_units()
 	# Create a node for drawing selection box
@@ -65,6 +73,17 @@ func _load_formation_config() -> void:
 	_formation_manager.speed_sync = bool(cfg.get("speed_sync", true))
 	var default_type: String = str(cfg.get("default_formation", "staggered"))
 	_formation_type = FormationManagerScript.type_from_string(default_type)
+
+
+func _init_command_handlers() -> void:
+	_command_handlers = [
+		FeedCmdHandler.new(),
+		BuildCmdHandler.new(),
+		GatherCmdHandler.new(),
+		GarrisonCmdHandler.new(),
+		EmbarkCmdHandler.new(),
+		DisembarkCmdHandler.new(),
+	]
 
 
 func setup(
@@ -371,35 +390,14 @@ func _issue_context_command(world_pos: Vector2) -> void:
 		cmd = "feed"
 	command_issued.emit(selected, cmd, target, world_pos)
 	_show_click_marker(world_pos, cmd)
-	if cmd == "feed" and target != null:
-		for unit in selected:
-			if unit.has_method("assign_feed_target"):
-				unit.assign_feed_target(target)
-	elif cmd == "build" and target != null and target.has_method("apply_build_work"):
-		for unit in selected:
-			if unit.has_method("assign_build_target"):
-				unit.assign_build_target(target)
-	elif cmd == "gather" and target != null:
-		for unit in selected:
-			if unit.has_method("assign_gather_target"):
-				unit.assign_gather_target(target)
-	elif cmd == "garrison" and target != null and target.has_method("garrison_unit"):
-		for unit in selected:
-			if unit is Node2D:
-				target.garrison_unit(unit)
-	elif cmd == "embark" and target != null and target.has_method("embark_unit"):
-		for unit in selected:
-			if unit is Node2D:
-				unit.move_to(target.global_position)
-				target.embark_unit(unit)
-	elif target == null and _has_transport_with_passengers(selected):
-		# Transports with passengers right-clicking ground → disembark
-		for unit in selected:
-			if unit.has_method("disembark_all") and unit.get_embarked_count() > 0:
-				unit.disembark_all(world_pos)
-			elif unit.has_method("move_to"):
-				unit.move_to(world_pos)
-	else:
+	# Dispatch to pluggable command handlers
+	var handled := false
+	for handler in _command_handlers:
+		if handler.can_handle(cmd, target, selected, world_pos):
+			handled = handler.execute(cmd, target, selected, world_pos)
+			if handled:
+				break
+	if not handled:
 		_move_selected(world_pos)
 
 
@@ -504,13 +502,6 @@ func _filter_barges(units: Array[Node]) -> Array[Node]:
 				continue
 		result.append(unit)
 	return result
-
-
-func _has_transport_with_passengers(units: Array[Node]) -> bool:
-	for unit in units:
-		if unit.has_method("get_embarked_count") and unit.get_embarked_count() > 0:
-			return true
-	return false
 
 
 func save_state() -> Dictionary:
