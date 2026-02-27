@@ -4,6 +4,7 @@ extends Control
 
 const GameLobbyScreenScript := preload("res://scripts/ui/game_lobby_screen.gd")
 const SettingsPanelScript := preload("res://scripts/ui/settings_panel.gd")
+const COVER_IMAGE := preload("res://assets/branding/cover.png")
 
 var _lobby: PanelContainer = null
 var _settings_panel: PanelContainer = null
@@ -25,44 +26,44 @@ func _reset_state() -> void:
 func _build_ui() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
-	# Background
-	var bg := ColorRect.new()
+	# Background — cover image
+	var bg := TextureRect.new()
 	bg.name = "Background"
-	bg.color = Color(0.04, 0.04, 0.08)
+	bg.texture = COVER_IMAGE
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+
+	# Dark overlay for text readability
+	var overlay := ColorRect.new()
+	overlay.name = "Overlay"
+	overlay.color = Color(0.0, 0.0, 0.0, 0.55)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
 
 	# Center container
 	var center := VBoxContainer.new()
 	center.name = "CenterVBox"
 	center.set_anchors_preset(Control.PRESET_CENTER)
-	center.size = Vector2(400, 500)
-	center.position = Vector2(-200, -250)
+	center.size = Vector2(400, 400)
+	center.position = Vector2(-200, -200)
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.add_theme_constant_override("separation", 16)
 	add_child(center)
 
-	# Title
-	var title := Label.new()
-	title.name = "TitleLabel"
-	title.text = "Roots of Reason"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 64)
-	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-	center.add_child(title)
-
-	# Subtitle
+	# Subtitle (cover image already contains the title)
 	var subtitle := Label.new()
 	subtitle.name = "SubtitleLabel"
 	subtitle.text = "The Path to Singularity"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 20)
-	subtitle.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
+	subtitle.add_theme_font_size_override("font_size", 22)
+	subtitle.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
 	center.add_child(subtitle)
 
 	# Spacer
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 40)
+	spacer.custom_minimum_size = Vector2(0, 20)
 	center.add_child(spacer)
 
 	# Buttons
