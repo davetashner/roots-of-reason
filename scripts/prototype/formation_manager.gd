@@ -108,3 +108,55 @@ func _staggered_offsets(count: int, facing: Vector2) -> Array[Vector2]:
 			result.append(offset)
 			placed += 1
 	return result
+
+
+static func assign_slots_sorted(
+	unit_positions: Array[Vector2], slots: Array[Vector2], facing: Vector2 = Vector2.RIGHT
+) -> Array[Vector2]:
+	## Assign unit positions to formation slots using sorted greedy matching.
+	## Projects both onto the facing axis, sorts, and matches in order.
+	## O(n log n) via sorting instead of O(n²) brute-force.
+	var n := unit_positions.size()
+	if n == 0:
+		return []
+	var s := slots.size()
+	if s == 0:
+		var empty: Array[Vector2] = []
+		empty.resize(n)
+		return empty
+
+	# Project onto facing direction for 1D sorting
+	var axis := facing.normalized()
+	if axis.length() < 0.1:
+		axis = Vector2.RIGHT
+
+	# Build indexed arrays for sorting
+	var unit_pairs: Array = []  # [[projection, original_index], ...]
+	for i in n:
+		unit_pairs.append([unit_positions[i].dot(axis), i])
+
+	var slot_pairs: Array = []  # [[projection, original_index], ...]
+	for j in s:
+		slot_pairs.append([slots[j].dot(axis), j])
+
+	# Sort both by projection (ascending)
+	unit_pairs.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	slot_pairs.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+
+	# Greedy 1-to-1 assignment in sorted order
+	var result: Array[Vector2] = []
+	result.resize(n)
+	var slot_count := mini(n, s)
+	for k in slot_count:
+		var unit_idx: int = int(unit_pairs[k][1])
+		var slot_idx: int = int(slot_pairs[k][1])
+		result[unit_idx] = slots[slot_idx]
+
+	# If more units than slots, assign extras to last slot
+	if n > s:
+		var last_slot: Vector2 = slots[int(slot_pairs[s - 1][1])]
+		for k in range(s, n):
+			var unit_idx: int = int(unit_pairs[k][1])
+			result[unit_idx] = last_slot
+
+	return result
