@@ -329,8 +329,9 @@ func test_herbalism_reduces_death_chance() -> void:
 	mgr._on_age_advanced(3)
 	mgr._tick_plague_delay(1.0)
 	# Herbalism: death -30% → effective = 0.70
-	var death_red: float = mgr._plague_mit_death.get(0, 0.0)
-	assert_float(death_red).is_equal_approx(0.30, 0.01)
+	var pstate: RefCounted = mgr._plague_states.get(0)
+	assert_object(pstate).is_not_null()
+	assert_float(pstate.death_chance_reduction).is_equal_approx(0.30, 0.01)
 
 
 func test_sanitation_reduces_work_penalty() -> void:
@@ -629,12 +630,15 @@ func test_save_load_roundtrip() -> void:
 	# Set up some state
 	mgr._plague_fired = true
 	mgr._plague_end_times[0] = 450.0
-	mgr._aftermath_active[0] = true
-	mgr._aftermath_timer[0] = 60.0
-	mgr._renaissance_triggered[0] = true
-	mgr._renaissance_active[0] = true
-	mgr._renaissance_timer[0] = 120.0
-	mgr._renaissance_phoenix[0] = true
+	var astate := HistoricalEventManager.AftermathState.new()
+	astate.timer = 60.0
+	mgr._aftermath_states[0] = astate
+	var rstate := HistoricalEventManager.RenaissanceState.new()
+	rstate.triggered = true
+	rstate.active = true
+	rstate.timer = 120.0
+	rstate.phoenix = true
+	mgr._renaissance_states[0] = rstate
 	var state: Dictionary = mgr.save_state()
 	# Create fresh manager and load
 	var mgr2 := _create_manager()
@@ -642,12 +646,13 @@ func test_save_load_roundtrip() -> void:
 	mgr2.load_state(state)
 	assert_bool(mgr2._plague_fired).is_true()
 	assert_float(mgr2._plague_end_times.get(0, 0.0)).is_equal_approx(450.0, 0.1)
-	assert_bool(mgr2._aftermath_active.has(0)).is_true()
-	assert_float(mgr2._aftermath_timer.get(0, 0.0)).is_equal_approx(60.0, 0.1)
-	assert_bool(mgr2._renaissance_triggered.has(0)).is_true()
-	assert_bool(mgr2._renaissance_active.has(0)).is_true()
-	assert_float(mgr2._renaissance_timer.get(0, 0.0)).is_equal_approx(120.0, 0.1)
-	assert_bool(mgr2._renaissance_phoenix.get(0, false)).is_true()
+	assert_bool(mgr2._aftermath_states.has(0)).is_true()
+	assert_float(mgr2._aftermath_states[0].timer).is_equal_approx(60.0, 0.1)
+	assert_bool(mgr2._renaissance_states.has(0)).is_true()
+	assert_bool(mgr2._renaissance_states[0].triggered).is_true()
+	assert_bool(mgr2._renaissance_states[0].active).is_true()
+	assert_float(mgr2._renaissance_states[0].timer).is_equal_approx(120.0, 0.1)
+	assert_bool(mgr2._renaissance_states[0].phoenix).is_true()
 
 
 func test_save_load_plague_active_state() -> void:
