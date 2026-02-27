@@ -34,6 +34,7 @@ const HistoricalEventVFXScript := preload("res://scripts/prototype/historical_ev
 const GameStatsTrackerScript := preload("res://scripts/prototype/game_stats_tracker.gd")
 const PostGameStatsScreenScript := preload("res://scripts/ui/postgame_stats_screen.gd")
 const SceneSaveHandlerScript := preload("res://scripts/prototype/scene_save_handler.gd")
+const EntityRegistryScript := preload("res://scripts/prototype/entity_registry.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -77,6 +78,7 @@ var _historical_event_vfx: Node = null
 var _game_stats_tracker: Node = null
 var _postgame_stats_screen: PanelContainer = null
 var _save_handler: RefCounted = null
+var _entity_registry: RefCounted = null
 var _pending_victory_tech: Array = []
 
 
@@ -115,6 +117,7 @@ func _on_civ_selected(player_civ: String, ai_civ: String) -> void:
 func _start_game() -> void:
 	ResourceManager.init_player(0)  # Must precede _setup_civilizations()
 	ResourceManager.init_player(1, null, GameManager.ai_difficulty)
+	_entity_registry = EntityRegistryScript.new()
 	_setup_civilizations()
 	_setup_units()
 	_setup_demo_entities()
@@ -176,23 +179,17 @@ func _setup_fog_of_war() -> void:
 
 
 func _update_fog_of_war() -> void:
-	if _visibility_manager == null:
+	if _visibility_manager == null or _entity_registry == null:
 		return
 	var player_units: Array = []
-	for child in get_children():
-		if not (child is Node2D):
+	for entity in _entity_registry.get_by_owner(0):
+		if "hp" in entity and entity.hp <= 0:
 			continue
-		if "owner_id" not in child:
+		if entity.has_method("get_los") and entity.get_los() > 0:
+			player_units.append(entity)
 			continue
-		if child.owner_id != 0:
-			continue
-		if "hp" in child and child.hp <= 0:
-			continue
-		if child.has_method("get_los") and child.get_los() > 0:
-			player_units.append(child)
-			continue
-		if child.has_method("get_stat"):
-			player_units.append(child)
+		if entity.has_method("get_stat"):
+			player_units.append(entity)
 	_visibility_manager.update_visibility(0, player_units)
 
 
@@ -334,6 +331,7 @@ func _setup_units() -> void:
 			_target_detector.register_entity(unit)
 		if _population_manager != null:
 			_population_manager.register_unit(unit, 0)
+		_entity_registry.register(unit)
 		unit.unit_died.connect(_on_unit_died)
 
 
@@ -371,6 +369,7 @@ func _setup_demo_entities() -> void:
 	_target_detector.register_entity(building)
 	if _population_manager != null:
 		_population_manager.register_building(building, building.owner_id)
+	_entity_registry.register(building)
 	building.building_destroyed.connect(_on_building_destroyed)
 	_try_attach_production_queue(building)
 	var cells := BuildingValidator.get_footprint_cells(bld_pos, Vector2i(3, 3))
@@ -413,6 +412,7 @@ func _setup_fauna() -> void:
 					wolf_ai.pack_id = pack_index
 					unit.add_child(wolf_ai)
 					wolf_ai.domesticated.connect(func(foid: int) -> void: _on_wolf_domesticated(unit, foid))
+				_entity_registry.register(unit)
 				if unit.has_signal("unit_died"):
 					unit.unit_died.connect(_on_fauna_died)
 				fauna_index += 1
@@ -420,6 +420,7 @@ func _setup_fauna() -> void:
 
 
 func _on_wolf_domesticated(wolf_unit: Node2D, feeder_owner_id: int) -> void:
+	_entity_registry.unregister(wolf_unit)
 	wolf_unit.owner_id = feeder_owner_id
 	wolf_unit.entity_category = "dog"
 	wolf_unit.unit_color = Color(0.6, 0.4, 0.2)  # Brown
@@ -435,6 +436,7 @@ func _on_wolf_domesticated(wolf_unit: Node2D, feeder_owner_id: int) -> void:
 	wolf_unit.add_child(dog_ai)
 	dog_ai.danger_alert.connect(_on_dog_danger_alert)
 	wolf_unit.queue_redraw()
+	_entity_registry.register(wolf_unit)
 	if _input_handler != null and _input_handler.has_method("register_unit"):
 		_input_handler.register_unit(wolf_unit)
 
@@ -444,6 +446,7 @@ func _on_dog_danger_alert(_alert_position: Vector2, _player_id: int) -> void:
 
 
 func _on_building_placed(building: Node2D) -> void:
+	_entity_registry.register(building)
 	if building.has_signal("construction_complete"):
 		building.construction_complete.connect(_on_building_construction_complete)
 	if building.has_signal("building_destroyed"):
@@ -462,6 +465,7 @@ func _on_building_construction_complete(building: Node2D) -> void:
 
 
 func _on_building_destroyed(building: Node2D) -> void:
+	_entity_registry.unregister(building)
 	if _population_manager != null and "owner_id" in building:
 		_population_manager.unregister_building(building, building.owner_id)
 	if _game_stats_tracker != null and "owner_id" in building:
@@ -525,10 +529,9 @@ func _setup_victory() -> void:
 	_victory_manager.set_script(VictoryManagerScript)
 	add_child(_victory_manager)
 	_victory_manager.setup(_building_placer)
-	for child in get_children():
-		if "building_name" in child and child.building_name == "town_center":
-			if not child.under_construction:
-				_victory_manager.register_town_center(child.owner_id, child)
+	for bld in _entity_registry.get_by_category("building"):
+		if "building_name" in bld and bld.building_name == "town_center" and not bld.under_construction:
+			_victory_manager.register_town_center(bld.owner_id, bld)
 	_victory_manager.player_defeated.connect(_on_player_defeated)
 	_victory_manager.player_victorious.connect(_on_player_victorious)
 	_victory_manager.agi_core_built.connect(_on_agi_core_built)
@@ -651,14 +654,16 @@ func _setup_ai() -> void:
 	_ai_economy.difficulty = difficulty
 	_ai_economy.personality = ai_pers
 	add_child(_ai_economy)
-	_ai_economy.setup(self, _population_manager, _pathfinder, _map_node, _target_detector, _tech_manager)
+	_ai_economy.setup(
+		self, _population_manager, _pathfinder, _map_node, _target_detector, _tech_manager, _entity_registry
+	)
 	_ai_military = Node.new()
 	_ai_military.name = "AIMilitary"
 	_ai_military.set_script(AIMilitaryScript)
 	_ai_military.difficulty = difficulty
 	_ai_military.personality = ai_pers
 	add_child(_ai_military)
-	_ai_military.setup(self, _population_manager, _target_detector, _ai_economy, _tech_manager)
+	_ai_military.setup(self, _population_manager, _target_detector, _ai_economy, _tech_manager, _entity_registry)
 	_ai_tech = Node.new()
 	_ai_tech.name = "AITech"
 	_ai_tech.set_script(AITechScript)
@@ -715,6 +720,7 @@ func _create_ai_town_center() -> Node2D:
 	_target_detector.register_entity(building)
 	if _population_manager != null:
 		_population_manager.register_building(building, building.owner_id)
+	_entity_registry.register(building)
 	building.building_destroyed.connect(_on_building_destroyed)
 	_try_attach_production_queue(building)
 	var cells := BuildingValidator.get_footprint_cells(tc_pos, Vector2i(3, 3))
@@ -743,21 +749,20 @@ func _create_ai_starting_villagers(tc: Node2D, count: int) -> void:
 			_target_detector.register_entity(unit)
 		if _population_manager != null:
 			_population_manager.register_unit(unit, 1)
+		_entity_registry.register(unit)
 		unit.unit_died.connect(_on_unit_died)
 
 
 func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
 	var best: Node2D = null
 	var best_dist := INF
-	for child in get_children():
-		if not child.has_method("is_idle") or not child.is_idle():
+	for unit in _entity_registry.get_by_owner(0):
+		if not unit.has_method("is_idle") or not unit.is_idle():
 			continue
-		if "owner_id" in child and child.owner_id != 0:
-			continue
-		var dist: float = child.global_position.distance_to(target_pos)
+		var dist: float = unit.global_position.distance_to(target_pos)
 		if dist < best_dist:
 			best_dist = dist
-			best = child
+			best = unit
 	return best
 
 
@@ -817,6 +822,7 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 	if _unit_upgrade_manager != null:
 		_unit_upgrade_manager.apply_upgrades_to_unit(unit, owner_id)
 	CivBonusManager.apply_bonus_to_unit(unit.stats, unit.unit_type, owner_id)
+	_entity_registry.register(unit)
 	unit.unit_died.connect(_on_unit_died)
 	EventBus.emit_unit_spawned(unit, owner_id, resolved_type)
 	if _game_stats_tracker != null:
@@ -836,6 +842,7 @@ func _on_resource_depleted(node: Node2D) -> void:
 func _on_unit_died(unit: Node2D, killer: Node2D) -> void:
 	var owner_id: int = unit.owner_id if "owner_id" in unit else -1
 	EventBus.emit_unit_died(unit, killer, owner_id)
+	_entity_registry.unregister(unit)
 	if _target_detector != null:
 		_target_detector.unregister_entity(unit)
 	if _population_manager != null and owner_id >= 0:
@@ -848,6 +855,7 @@ func _on_unit_died(unit: Node2D, killer: Node2D) -> void:
 
 
 func _on_fauna_died(unit: Node2D, _killer: Node2D) -> void:
+	_entity_registry.unregister(unit)
 	if _target_detector != null:
 		_target_detector.unregister_entity(unit)
 	if "unit_type" in unit and unit.unit_type == "wolf":
@@ -965,11 +973,9 @@ func _on_hist_event_ended(event_id: String, player_id: int) -> void:
 
 
 func _find_town_center_pos(player_id: int) -> Vector2:
-	for child in get_children():
-		if child is Node2D and "building_name" in child:
-			if child.building_name == "town_center" and "owner_id" in child:
-				if child.owner_id == player_id:
-					return child.position
+	for bld in _entity_registry.get_by_owner_and_category(player_id, "building"):
+		if "building_name" in bld and bld.building_name == "town_center":
+			return bld.position
 	return Vector2.ZERO
 
 
@@ -1151,14 +1157,9 @@ func _on_minimap_move_command(world_pos: Vector2) -> void:
 func _find_naval_spawn_point(building: Node2D) -> Vector2i:
 	if _map_node == null or not _map_node.has_method("get_terrain_at"):
 		return Vector2i(-1, -1)
-	var footprint := Vector2i(1, 1)
-	if "footprint" in building:
-		footprint = building.footprint
-	var origin := Vector2i.ZERO
-	if "grid_pos" in building:
-		origin = building.grid_pos
+	var footprint: Vector2i = building.footprint if "footprint" in building else Vector2i(1, 1)
+	var origin: Vector2i = building.grid_pos if "grid_pos" in building else Vector2i.ZERO
 	var cells := BuildingValidator.get_footprint_cells(origin, footprint)
-	var water_terrains: Array[String] = ["water", "shallows", "deep_water"]
 	var directions: Array[Vector2i] = [
 		Vector2i(0, -1),
 		Vector2i(1, 0),
@@ -1174,7 +1175,7 @@ func _find_naval_spawn_point(building: Node2D) -> Vector2i:
 			var neighbor := cell + dir
 			if neighbor in cells:
 				continue
-			if _map_node.get_terrain_at(neighbor) in water_terrains:
+			if _map_node.get_terrain_at(neighbor) in ["water", "shallows", "deep_water"]:
 				return neighbor
 	return Vector2i(-1, -1)
 
@@ -1185,14 +1186,13 @@ func _get_start_position(player_index: int) -> Vector2i:
 		return positions[player_index] as Vector2i
 	if player_index == 0:
 		return Vector2i(4, 4)
-	var map_size: int = _map_node.get_map_size()
-	return Vector2i(map_size - 7, map_size - 7)
+	return Vector2i(_map_node.get_map_size() - 7, _map_node.get_map_size() - 7)
 
 
 func _get_villager_offsets() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
-	var map_gen_cfg: Dictionary = DataLoader.load_json("res://data/settings/map_generation.json")
-	var start_cfg: Dictionary = map_gen_cfg.get("starting_locations", {})
+	var cfg: Dictionary = DataLoader.load_json("res://data/settings/map_generation.json")
+	var start_cfg: Dictionary = cfg.get("starting_locations", {})
 	var raw_offsets: Array = start_cfg.get("villager_offsets", [[-1, 0], [0, -1], [-1, -1], [1, -1], [-1, 1]])
 	for offset in raw_offsets:
 		if offset is Array and offset.size() == 2:

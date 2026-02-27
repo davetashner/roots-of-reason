@@ -30,6 +30,7 @@ var _pathfinder: Node = null
 var _map_node: Node = null
 var _target_detector: Node = null
 var _tech_manager: Node = null
+var _entity_registry: RefCounted = null
 var _own_villagers: Array[Node2D] = []
 
 
@@ -126,6 +127,8 @@ func place_building(bname: String, town_center: Node2D) -> Node2D:
 	building.hp = 0
 	building._build_time = float(stats.get("build_time", 25))
 	_scene_root.add_child(building)
+	if _entity_registry != null:
+		_entity_registry.register(building)
 	# Mark footprint cells solid
 	if _pathfinder != null:
 		var cells := BuildingValidator.get_footprint_cells(grid_pos, footprint)
@@ -166,6 +169,8 @@ func on_unit_produced(unit_type: String, building: Node2D) -> void:
 	unit._scene_root = _scene_root
 	if _target_detector != null:
 		_target_detector.register_entity(unit)
+	if _entity_registry != null:
+		_entity_registry.register(unit)
 	if _population_manager != null:
 		_population_manager.register_unit(unit, player_id)
 
@@ -275,6 +280,8 @@ func _should_build_forward_tc(_town_center: Node2D) -> bool:
 
 
 func _count_military_units(owner: int) -> int:
+	if _entity_registry != null:
+		return _entity_registry.get_count_by_owner_and_category(owner, "military")
 	var count: int = 0
 	if _scene_root == null:
 		return count
