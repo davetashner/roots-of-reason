@@ -110,13 +110,6 @@ func _build_save_panel(parent: VBoxContainer) -> void:
 	title.add_theme_font_size_override("font_size", 28)
 	parent.add_child(title)
 
-	var note := Label.new()
-	note.text = "(Autoload state only)"
-	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	note.add_theme_font_size_override("font_size", 14)
-	note.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-	parent.add_child(note)
-
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 10)
 	parent.add_child(spacer)
@@ -170,13 +163,6 @@ func _build_load_panel(parent: VBoxContainer) -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 28)
 	parent.add_child(title)
-
-	var note := Label.new()
-	note.text = "(Autoload state only)"
-	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	note.add_theme_font_size_override("font_size", 14)
-	note.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-	parent.add_child(note)
 
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 10)
@@ -339,9 +325,13 @@ func _on_load_confirm() -> void:
 		_load_status_label.text = "Load failed!"
 		_load_status_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 		return
-	SaveManager.apply_loaded_state(data)
+	_load_confirm_btn.disabled = true
+	_load_status_label.text = "Loading..."
+	_load_status_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	await SaveManager.apply_loaded_state(data)
 	_load_status_label.text = "Loaded slot %d" % (_selected_load_slot + 1)
 	_load_status_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4))
+	_load_confirm_btn.disabled = false
 
 
 func _refresh_save_slots() -> void:
