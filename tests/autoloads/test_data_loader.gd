@@ -184,7 +184,7 @@ func test_clear_cache_clears_cache() -> void:
 
 
 func test_all_unit_files_parse() -> void:
-	for unit_name in ["villager", "infantry", "archer", "cavalry", "siege", "naval"]:
+	for unit_name in ["villager", "infantry", "archer", "cavalry", "siege", "war_galley"]:
 		var stats := DataLoader.get_unit_stats(unit_name)
 		assert_dict(stats).is_not_empty()
 		assert_bool(stats.has("name")).is_true()
@@ -229,7 +229,7 @@ func test_ages_all_entries_have_required_keys() -> void:
 
 
 func test_all_unit_files_have_required_stats() -> void:
-	for unit_name in ["villager", "infantry", "archer", "cavalry", "siege", "naval"]:
+	for unit_name in ["villager", "infantry", "archer", "cavalry", "siege", "war_galley"]:
 		var stats := DataLoader.get_unit_stats(unit_name)
 		for field in ["hp", "attack", "defense", "speed"]:
 			assert_bool(stats.has(field)).is_true()

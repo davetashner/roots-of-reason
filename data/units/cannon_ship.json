@@ -1,0 +1,20 @@
+{
+  "name": "Cannon Ship",
+  "hp": 200,
+  "attack": 14,
+  "defense": 3,
+  "speed": 1.2,
+  "range": 6,
+  "los": 7,
+  "population_cost": 3,
+  "train_time": 50,
+  "train_cost": { "wood": 250, "gold": 150 },
+  "bonus_vs": { "building": 8 },
+  "armor_type": "siege",
+  "attack_speed": 3.5,
+  "attack_type": "ranged",
+  "movement_type": "water",
+  "transport_capacity": 0,
+  "unit_category": "military",
+  "default_stance": "aggressive"
+}
