@@ -4,10 +4,12 @@ extends PanelContainer
 
 signal continue_pressed
 signal menu_pressed
+signal stats_pressed
 
 var _title_label: Label = null
 var _condition_label: Label = null
 var _continue_btn: Button = null
+var _stats_btn: Button = null
 var _menu_btn: Button = null
 var _vbox: VBoxContainer = null
 
@@ -71,9 +73,20 @@ func _build_ui() -> void:
 	_continue_btn.pressed.connect(_on_continue_pressed)
 	btn_hbox.add_child(_continue_btn)
 
-	var btn_spacer := Control.new()
-	btn_spacer.custom_minimum_size = Vector2(20, 0)
-	btn_hbox.add_child(btn_spacer)
+	var spacer_1 := Control.new()
+	spacer_1.custom_minimum_size = Vector2(20, 0)
+	btn_hbox.add_child(spacer_1)
+
+	_stats_btn = Button.new()
+	_stats_btn.name = "StatsButton"
+	_stats_btn.text = "View Statistics"
+	_stats_btn.custom_minimum_size = Vector2(160, 40)
+	_stats_btn.pressed.connect(_on_stats_pressed)
+	btn_hbox.add_child(_stats_btn)
+
+	var spacer_2 := Control.new()
+	spacer_2.custom_minimum_size = Vector2(20, 0)
+	btn_hbox.add_child(spacer_2)
 
 	_menu_btn = Button.new()
 	_menu_btn.name = "MenuButton"
@@ -105,6 +118,10 @@ func set_continue_enabled(enabled: bool) -> void:
 func _on_continue_pressed() -> void:
 	visible = false
 	continue_pressed.emit()
+
+
+func _on_stats_pressed() -> void:
+	stats_pressed.emit()
 
 
 func _on_menu_pressed() -> void:

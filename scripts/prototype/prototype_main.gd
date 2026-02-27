@@ -1,6 +1,5 @@
 extends Node2D
-## Main prototype scene — assembles map, camera, units, input, and HUD
-## programmatically at runtime.
+## Main prototype scene — assembles map, camera, units, input, and HUD at runtime.
 
 signal knowledge_burned(attacker_id: int, defender_id: int, regressed_techs: Array)
 
@@ -34,6 +33,8 @@ const PandemicManagerScript := preload("res://scripts/prototype/pandemic_manager
 const PandemicVFXScript := preload("res://scripts/prototype/pandemic_vfx.gd")
 const HistoricalEventManagerScript := preload("res://scripts/prototype/historical_event_manager.gd")
 const HistoricalEventVFXScript := preload("res://scripts/prototype/historical_event_vfx.gd")
+const GameStatsTrackerScript := preload("res://scripts/prototype/game_stats_tracker.gd")
+const PostGameStatsScreenScript := preload("res://scripts/ui/postgame_stats_screen.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -74,6 +75,8 @@ var _pandemic_manager: Node = null
 var _pandemic_vfx: Node = null
 var _historical_event_manager: Node = null
 var _historical_event_vfx: Node = null
+var _game_stats_tracker: Node = null
+var _postgame_stats_screen: PanelContainer = null
 var _pending_victory_tech: Array = []
 
 
@@ -125,6 +128,7 @@ func _start_game() -> void:
 	_setup_trade()
 	_setup_ai()
 	_setup_pirates()
+	_setup_game_stats_tracker()
 	_setup_hud()
 	_update_fog_of_war()
 
@@ -169,11 +173,9 @@ func _update_fog_of_war() -> void:
 			continue
 		if "hp" in child and child.hp <= 0:
 			continue
-		# Include buildings with dog LOS bonus
 		if child.has_method("get_los") and child.get_los() > 0:
 			player_units.append(child)
 			continue
-		# Include normal units
 		if child.has_method("get_stat"):
 			player_units.append(child)
 	_visibility_manager.update_visibility(0, player_units)
@@ -317,7 +319,6 @@ func _setup_units() -> void:
 			unit._visibility_manager = _visibility_manager
 		if _war_survival != null:
 			unit._war_survival = _war_survival
-		# Register with input handler after both are in tree
 		if _input_handler.has_method("register_unit"):
 			_input_handler.register_unit(unit)
 		if _target_detector != null:
@@ -342,7 +343,6 @@ func _setup_demo_entities() -> void:
 			add_child(res_node)
 			res_node.setup(res_name)
 			res_node.depleted.connect(_on_resource_depleted)
-			res_node.regen_started.connect(_on_resource_regen_started)
 			_target_detector.register_entity(res_node)
 			res_index += 1
 	var building := Node2D.new()
@@ -383,23 +383,20 @@ func _setup_fauna() -> void:
 				var unit := Node2D.new()
 				unit.name = "Fauna_%s_%d" % [fauna_name, fauna_index]
 				unit.set_script(UnitScript)
-				# Offset pack members slightly
 				var offset := Vector2i(i % 2, i / 2)
 				var spawn_pos: Vector2i = grid_pos + offset
 				unit.position = IsoUtils.grid_to_screen(Vector2(spawn_pos))
 				unit.unit_type = fauna_name
 				unit.owner_id = -1  # Gaia faction
-				unit.unit_color = Color(0.5, 0.5, 0.5)  # Gray
+				unit.unit_color = Color(0.5, 0.5, 0.5)
 				add_child(unit)
 				unit._scene_root = self
 				if _war_survival != null:
 					unit._war_survival = _war_survival
 				if _target_detector != null:
 					_target_detector.register_entity(unit)
-				# Set entity category for wild fauna
 				if fauna_name == "wolf":
 					unit.entity_category = "wild_fauna"
-				# Attach wolf AI for wolf fauna
 				if fauna_name == "wolf":
 					var wolf_ai := Node.new()
 					wolf_ai.name = "WolfAI"
@@ -407,7 +404,6 @@ func _setup_fauna() -> void:
 					wolf_ai.pack_id = pack_index
 					unit.add_child(wolf_ai)
 					wolf_ai.domesticated.connect(func(foid: int) -> void: _on_wolf_domesticated(unit, foid))
-				# Connect death signal for carcass spawning
 				if unit.has_signal("unit_died"):
 					unit.unit_died.connect(_on_fauna_died)
 				fauna_index += 1
@@ -418,15 +414,12 @@ func _on_wolf_domesticated(wolf_unit: Node2D, feeder_owner_id: int) -> void:
 	wolf_unit.owner_id = feeder_owner_id
 	wolf_unit.entity_category = "dog"
 	wolf_unit.unit_color = Color(0.6, 0.4, 0.2)  # Brown
-	# Remove WolfAI and attach DogAI
 	var wolf_ai := wolf_unit.get_node_or_null("WolfAI")
 	if wolf_ai != null:
 		wolf_unit.remove_child(wolf_ai)
 		wolf_ai.queue_free()
-	# Reinit stats to dog type
 	wolf_unit.unit_type = "dog"
 	wolf_unit._init_stats()
-	# Create DogAI
 	var dog_ai := Node.new()
 	dog_ai.name = "DogAI"
 	dog_ai.set_script(DogAIScript)
@@ -454,12 +447,16 @@ func _on_building_placed(building: Node2D) -> void:
 func _on_building_construction_complete(building: Node2D) -> void:
 	if _population_manager != null and "owner_id" in building:
 		_population_manager.register_building(building, building.owner_id)
+	if _game_stats_tracker != null and "owner_id" in building and "building_name" in building:
+		_game_stats_tracker.record_building_built(building.owner_id, building.building_name)
 	_try_attach_production_queue(building)
 
 
 func _on_building_destroyed(building: Node2D) -> void:
 	if _population_manager != null and "owner_id" in building:
 		_population_manager.unregister_building(building, building.owner_id)
+	if _game_stats_tracker != null and "owner_id" in building:
+		_game_stats_tracker.record_building_lost(building.owner_id)
 	if _target_detector != null:
 		_target_detector.unregister_entity(building)
 	if _pathfinder != null and "grid_pos" in building and "footprint" in building:
@@ -476,7 +473,6 @@ func _on_building_destroyed(building: Node2D) -> void:
 		if not regressed.is_empty():
 			knowledge_burned.emit(building.last_attacker_id, building.owner_id, regressed)
 			_play_knowledge_burning_vfx(building.position, building.owner_id, building.last_attacker_id, regressed)
-	# Notify AI brains of building destruction
 	if "owner_id" in building and int(building.owner_id) == 1:
 		if _ai_military != null:
 			_ai_military.on_building_destroyed(building)
@@ -520,18 +516,15 @@ func _setup_victory() -> void:
 	_victory_manager.set_script(VictoryManagerScript)
 	add_child(_victory_manager)
 	_victory_manager.setup(_building_placer)
-	# Register existing player TC (created in _setup_demo_entities)
 	for child in get_children():
 		if "building_name" in child and child.building_name == "town_center":
 			if not child.under_construction:
 				_victory_manager.register_town_center(child.owner_id, child)
-	# Connect victory/defeat signals
 	_victory_manager.player_defeated.connect(_on_player_defeated)
 	_victory_manager.player_victorious.connect(_on_player_victorious)
 	_victory_manager.agi_core_built.connect(_on_agi_core_built)
 	_victory_manager.wonder_countdown_started.connect(_on_wonder_countdown_started)
 	_victory_manager.wonder_countdown_cancelled.connect(_on_wonder_countdown_cancelled)
-	# Connect age advancement for singularity check
 	GameManager.age_advanced.connect(_victory_manager.on_age_advanced)
 
 
@@ -545,6 +538,12 @@ func _on_player_victorious(player_id: int, condition: String) -> void:
 		var result: Dictionary = _victory_manager.get_game_result()
 		var label: String = result.get("condition_label", condition)
 		_victory_screen.show_victory(label)
+
+
+func _on_victory_stats_pressed() -> void:
+	if _postgame_stats_screen == null or _game_stats_tracker == null:
+		return
+	_postgame_stats_screen.show_stats(_game_stats_tracker.get_all_stats(), _game_stats_tracker.get_game_time())
 
 
 func _on_victory_tech_completed(player_id: int, tech_id: String) -> void:
@@ -601,7 +600,6 @@ func _setup_river_transport() -> void:
 	_river_transport.set_script(RiverTransportScript)
 	add_child(_river_transport)
 	_river_transport.setup(_map_node, _building_placer, _target_detector)
-	# Connect destruction signals for notifications
 	_river_transport.barge_destroyed_with_resources.connect(_on_barge_destroyed_with_resources)
 
 
@@ -635,7 +633,6 @@ func _setup_ai() -> void:
 	var ai_tc := _create_ai_town_center()
 	var villager_count: int = tier_config.get("starting_villagers", 3)
 	_create_ai_starting_villagers(ai_tc, villager_count)
-	# Resolve gameplay personality
 	var personality_id: String = str(tier_config.get("gameplay_personality", "random"))
 	if personality_id == "random":
 		personality_id = AIPersonality.get_random_id()
@@ -661,10 +658,8 @@ func _setup_ai() -> void:
 	_ai_tech.gameplay_personality = ai_pers
 	add_child(_ai_tech)
 	_ai_tech.setup(_tech_manager)
-	# Connect tech regression signals to AI brains
 	_tech_manager.tech_regressed.connect(_ai_military.on_tech_regressed)
 	_tech_manager.tech_regressed.connect(_ai_tech.on_tech_regressed)
-	# AI Singularity awareness
 	_ai_singularity = Node.new()
 	_ai_singularity.name = "AISingularity"
 	_ai_singularity.set_script(AISingularityScript)
@@ -788,7 +783,6 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 	var resolved_type := CivBonusManager.get_resolved_unit_id(owner_id, unit_type)
 	unit.unit_type = resolved_type
 	unit.owner_id = owner_id
-	# Spawn at building position offset by rally point
 	var pq: Node = building.get_node_or_null("ProductionQueue")
 	var offset := Vector2i(1, 1)
 	if pq != null and pq.has_method("get_rally_point_offset"):
@@ -796,7 +790,6 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 	var spawn_grid: Vector2i = Vector2i.ZERO
 	if "grid_pos" in building:
 		spawn_grid = building.grid_pos + offset
-	# Naval units spawn on adjacent water tile instead of land
 	var unit_stats: Dictionary = DataLoader.get_unit_stats(resolved_type)
 	if unit_stats.get("movement_type", "") == "water" and _map_node != null:
 		var naval_spawn := _find_naval_spawn_point(building)
@@ -819,7 +812,8 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 		_unit_upgrade_manager.apply_upgrades_to_unit(unit, owner_id)
 	CivBonusManager.apply_bonus_to_unit(unit.stats, unit.unit_type, owner_id)
 	unit.unit_died.connect(_on_unit_died)
-	# Attach trade AI for trade carts and merchant ships
+	if _game_stats_tracker != null:
+		_game_stats_tracker.record_unit_produced(owner_id, resolved_type)
 	if unit_type == "trade_cart" or unit_type == "merchant_ship":
 		var trade_ai := Node.new()
 		trade_ai.name = "TradeCartAI"
@@ -832,15 +826,15 @@ func _on_resource_depleted(node: Node2D) -> void:
 		_target_detector.unregister_entity(node)
 
 
-func _on_resource_regen_started(_node: Node2D) -> void:
-	pass
-
-
-func _on_unit_died(unit: Node2D, _killer: Node2D) -> void:
+func _on_unit_died(unit: Node2D, killer: Node2D) -> void:
 	if _target_detector != null:
 		_target_detector.unregister_entity(unit)
 	if _population_manager != null and "owner_id" in unit:
 		_population_manager.unregister_unit(unit, unit.owner_id)
+	if _game_stats_tracker != null and "owner_id" in unit:
+		_game_stats_tracker.record_unit_lost(unit.owner_id)
+		if killer != null and "owner_id" in killer:
+			_game_stats_tracker.record_unit_kill(killer.owner_id)
 	_update_fog_of_war()
 
 
@@ -870,13 +864,11 @@ func _setup_tech() -> void:
 	_tech_manager.name = "TechManager"
 	_tech_manager.set_script(load("res://scripts/prototype/tech_manager.gd"))
 	add_child(_tech_manager)
-	# War research bonus node — tracks combat state and provides speed multiplier
 	_war_bonus = Node.new()
 	_war_bonus.name = "WarResearchBonus"
 	_war_bonus.set_script(load("res://scripts/prototype/war_research_bonus.gd"))
 	add_child(_war_bonus)
 	_tech_manager.setup_war_bonus(_war_bonus)
-	# Unit upgrade manager — applies tech stat_modifiers to units
 	_unit_upgrade_manager = Node.new()
 	_unit_upgrade_manager.name = "UnitUpgradeManager"
 	_unit_upgrade_manager.set_script(load("res://scripts/prototype/unit_upgrade_manager.gd"))
@@ -884,23 +876,18 @@ func _setup_tech() -> void:
 	_unit_upgrade_manager.setup(self)
 	_tech_manager.tech_researched.connect(_unit_upgrade_manager.on_tech_researched)
 	_tech_manager.tech_regressed.connect(_unit_upgrade_manager.on_tech_regressed)
-	# War survival — medical tech chain for lethal-damage survival
 	_war_survival = Node.new()
 	_war_survival.name = "WarSurvival"
 	_war_survival.set_script(WarSurvivalScript)
 	add_child(_war_survival)
 	_war_survival.setup(_tech_manager)
-	# Connect tech completion to spillover system
 	_tech_manager.tech_researched.connect(_on_tech_researched_spillover)
-	# Singularity regression — tech regression + singularity path interaction
 	_singularity_regression = Node.new()
 	_singularity_regression.name = "SingularityRegression"
 	_singularity_regression.set_script(SingularityRegressionScript)
 	add_child(_singularity_regression)
 	_singularity_regression.setup(_tech_manager, _notification_panel)
-	# Wire victory tech completion signal for singularity cinematic
 	_tech_manager.victory_tech_completed.connect(_on_victory_tech_completed)
-	# Provide tech_manager to building placer for prerequisite checks
 	if _building_placer != null:
 		_building_placer._tech_manager = _tech_manager
 
@@ -977,6 +964,17 @@ func _find_town_center_pos(player_id: int) -> Vector2:
 	return Vector2.ZERO
 
 
+func _setup_game_stats_tracker() -> void:
+	_game_stats_tracker = Node.new()
+	_game_stats_tracker.name = "GameStatsTracker"
+	_game_stats_tracker.set_script(GameStatsTrackerScript)
+	add_child(_game_stats_tracker)
+	var config: Dictionary = DataLoader.load_json("res://data/settings/postgame_stats.json")
+	_game_stats_tracker.setup(config, _tech_manager)
+	_game_stats_tracker.init_player(0)
+	_game_stats_tracker.init_player(1)
+
+
 func _setup_hud() -> void:
 	var hud := CanvasLayer.new()
 	hud.name = "HUD"
@@ -1050,7 +1048,12 @@ func _setup_hud() -> void:
 	_victory_screen = PanelContainer.new()
 	_victory_screen.name = "VictoryScreen"
 	_victory_screen.set_script(VictoryScreenScript)
+	_victory_screen.stats_pressed.connect(_on_victory_stats_pressed)
 	victory_layer.add_child(_victory_screen)
+	_postgame_stats_screen = PanelContainer.new()
+	_postgame_stats_screen.name = "PostGameStatsScreen"
+	_postgame_stats_screen.set_script(PostGameStatsScreenScript)
+	victory_layer.add_child(_postgame_stats_screen)
 	var tech_viewer_layer := CanvasLayer.new()
 	tech_viewer_layer.name = "TechTreeViewerLayer"
 	tech_viewer_layer.layer = 15
@@ -1094,17 +1097,13 @@ func _setup_resource_bar() -> void:
 	_resource_bar.name = "ResourceBarPanel"
 	_resource_bar.set_script(load("res://scripts/ui/resource_bar.gd"))
 	resource_bar_layer.add_child(_resource_bar)
-	# Connect population manager to resource bar display
 	if _population_manager != null:
 		_population_manager.population_changed.connect(_on_population_changed)
-		# Initial display update
-		var current: int = _population_manager.get_population(0)
-		var cap: int = _population_manager.get_population_cap(0)
-		_resource_bar.update_population(current, cap)
-	# Connect corruption display
+		_resource_bar.update_population(
+			_population_manager.get_population(0), _population_manager.get_population_cap(0)
+		)
 	if _corruption_manager != null:
 		_corruption_manager.corruption_changed.connect(_on_corruption_changed)
-	# Connect river transport for in-transit resource display
 	if _river_transport != null:
 		_resource_bar.setup_transit(_river_transport)
 
