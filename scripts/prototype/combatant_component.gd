@@ -136,7 +136,7 @@ func _tick_combat_attacking() -> void:
 		if cooldown <= 0.0:
 			cooldown = float(combat_config.get("attack_cooldown", 1.0))
 		attack_cooldown = cooldown
-		_unit.queue_redraw()
+		_unit.mark_visual_dirty()
 
 
 func _tick_combat_attack_moving() -> void:
@@ -289,11 +289,11 @@ func take_damage(amount: int, attacker: Node2D) -> void:
 	# Check war survival before applying lethal damage
 	if _unit.hp > 0 and amount >= _unit.hp and _unit._war_survival != null:
 		if _unit._war_survival.roll_survival(_unit, amount):
-			_unit.queue_redraw()
+			_unit.mark_visual_dirty()
 			_try_retaliate(attacker)
 			return
 	_unit.hp = maxi(0, _unit.hp - amount)
-	_unit.queue_redraw()
+	_unit.mark_visual_dirty()
 	_try_retaliate(attacker)
 	if _unit.hp <= 0:
 		_unit._die()

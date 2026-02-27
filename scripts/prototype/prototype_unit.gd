@@ -56,6 +56,7 @@ var _pending_feed_target_name: String = ""
 var _formation_speed_override: float = 0.0
 
 var _heal_accumulator: float = 0.0
+var _visual_dirty: bool = true  # Start dirty so initial draw happens
 
 var _is_dead: bool = false
 var _last_attacker: Node2D = null
@@ -334,6 +335,10 @@ func _init_transport() -> void:
 		_transport.config = GameUtils.dl_settings("transport")
 
 
+func mark_visual_dirty() -> void:
+	_visual_dirty = true
+
+
 func _process(delta: float) -> void:
 	if _is_dead:
 		return
@@ -357,7 +362,7 @@ func _process(delta: float) -> void:
 			var direction := (_target_pos - position).normalized()
 			_facing = direction
 			position = position.move_toward(_target_pos, get_move_speed() * game_delta)
-		queue_redraw()
+		_visual_dirty = true
 	_tick_build(game_delta)
 	_gatherer.tick(game_delta)
 	_tick_feed(game_delta)
@@ -365,6 +370,9 @@ func _process(delta: float) -> void:
 	_tick_heal(game_delta)
 	if _transport != null:
 		_transport.tick(game_delta, _moving)
+	if _visual_dirty:
+		_visual_dirty = false
+		queue_redraw()
 
 
 func _tick_build(game_delta: float) -> void:
@@ -535,7 +543,7 @@ func _tick_heal(game_delta: float) -> void:
 		var whole := int(_heal_accumulator)
 		hp = mini(hp + whole, max_hp)
 		_heal_accumulator -= float(whole)
-		queue_redraw()
+		_visual_dirty = true
 
 
 # -- Combat delegation --
@@ -698,7 +706,7 @@ func move_to(world_pos: Vector2) -> void:
 	_path_index = 0
 	_target_pos = world_pos
 	_moving = true
-	queue_redraw()
+	mark_visual_dirty()
 
 
 func follow_path(waypoints: Array[Vector2]) -> void:
@@ -708,19 +716,19 @@ func follow_path(waypoints: Array[Vector2]) -> void:
 	_path_index = 0
 	_target_pos = _path[0]
 	_moving = true
-	queue_redraw()
+	mark_visual_dirty()
 
 
 func select() -> void:
 	if _is_dead:
 		return
 	selected = true
-	queue_redraw()
+	mark_visual_dirty()
 
 
 func deselect() -> void:
 	selected = false
-	queue_redraw()
+	mark_visual_dirty()
 
 
 func is_point_inside(point: Vector2) -> bool:
