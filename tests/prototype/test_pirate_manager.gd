@@ -180,6 +180,8 @@ func test_respects_max_active_pirates_cap() -> void:
 	# Spawn up to max
 	mgr._spawn_pirate()
 	mgr._spawn_pirate()
+	for p in mgr._active_pirates:
+		auto_free(p)
 	assert_int(mgr.get_active_pirate_count()).is_equal(2)
 	# Try to spawn beyond max — timer check would prevent it, but test the cap logic
 	mgr._spawn_timer = 100.0
@@ -199,6 +201,8 @@ func test_dead_pirates_removed_from_active_list() -> void:
 	mgr._config = _config
 	mgr._enabled = true
 	mgr._spawn_pirate()
+	for p in mgr._active_pirates:
+		auto_free(p)
 	assert_int(mgr.get_active_pirate_count()).is_equal(1)
 	# Kill the pirate
 	var pirate: Node2D = mgr._active_pirates[0]
@@ -219,6 +223,8 @@ func test_pirates_have_correct_stats_from_config() -> void:
 	mgr._config = _config
 	mgr._enabled = true
 	mgr._spawn_pirate()
+	for p in mgr._active_pirates:
+		auto_free(p)
 	var pirate: Node2D = mgr._active_pirates[0]
 	assert_int(pirate.hp).is_equal(80)
 	assert_int(pirate.max_hp).is_equal(80)
