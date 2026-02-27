@@ -206,8 +206,11 @@ func _teardown_scene_entities() -> void:
 		if is_instance_valid(node):
 			node.queue_free()
 	# Clear target detector registry
-	if _target_detector != null and "_entities" in _target_detector:
-		_target_detector._entities.clear()
+	if _target_detector != null:
+		if _target_detector.has_method("clear"):
+			_target_detector.clear()
+		elif "_entities" in _target_detector:
+			_target_detector._entities.clear()
 	# Wait one frame for queue_free to process
 	if not to_remove.is_empty() and _root.get_tree() != null:
 		await _root.get_tree().process_frame
