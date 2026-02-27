@@ -1,14 +1,31 @@
 #!/usr/bin/env bash
-# Pre-push hook: runs lint check before allowing push.
+# Pre-push hook: rebase on latest main, then run lint check.
 # Install: git config core.hooksPath .githooks
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+# Don't rebase if pushing main itself
+if [ "$BRANCH" != "main" ]; then
+    echo "Fetching latest main ..."
+    git fetch origin main --quiet
+
+    echo "Rebasing $BRANCH onto origin/main ..."
+    if ! git rebase origin/main; then
+        echo ""
+        echo "Push blocked: rebase onto origin/main failed."
+        echo "Resolve conflicts, then retry."
+        git rebase --abort 2>/dev/null || true
+        exit 1
+    fi
+fi
+
 echo "Running pre-push lint check ..."
 if ! "$SCRIPT_DIR/tools/ror" lint; then
     echo ""
     echo "Push blocked: lint check failed."
-    echo "Run 'ror lint --fix' to auto-format, then retry."
+    echo "Run './tools/ror lint --fix' to auto-format, then retry."
     exit 1
 fi
