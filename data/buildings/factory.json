@@ -1,0 +1,9 @@
+{
+  "name": "Factory",
+  "hp": 2000,
+  "footprint": [3, 3],
+  "build_time": 70,
+  "build_cost": { "wood": 200, "stone": 150, "gold": 100 },
+  "units_produced": ["tank", "artillery"],
+  "age_required": 4
+}

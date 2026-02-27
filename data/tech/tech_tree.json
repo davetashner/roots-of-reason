@@ -740,6 +740,18 @@
     "flavor_text": "Calculated arcs turn artillery into science."
   },
   {
+    "id": "mechanized_warfare",
+    "name": "Mechanized Warfare",
+    "age": 4,
+    "cost": { "gold": 500, "knowledge": 400 },
+    "research_time": 85,
+    "prerequisites": ["steam_power", "ballistics"],
+    "effects": {
+      "unlock_units": ["tank"]
+    },
+    "flavor_text": "Steel treads crush the age of cavalry."
+  },
+  {
     "id": "telegraph_comm",
     "name": "Telegraph",
     "age": 4,

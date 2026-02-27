@@ -37,6 +37,7 @@ var _enemy_composition: Dictionary = {}
 # Cached entity lists (refreshed each tick)
 var _own_military: Array[Node2D] = []
 var _own_barracks: Array[Node2D] = []
+var _own_factories: Array[Node2D] = []
 var _town_center: Node2D = null
 var _town_centers: Array[Node2D] = []
 var _enemy_units: Array[Node2D] = []
@@ -150,6 +151,7 @@ func _tick() -> void:
 func _refresh_entity_lists() -> void:
 	_own_military.clear()
 	_own_barracks.clear()
+	_own_factories.clear()
 	_town_center = null
 	_town_centers.clear()
 	_enemy_units.clear()
@@ -177,6 +179,8 @@ func _classify_own_entity(entity: Node2D) -> void:
 				_town_center = entity
 		elif entity.building_name == "barracks" and not entity.under_construction:
 			_own_barracks.append(entity)
+		elif entity.building_name == "factory" and not entity.under_construction:
+			_own_factories.append(entity)
 		return
 	if not entity.has_method("is_idle"):
 		return
@@ -299,17 +303,17 @@ func _train_military_units() -> void:
 	var unit_type: String = _get_training_deficit()
 	if unit_type == "":
 		return
-	# Find barracks with shortest queue
-	var best_barracks: Node2D = _find_best_barracks(unit_type)
-	if best_barracks == null:
+	# Find production building with shortest queue
+	var best_building: Node2D = _find_best_production_building(unit_type)
+	if best_building == null:
 		return
-	var pq: Node = best_barracks.get_node_or_null("ProductionQueue")
+	var pq: Node = best_building.get_node_or_null("ProductionQueue")
 	if pq != null and pq.has_method("add_to_queue"):
 		pq.add_to_queue(unit_type)
 
 
 func _can_train_military() -> bool:
-	if _own_barracks.is_empty() or _population_manager == null:
+	if (_own_barracks.is_empty() and _own_factories.is_empty()) or _population_manager == null:
 		return false
 	var max_mil_ratio: float = float(_config.get("max_military_pop_ratio", 0.50))
 	if _tech_loss_boost_timer > 0.0:
@@ -324,11 +328,14 @@ func _can_train_military() -> bool:
 	return _check_military_budget()
 
 
-func _find_best_barracks(unit_type: String) -> Node2D:
+func _find_best_production_building(unit_type: String) -> Node2D:
 	var best: Node2D = null
 	var best_queue_size: int = 999
-	for barracks in _own_barracks:
-		var pq: Node = barracks.get_node_or_null("ProductionQueue")
+	var buildings: Array[Node2D] = []
+	buildings.append_array(_own_barracks)
+	buildings.append_array(_own_factories)
+	for building in buildings:
+		var pq: Node = building.get_node_or_null("ProductionQueue")
 		if pq == null or not pq.has_method("can_produce"):
 			continue
 		if not pq.can_produce(unit_type):
@@ -336,7 +343,7 @@ func _find_best_barracks(unit_type: String) -> Node2D:
 		var queue_size: int = pq.get_queue().size() if pq.has_method("get_queue") else 0
 		if queue_size < best_queue_size:
 			best_queue_size = queue_size
-			best = barracks
+			best = building
 	return best
 
 
