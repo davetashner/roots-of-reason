@@ -161,9 +161,9 @@ func test_wonder_has_victory_countdown() -> void:
 	assert_float(stats["victory_countdown"]).is_equal(600.0)
 
 
-func test_wonder_age_required_is_five() -> void:
+func test_wonder_age_required_is_three() -> void:
 	var stats := DataLoader.get_building_stats("wonder")
-	assert_float(stats["age_required"]).is_equal(5.0)
+	assert_float(stats["age_required"]).is_equal(3.0)
 
 
 # --- Town Center garrison ---
@@ -186,7 +186,7 @@ func test_age_requirements_correct() -> void:
 		"dock": 1,
 		"market": 1,
 		"library": 2,
-		"wonder": 5,
+		"wonder": 3,
 	}
 	for building_name in expected:
 		var stats := DataLoader.get_building_stats(building_name)
