@@ -131,3 +131,61 @@ func test_load_backward_compatible() -> void:
 	# Load empty state — should not crash
 	mgr.load_state({})
 	assert_bool(mgr.is_explored(0, Vector2i(0, 0))).is_false()
+
+
+# -- Dirty flag tests --
+
+
+func test_dirty_flag_set_on_first_update() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+	assert_bool(mgr.has_changes(0)).is_true()
+
+
+func test_dirty_flag_false_when_unchanged() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+	# Update again with same unit at same position — no change
+	mgr.update_visibility(0, [unit])
+	assert_bool(mgr.has_changes(0)).is_false()
+
+
+func test_dirty_flag_true_when_unit_moves() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+	# Move unit to a different position
+	unit.position = Vector2(0.0, 640.0)
+	mgr.update_visibility(0, [unit])
+	assert_bool(mgr.has_changes(0)).is_true()
+
+
+func test_clear_dirty() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+	assert_bool(mgr.has_changes(0)).is_true()
+	mgr.clear_dirty(0)
+	assert_bool(mgr.has_changes(0)).is_false()
+
+
+func test_has_changes_false_for_unknown_player() -> void:
+	var mgr := _make_manager()
+	assert_bool(mgr.has_changes(99)).is_false()
+
+
+func test_signal_not_emitted_when_unchanged() -> void:
+	var mgr := _make_manager()
+	add_child(mgr)
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+
+	var signal_fired: Array = [false]
+	mgr.visibility_changed.connect(func(_pid: int) -> void: signal_fired[0] = true)
+
+	# Update with same position — should NOT fire signal
+	signal_fired[0] = false
+	mgr.update_visibility(0, [unit])
+	assert_bool(signal_fired[0]).is_false()
