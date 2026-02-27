@@ -1,12 +1,9 @@
 class_name AIEconomy
 extends Node
-## AI economy brain — drives villager allocation, build orders, house building,
-## and age advancement. Runs on a configurable tick timer, not every frame.
-## Each tick evaluates state and executes at most one resource-spending action.
-
-const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
-const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
-const ProductionQueueScript := preload("res://scripts/prototype/production_queue.gd")
+## AI economy brain — coordinates AIBuildPlanner (build orders, building placement,
+## unit production) and AIResourceAllocator (villager assignment, resource balancing).
+## Runs on a configurable tick timer, not every frame. Each tick evaluates state
+## and executes at most one resource-spending action.
 
 const RESOURCE_NAME_TO_TYPE: Dictionary = {
 	"food": ResourceManager.ResourceType.FOOD,
@@ -41,6 +38,10 @@ var _tr_config: Dictionary = {}
 var _own_villagers: Array[Node2D] = []
 var _own_buildings: Array[Node2D] = []
 
+# Component delegates
+var _build_planner: AIBuildPlanner = null
+var _resource_allocator: AIResourceAllocator = null
+
 
 func setup(
 	scene_root: Node,
@@ -59,6 +60,30 @@ func setup(
 	_load_config()
 	_load_build_order()
 	_load_tr_config()
+	_setup_components()
+
+
+func _setup_components() -> void:
+	_build_planner = AIBuildPlanner.new()
+	_build_planner.player_id = player_id
+	_build_planner.build_order_index = _build_order_index
+	_build_planner.trained_count = _trained_count
+	_build_planner.destroyed_tc_positions = _destroyed_tc_positions
+	_build_planner.setup(
+		_scene_root,
+		_population_manager,
+		_pathfinder,
+		_map_node,
+		_target_detector,
+		_tech_manager,
+		_config,
+		_build_order,
+		_tr_config
+	)
+
+	_resource_allocator = AIResourceAllocator.new()
+	_resource_allocator.player_id = player_id
+	_resource_allocator.setup(_scene_root, _config, _villager_allocation)
 
 
 func _load_config() -> void:
@@ -77,7 +102,6 @@ func _load_config() -> void:
 
 
 func _load_build_order() -> void:
-	# Check personality build order override first
 	var override_key: String = ""
 	if personality != null:
 		override_key = personality.get_build_order_override()
@@ -88,177 +112,12 @@ func _load_build_order() -> void:
 			_build_order = bo.get("steps", [])
 			_villager_allocation = bo.get("villager_allocation", {})
 			return
-	# Default: load from difficulty-based build orders
 	var data: Variant = DataLoader.load_json("res://data/ai/build_orders.json")
 	if data == null or not data is Dictionary:
 		return
 	var diff_data: Dictionary = data.get(difficulty, {})
 	_build_order = diff_data.get("steps", [])
 	_villager_allocation = diff_data.get("villager_allocation", {})
-
-
-func _process(delta: float) -> void:
-	var game_delta := GameManager.get_game_delta(delta)
-	if game_delta <= 0.0:
-		return
-	_tick_timer += game_delta
-	var interval: float = float(_config.get("tick_interval", 2.0))
-	if _tick_timer < interval:
-		return
-	_tick_timer -= interval
-	_tick()
-
-
-func _tick() -> void:
-	_refresh_entity_lists()
-	# Priority 1: build house if near pop cap
-	if _check_house_needed():
-		_rebalance_gatherers()
-		return
-	# Priority 2: walk build order steps (one spending action per tick)
-	if _process_build_order():
-		_rebalance_gatherers()
-		return
-	# Fallback: just rebalance
-	_rebalance_gatherers()
-
-
-func _refresh_entity_lists() -> void:
-	_own_villagers.clear()
-	_own_buildings.clear()
-	_town_center = null
-	if _scene_root == null:
-		return
-	for child in _scene_root.get_children():
-		if not (child is Node2D):
-			continue
-		if "owner_id" not in child:
-			continue
-		if int(child.owner_id) != player_id:
-			continue
-		if child.has_method("is_idle"):
-			# It's a unit
-			_own_villagers.append(child)
-		elif "building_name" in child:
-			_own_buildings.append(child)
-			if child.building_name == "town_center" and not child.under_construction:
-				_town_center = child
-
-
-func _check_house_needed() -> bool:
-	if _population_manager == null:
-		return false
-	var buffer: int = int(_config.get("near_cap_house_buffer", 3))
-	var current: int = _population_manager.get_population(player_id)
-	var cap: int = _population_manager.get_population_cap(player_id)
-	if cap - current > buffer:
-		return false
-	# Check if we already have a house under construction
-	for building in _own_buildings:
-		if building.building_name == "house" and building.under_construction:
-			return false
-	return _place_building("house") != null
-
-
-func _process_build_order() -> bool:
-	if _build_order_index >= _build_order.size():
-		# Build order exhausted — try opportunistic villager training
-		return _try_opportunistic_train()
-	var step: Dictionary = _build_order[_build_order_index]
-	var action: String = str(step.get("action", ""))
-	match action:
-		"train":
-			return _process_train_step(step)
-		"build":
-			return _process_build_step(step)
-		"advance_age":
-			return _process_advance_age_step()
-	# Unknown action — skip
-	_build_order_index += 1
-	return false
-
-
-func _process_train_step(step: Dictionary) -> bool:
-	var unit_type: String = str(step.get("unit", "villager"))
-	var target_count: int = int(step.get("count", 1))
-	var step_key: String = str(_build_order_index)
-	var trained_so_far: int = int(_trained_count.get(step_key, 0))
-	# Skip step if already trained enough or at max villagers
-	var max_vill: int = int(_config.get("max_villagers", 30))
-	var at_max: bool = unit_type == "villager" and _own_villagers.size() >= max_vill
-	if trained_so_far >= target_count or at_max:
-		_build_order_index += 1
-		return false
-	# Try to queue at town center
-	if not _try_queue_unit(unit_type):
-		return false
-	_trained_count[step_key] = trained_so_far + 1
-	if trained_so_far + 1 >= target_count:
-		_build_order_index += 1
-	return true
-
-
-func _try_queue_unit(unit_type: String) -> bool:
-	if _town_center == null:
-		return false
-	var pq: Node = _town_center.get_node_or_null("ProductionQueue")
-	if pq == null or not pq.has_method("can_produce"):
-		return false
-	if not pq.can_produce(unit_type):
-		return false
-	return pq.add_to_queue(unit_type)
-
-
-func _process_build_step(step: Dictionary) -> bool:
-	var building_name: String = str(step.get("building", ""))
-	if building_name == "":
-		_build_order_index += 1
-		return false
-	if building_name == "town_center" and not _should_build_forward_tc():
-		return false
-	var building := _place_building(building_name)
-	if building != null:
-		_build_order_index += 1
-		return true
-	return false
-
-
-func _process_advance_age_step() -> bool:
-	var next_age: int = GameManager.current_age + 1
-	var ages_data: Array = DataLoader.get_ages_data()
-	if next_age >= ages_data.size():
-		_build_order_index += 1
-		return false
-	var age_entry: Dictionary = ages_data[next_age]
-	# Check tech prerequisites — wait for AITech to research them
-	if _tech_manager != null:
-		var prereqs: Array = age_entry.get("advance_prerequisites", [])
-		for prereq: String in prereqs:
-			if not _tech_manager.is_tech_researched(prereq, player_id):
-				return false
-	var raw_costs: Dictionary = age_entry.get("advance_cost", {})
-	var costs := _parse_costs(raw_costs)
-	if not ResourceManager.can_afford(player_id, costs):
-		return false
-	if not ResourceManager.spend(player_id, costs):
-		return false
-	GameManager.advance_age(next_age)
-	_build_order_index += 1
-	return true
-
-
-func _try_opportunistic_train() -> bool:
-	var max_vill: int = int(_config.get("max_villagers", 30))
-	if _own_villagers.size() >= max_vill:
-		return false
-	if _town_center == null:
-		return false
-	var pq: Node = _town_center.get_node_or_null("ProductionQueue")
-	if pq == null:
-		return false
-	if not pq.has_method("can_produce") or not pq.can_produce("villager"):
-		return false
-	return pq.add_to_queue("villager")
 
 
 func _load_tr_config() -> void:
@@ -284,40 +143,123 @@ func _load_tr_config() -> void:
 			_tr_config[section][field] = pov[key]
 
 
-func _should_build_forward_tc() -> bool:
-	var ftc: Dictionary = _tr_config.get("forward_tc", {})
-	var min_adv: float = float(ftc.get("min_military_advantage_ratio", 1.8))
-	var max_tech_risky: int = int(ftc.get("max_tech_count_for_risky_build", 15))
-	var own_mil: int = _count_military_units(player_id)
-	var enemy_pid: int = 0 if player_id != 0 else 1
-	var enemy_mil: int = _count_military_units(enemy_pid)
-	# High tech count increases required advantage
-	if _tech_manager != null:
-		var tech_count: int = _tech_manager.get_researched_techs(player_id).size()
-		if tech_count > max_tech_risky:
-			min_adv *= 1.5
-	if enemy_mil > 0:
-		var ratio: float = float(own_mil) / float(enemy_mil)
-		return ratio >= min_adv
-	return own_mil > 0
+func _process(delta: float) -> void:
+	var game_delta := GameManager.get_game_delta(delta)
+	if game_delta <= 0.0:
+		return
+	_tick_timer += game_delta
+	var interval: float = float(_config.get("tick_interval", 2.0))
+	if _tick_timer < interval:
+		return
+	_tick_timer -= interval
+	_tick()
 
 
-func _count_military_units(owner: int) -> int:
-	var count: int = 0
+func _tick() -> void:
+	_refresh_entity_lists()
+	# Sync planner state from coordinator (in case of load_state)
+	_build_planner.build_order_index = _build_order_index
+	_build_planner.trained_count = _trained_count
+	_build_planner.destroyed_tc_positions = _destroyed_tc_positions
+	# Priority 1: build house if near pop cap
+	if _build_planner.check_house_needed(_own_buildings, _own_villagers, _town_center):
+		_sync_planner_state()
+		_resource_allocator.rebalance_gatherers(_own_villagers, _town_center)
+		return
+	# Priority 2: walk build order steps (one spending action per tick)
+	if _build_planner.process_build_order(_own_villagers, _town_center):
+		_sync_planner_state()
+		_resource_allocator.rebalance_gatherers(_own_villagers, _town_center)
+		return
+	# Fallback: just rebalance
+	_sync_planner_state()
+	_resource_allocator.rebalance_gatherers(_own_villagers, _town_center)
+
+
+func _sync_planner_state() -> void:
+	## Pull mutable state back from planner into coordinator for save/load.
+	_build_order_index = _build_planner.build_order_index
+	_trained_count = _build_planner.trained_count
+	_destroyed_tc_positions = _build_planner.destroyed_tc_positions
+
+
+func _refresh_entity_lists() -> void:
+	_own_villagers.clear()
+	_own_buildings.clear()
+	_town_center = null
 	if _scene_root == null:
-		return count
+		return
 	for child in _scene_root.get_children():
 		if not (child is Node2D):
 			continue
 		if "owner_id" not in child:
 			continue
-		if int(child.owner_id) != owner:
+		if int(child.owner_id) != player_id:
 			continue
-		if not child.has_method("is_idle"):
-			continue
-		if "unit_category" in child and str(child.unit_category) == "military":
-			count += 1
-	return count
+		if child.has_method("is_idle"):
+			_own_villagers.append(child)
+		elif "building_name" in child:
+			_own_buildings.append(child)
+			if child.building_name == "town_center" and not child.under_construction:
+				_town_center = child
+
+
+## Delegation wrappers — maintain backward compatibility for callers and tests.
+
+
+func _get_target_allocation() -> Dictionary:
+	return _resource_allocator._get_target_allocation()
+
+
+func _rebalance_gatherers() -> void:
+	_resource_allocator.rebalance_gatherers(_own_villagers, _town_center)
+
+
+func _find_resource_nodes(res_type: String) -> Array[Node2D]:
+	_resource_allocator._town_center = _town_center
+	return _resource_allocator._find_resource_nodes(res_type)
+
+
+func _get_current_allocation() -> Dictionary:
+	return _resource_allocator._get_current_allocation(_own_villagers)
+
+
+func _process_build_order() -> bool:
+	_build_planner.build_order_index = _build_order_index
+	_build_planner.trained_count = _trained_count
+	var result: bool = _build_planner.process_build_order(_own_villagers, _town_center)
+	_sync_planner_state()
+	return result
+
+
+func _place_building(bname: String) -> Node2D:
+	_build_planner._own_villagers = _own_villagers
+	_build_planner._map_node = _map_node
+	_build_planner._pathfinder = _pathfinder
+	var building: Node2D = _build_planner.place_building(bname, _town_center)
+	return building
+
+
+func _check_house_needed() -> bool:
+	_build_planner._map_node = _map_node
+	_build_planner._pathfinder = _pathfinder
+	_build_planner._own_villagers = _own_villagers
+	return _build_planner.check_house_needed(_own_buildings, _own_villagers, _town_center)
+
+
+func _find_valid_placement(footprint: Vector2i, building_name: String = "") -> Vector2i:
+	_build_planner._map_node = _map_node
+	_build_planner._pathfinder = _pathfinder
+	return _build_planner._find_valid_placement(footprint, building_name, _town_center)
+
+
+func _should_build_forward_tc() -> bool:
+	return _build_planner._should_build_forward_tc(_town_center)
+
+
+func _is_near_destroyed_tc(pos: Vector2i, radius: int) -> bool:
+	_build_planner.destroyed_tc_positions = _destroyed_tc_positions
+	return _build_planner._is_near_destroyed_tc(pos, radius)
 
 
 func on_building_destroyed(building: Node2D) -> void:
@@ -327,296 +269,8 @@ func on_building_destroyed(building: Node2D) -> void:
 		return
 	if "grid_pos" in building:
 		_destroyed_tc_positions.append(building.grid_pos)
-
-
-func _place_building(bname: String) -> Node2D:
-	var stats: Dictionary = DataLoader.get_building_stats(bname)
-	if stats.is_empty():
-		return null
-	var raw_costs: Dictionary = stats.get("build_cost", {})
-	var costs := _parse_costs(raw_costs)
-	if not ResourceManager.can_afford(player_id, costs):
-		return null
-	var fp: Array = stats.get("footprint", [1, 1])
-	var footprint := Vector2i(int(fp[0]), int(fp[1]))
-	var grid_pos := _find_valid_placement(footprint, bname)
-	if grid_pos == Vector2i(-1, -1):
-		return null
-	if not ResourceManager.spend(player_id, costs):
-		return null
-	var building := Node2D.new()
-	building.name = "Building_%s_%d_%d" % [bname, grid_pos.x, grid_pos.y]
-	building.set_script(BuildingScript)
-	building.position = IsoUtils.grid_to_screen(Vector2(grid_pos))
-	building.building_name = bname
-	building.footprint = footprint
-	building.grid_pos = grid_pos
-	building.owner_id = player_id
-	building.max_hp = int(stats.get("hp", 100))
-	building.entity_category = "enemy_building"
-	building.under_construction = true
-	building.build_progress = 0.0
-	building.hp = 0
-	building._build_time = float(stats.get("build_time", 25))
-	_scene_root.add_child(building)
-	# Mark footprint cells solid
-	if _pathfinder != null:
-		var cells := BuildingValidator.get_footprint_cells(grid_pos, footprint)
-		for cell in cells:
-			_pathfinder.set_cell_solid(cell, true)
-	# Register with target detector
-	if _target_detector != null:
-		_target_detector.register_entity(building)
-	# Connect construction_complete for population registration
-	if building.has_signal("construction_complete"):
-		building.construction_complete.connect(_on_building_complete)
-	# Assign nearest idle villager as builder
-	var builder := _find_nearest_idle_villager(building.global_position)
-	if builder != null and builder.has_method("assign_build_target"):
-		builder.assign_build_target(building)
-	return building
-
-
-func _on_building_complete(building: Node2D) -> void:
-	if _population_manager != null and "owner_id" in building:
-		_population_manager.register_building(building, building.owner_id)
-	# Attach production queue if building produces units
-	_try_attach_production_queue(building)
-
-
-func _try_attach_production_queue(building: Node2D) -> void:
-	if not "building_name" in building:
-		return
-	var bname: String = building.building_name
-	if bname == "":
-		return
-	var stats: Dictionary = DataLoader.get_building_stats(bname)
-	var units_produced: Array = stats.get("units_produced", [])
-	if units_produced.is_empty():
-		return
-	var pq := Node.new()
-	pq.name = "ProductionQueue"
-	pq.set_script(ProductionQueueScript)
-	building.add_child(pq)
-	pq.setup(building, player_id, _population_manager)
-	pq.unit_produced.connect(_on_unit_produced)
-
-
-func _on_unit_produced(unit_type: String, building: Node2D) -> void:
-	if _scene_root == null:
-		return
-	var unit := Node2D.new()
-	var unit_count := _scene_root.get_child_count()
-	unit.name = "AIUnit_%d" % unit_count
-	unit.set_script(UnitScript)
-	unit.unit_type = unit_type
-	unit.owner_id = player_id
-	unit.unit_color = Color(0.9, 0.2, 0.2)
-	# Spawn at building position offset by rally point
-	var pq: Node = building.get_node_or_null("ProductionQueue")
-	var offset := Vector2i(1, 1)
-	if pq != null and pq.has_method("get_rally_point_offset"):
-		offset = pq.get_rally_point_offset()
-	var spawn_grid := Vector2i.ZERO
-	if "grid_pos" in building:
-		spawn_grid = building.grid_pos + offset
-	unit.position = IsoUtils.grid_to_screen(Vector2(spawn_grid))
-	_scene_root.add_child(unit)
-	unit._scene_root = _scene_root
-	if _target_detector != null:
-		_target_detector.register_entity(unit)
-	if _population_manager != null:
-		_population_manager.register_unit(unit, player_id)
-
-
-func _find_valid_placement(footprint: Vector2i, building_name: String = "") -> Vector2i:
-	if _town_center == null:
-		return Vector2i(-1, -1)
-	var tc_pos: Vector2i = _town_center.grid_pos
-	var radius: int = int(_config.get("building_search_radius", 15))
-	var avoid_radius: int = 0
-	if building_name == "town_center":
-		var tlr: Dictionary = _tr_config.get("tech_loss_response", {})
-		avoid_radius = int(tlr.get("destroyed_position_avoid_radius_tiles", 10))
-	# Spiral search outward from town center
-	for r in range(3, radius + 1):
-		for dx in range(-r, r + 1):
-			for dy in range(-r, r + 1):
-				if absi(dx) != r and absi(dy) != r:
-					continue
-				var pos := tc_pos + Vector2i(dx, dy)
-				var constraint: String = ""
-				if not BuildingValidator.is_placement_valid(pos, footprint, _map_node, _pathfinder, constraint):
-					continue
-				if avoid_radius > 0 and _is_near_destroyed_tc(pos, avoid_radius):
-					continue
-				return pos
-	return Vector2i(-1, -1)
-
-
-func _is_near_destroyed_tc(pos: Vector2i, radius: int) -> bool:
-	for dtc_pos in _destroyed_tc_positions:
-		var dist: int = absi(pos.x - dtc_pos.x) + absi(pos.y - dtc_pos.y)
-		if dist <= radius:
-			return true
-	return false
-
-
-func _find_nearest_idle_villager(target_pos: Vector2) -> Node2D:
-	var best: Node2D = null
-	var best_dist := INF
-	for villager in _own_villagers:
-		if not villager.has_method("is_idle") or not villager.is_idle():
-			continue
-		var dist: float = villager.global_position.distance_to(target_pos)
-		if dist < best_dist:
-			best_dist = dist
-			best = villager
-	return best
-
-
-func _rebalance_gatherers() -> void:
-	var target := _get_target_allocation()
-	if target.is_empty():
-		return
-	var current := _get_current_allocation()
-	var total_villagers: int = _own_villagers.size()
-	if total_villagers == 0:
-		return
-	# Assign idle villagers to the highest-deficit resource
-	for villager in _own_villagers:
-		if not villager.has_method("is_idle") or not villager.is_idle():
-			continue
-		var best_type: String = _get_highest_deficit_resource(target, current, total_villagers)
-		if best_type != "":
-			if _assign_villager_to_resource(villager, best_type):
-				current[best_type] = int(current.get(best_type, 0)) + 1
-	# Imbalance check: reassign from surplus
-	var threshold: float = float(_config.get("rebalance_threshold", 2.0))
-	_check_surplus_rebalance(target, current, total_villagers, threshold)
-
-
-func _get_target_allocation() -> Dictionary:
-	var age_key: String = str(GameManager.current_age)
-	if _villager_allocation.has(age_key):
-		return _villager_allocation[age_key]
-	# Fallback to age 0
-	return _villager_allocation.get("0", {})
-
-
-func _get_current_allocation() -> Dictionary:
-	var counts: Dictionary = {"food": 0, "wood": 0, "stone": 0, "gold": 0}
-	for villager in _own_villagers:
-		if "_gather_type" not in villager:
-			continue
-		var gtype: String = villager._gather_type
-		if gtype in counts:
-			counts[gtype] = int(counts[gtype]) + 1
-	return counts
-
-
-func _get_highest_deficit_resource(target: Dictionary, current: Dictionary, total: int) -> String:
-	var best_type: String = ""
-	var best_deficit: float = -INF
-	for res_type: String in target:
-		var target_count: float = float(target[res_type]) * total
-		var actual_count: float = float(current.get(res_type, 0))
-		var deficit: float = target_count - actual_count
-		if deficit > best_deficit:
-			best_deficit = deficit
-			best_type = res_type
-	return best_type
-
-
-func _check_surplus_rebalance(target: Dictionary, current: Dictionary, total: int, threshold: float) -> void:
-	# Find resource with lowest needed stockpile
-	var min_needed: float = INF
-	for res_type: String in target:
-		if float(target[res_type]) <= 0.0:
-			continue
-		var res_enum: Variant = RESOURCE_NAME_TO_TYPE.get(res_type)
-		if res_enum == null:
-			continue
-		var amount: float = float(ResourceManager.get_amount(player_id, res_enum))
-		if amount < min_needed:
-			min_needed = amount
-	if min_needed == INF or min_needed <= 0.0:
-		return
-	# Check if any stockpile exceeds threshold * lowest
-	for res_type: String in target:
-		var res_enum: Variant = RESOURCE_NAME_TO_TYPE.get(res_type)
-		if res_enum == null:
-			continue
-		var amount: float = float(ResourceManager.get_amount(player_id, res_enum))
-		if amount > threshold * min_needed and int(current.get(res_type, 0)) > 0:
-			# Find a gatherer of this type and reassign
-			var deficit_type := _get_highest_deficit_resource(target, current, total)
-			if deficit_type == "" or deficit_type == res_type:
-				continue
-			for villager in _own_villagers:
-				if "_gather_type" not in villager:
-					continue
-				if villager._gather_type != res_type:
-					continue
-				if _assign_villager_to_resource(villager, deficit_type):
-					current[res_type] = maxi(int(current.get(res_type, 0)) - 1, 0)
-					current[deficit_type] = int(current.get(deficit_type, 0)) + 1
-					return
-
-
-func _assign_villager_to_resource(villager: Node2D, res_type: String) -> bool:
-	var nodes := _find_resource_nodes(res_type)
-	if nodes.is_empty():
-		return false
-	# Find nearest to villager
-	var best: Node2D = null
-	var best_dist := INF
-	for node in nodes:
-		var dist: float = villager.global_position.distance_to(node.global_position)
-		if dist < best_dist:
-			best_dist = dist
-			best = node
-	if best == null:
-		return false
-	if villager.has_method("assign_gather_target"):
-		villager.assign_gather_target(best)
-		return true
-	return false
-
-
-func _find_resource_nodes(res_type: String) -> Array[Node2D]:
-	var result: Array[Node2D] = []
-	if _scene_root == null:
-		return result
-	var search_radius: float = float(_config.get("resource_search_radius", 20))
-	var search_pixels: float = search_radius * 64.0
-	var origin := Vector2.ZERO
-	if _town_center != null:
-		origin = _town_center.global_position
-	for child in _scene_root.get_children():
-		if "entity_category" not in child:
-			continue
-		if child.entity_category != "resource_node":
-			continue
-		if "resource_type" not in child or child.resource_type != res_type:
-			continue
-		if "current_yield" in child and child.current_yield <= 0:
-			continue
-		if origin != Vector2.ZERO:
-			var dist: float = child.global_position.distance_to(origin)
-			if dist > search_pixels:
-				continue
-		result.append(child)
-	return result
-
-
-func _parse_costs(raw_costs: Dictionary) -> Dictionary:
-	var costs: Dictionary = {}
-	for key: String in raw_costs:
-		var lower_key := key.to_lower()
-		if RESOURCE_NAME_TO_TYPE.has(lower_key):
-			costs[RESOURCE_NAME_TO_TYPE[lower_key]] = int(raw_costs[key])
-	return costs
+		if _build_planner != null:
+			_build_planner.destroyed_tc_positions = _destroyed_tc_positions
 
 
 func save_state() -> Dictionary:
@@ -659,3 +313,4 @@ func load_state(data: Dictionary) -> void:
 	_load_config()
 	_load_build_order()
 	_load_tr_config()
+	_setup_components()
