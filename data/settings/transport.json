@@ -1,0 +1,6 @@
+{
+  "load_time_per_unit": 1.5,
+  "unload_time_per_unit": 1.0,
+  "shallows_search_radius": 3,
+  "unload_spread_radius_tiles": 2
+}

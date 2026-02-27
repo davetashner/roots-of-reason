@@ -9,6 +9,7 @@ enum GatherState { NONE, MOVING_TO_RESOURCE, GATHERING, MOVING_TO_DROP_OFF, DEPO
 enum CombatState { NONE, PURSUING, ATTACKING, ATTACK_MOVING, PATROLLING }
 enum Stance { AGGRESSIVE, DEFENSIVE, STAND_GROUND }
 
+const TransportHandlerScript := preload("res://scripts/prototype/transport_handler.gd")
 const RADIUS: float = 12.0
 const MOVE_SPEED: float = 150.0
 const SELECTION_RING_RADIUS: float = 16.0
@@ -82,6 +83,10 @@ var _is_dead: bool = false
 var _last_attacker: Node2D = null
 var _war_survival: Node = null
 
+# Transport state
+var _transport: RefCounted = null  # TransportHandler
+var _transport_capacity: int = 0
+
 
 func _ready() -> void:
 	_target_pos = position
@@ -89,6 +94,7 @@ func _ready() -> void:
 	_load_build_config()
 	_load_gather_config()
 	_load_combat_config()
+	_init_transport()
 	var cbm: Node = _get_autoload("CivBonusManager")
 	if cbm != null and stats != null:
 		cbm.apply_bonus_to_unit(stats, unit_type, owner_id)
@@ -189,6 +195,15 @@ func _load_combat_config() -> void:
 			unit_category = str(unit_cfg.get("unit_category", ""))
 
 
+func _init_transport() -> void:
+	var cfg := _dl_unit_stats(unit_type)
+	_transport_capacity = int(cfg.get("transport_capacity", 0))
+	if _transport_capacity > 0:
+		_transport = TransportHandlerScript.new()
+		_transport.capacity = _transport_capacity
+		_transport.config = _dl_settings("transport")
+
+
 func _process(delta: float) -> void:
 	if _is_dead:
 		return
@@ -218,6 +233,8 @@ func _process(delta: float) -> void:
 	_tick_feed(game_delta)
 	_tick_combat(game_delta)
 	_tick_heal(game_delta)
+	if _transport != null:
+		_transport.tick(game_delta, _moving)
 
 
 func _tick_build(game_delta: float) -> void:
@@ -365,9 +382,7 @@ func _try_find_replacement_resource() -> void:
 	var best: Node2D = null
 	var best_dist := INF
 	for child in root.get_children():
-		if child == _gather_target:
-			continue
-		if "entity_category" not in child:
+		if child == _gather_target or "entity_category" not in child:
 			continue
 		if child.entity_category != "resource_node":
 			continue
@@ -413,14 +428,10 @@ func _resource_type_to_enum(res_type: String) -> Variant:
 
 
 func assign_gather_target(node: Node2D) -> void:
-	# Cancel build task
 	_build_target = null
 	_pending_build_target_name = ""
-	# Cancel combat
 	_cancel_combat()
-	# Cancel feed
 	_cancel_feed()
-	# Set up gather
 	_gather_target = node
 	_gather_type = node.resource_type if "resource_type" in node else ""
 	_gather_state = GatherState.MOVING_TO_RESOURCE
@@ -431,11 +442,8 @@ func assign_gather_target(node: Node2D) -> void:
 
 
 func assign_build_target(building: Node2D) -> void:
-	# Cancel gather task
 	_cancel_gather()
-	# Cancel combat
 	_cancel_combat()
-	# Cancel feed
 	_cancel_feed()
 	_build_target = building
 	move_to(building.global_position)
@@ -467,9 +475,6 @@ func resolve_gather_target(scene_root: Node) -> void:
 	if target is Node2D:
 		_gather_target = target
 	_pending_gather_target_name = ""
-
-
-# -- Feed --
 
 
 func _tick_feed(game_delta: float) -> void:
@@ -558,9 +563,6 @@ func resolve_feed_target(scene_root: Node) -> void:
 	_pending_feed_target_name = ""
 
 
-# -- Self-heal --
-
-
 func _tick_heal(game_delta: float) -> void:
 	if hp <= 0 or hp >= max_hp:
 		return
@@ -579,9 +581,6 @@ func _tick_heal(game_delta: float) -> void:
 		hp = mini(hp + whole, max_hp)
 		_heal_accumulator -= float(whole)
 		queue_redraw()
-
-
-# -- Combat --
 
 
 func _tick_combat(game_delta: float) -> void:
@@ -612,40 +611,23 @@ func _tick_combat(game_delta: float) -> void:
 
 
 func _tick_combat_none() -> void:
-	if not _get_stance_config().get("auto_scan", false):
-		return
-	if _scan_timer < float(_combat_config.get("scan_interval", 0.5)):
-		return
-	_scan_timer = 0.0
-	var target := _scan_for_targets()
-	if target == null:
-		return
-	_combat_target = target
-	_leash_origin = position
-	_combat_state = CombatState.PURSUING
-	move_to(target.global_position)
+	if _get_stance_config().get("auto_scan", false):
+		_try_scan_and_pursue()
 
 
 func _tick_combat_pursuing() -> void:
 	if _combat_target == null:
 		_return_from_combat()
 		return
-	# Check leash range
 	var leash: float = float(_combat_config.get("leash_range", 8)) * TILE_SIZE
 	if position.distance_to(_leash_origin) > leash:
 		_combat_target = null
 		_return_from_combat()
 		return
-	# Check if in attack range
-	var attack_range := _get_attack_range()
 	var dist := position.distance_to(_combat_target.global_position)
-	var range_pixels: float = maxf(1.0, float(attack_range)) * TILE_SIZE
-	if attack_range <= 0:
-		range_pixels = TILE_SIZE  # Melee: adjacent tile
-	if dist <= range_pixels:
-		# Check min range — if target is too close for ranged, disengage
-		var min_range := _get_min_range()
-		if min_range > 0 and dist < float(min_range) * TILE_SIZE:
+	var range_px := _get_attack_range_pixels()
+	if dist <= range_px:
+		if _is_below_min_range(dist):
 			_combat_target = null
 			_return_from_combat()
 			return
@@ -653,28 +635,20 @@ func _tick_combat_pursuing() -> void:
 		_path.clear()
 		_path_index = 0
 		_combat_state = CombatState.ATTACKING
-	else:
-		# Keep moving toward target
-		if not _moving:
-			move_to(_combat_target.global_position)
+	elif not _moving:
+		move_to(_combat_target.global_position)
 
 
 func _tick_combat_attacking() -> void:
 	if _combat_target == null:
 		_return_from_combat()
 		return
-	# Face the target
 	var dir := _combat_target.global_position - position
 	if dir.length() > 0.1:
 		_facing = dir.normalized()
-	# Check if target moved out of range
-	var attack_range := _get_attack_range()
 	var dist := position.distance_to(_combat_target.global_position)
-	var range_pixels: float = maxf(1.0, float(attack_range)) * TILE_SIZE
-	if attack_range <= 0:
-		range_pixels = TILE_SIZE
-	if dist > range_pixels * 1.2:
-		# Target moved away — pursue if stance allows
+	var range_px := _get_attack_range_pixels()
+	if dist > range_px * 1.2:
 		var stance_cfg := _get_stance_config()
 		if stance_cfg.get("pursue", false):
 			_combat_state = CombatState.PURSUING
@@ -683,9 +657,7 @@ func _tick_combat_attacking() -> void:
 			_combat_target = null
 			_return_from_combat()
 		return
-	# Check min range — if target is too close for ranged, disengage
-	var min_range := _get_min_range()
-	if min_range > 0 and dist < float(min_range) * TILE_SIZE:
+	if _is_below_min_range(dist):
 		_combat_target = null
 		_return_from_combat()
 		return
@@ -700,42 +672,20 @@ func _tick_combat_attacking() -> void:
 
 
 func _tick_combat_attack_moving() -> void:
-	# Scan while moving
-	var interval: float = float(_combat_config.get("scan_interval", 0.5))
-	if _scan_timer >= interval:
-		_scan_timer = 0.0
-		if _combat_target == null:
-			var target := _scan_for_targets()
-			if target != null:
-				_combat_target = target
-				_combat_state = CombatState.PURSUING
-				_leash_origin = position
-				move_to(target.global_position)
-				return
-	# If we have a target, pursue it
+	if _try_scan_and_pursue():
+		return
 	if _combat_target != null:
 		_combat_state = CombatState.PURSUING
 		_leash_origin = position
 		move_to(_combat_target.global_position)
 		return
-	# If reached destination, done
 	if not _moving:
 		_combat_state = CombatState.NONE
 
 
 func _tick_combat_patrolling() -> void:
-	# Scan while patrolling
-	var interval: float = float(_combat_config.get("scan_interval", 0.5))
-	if _scan_timer >= interval:
-		_scan_timer = 0.0
-		var target := _scan_for_targets()
-		if target != null:
-			_combat_target = target
-			_combat_state = CombatState.PURSUING
-			_leash_origin = position
-			move_to(target.global_position)
-			return
-	# Move between patrol points
+	if _try_scan_and_pursue():
+		return
 	if not _moving:
 		if _patrol_heading_to_b:
 			_patrol_heading_to_b = false
@@ -745,6 +695,21 @@ func _tick_combat_patrolling() -> void:
 			move_to(_patrol_point_b)
 
 
+func _try_scan_and_pursue() -> bool:
+	var interval: float = float(_combat_config.get("scan_interval", 0.5))
+	if _scan_timer < interval:
+		return false
+	_scan_timer = 0.0
+	var target := _scan_for_targets()
+	if target == null:
+		return false
+	_combat_target = target
+	_combat_state = CombatState.PURSUING
+	_leash_origin = position
+	move_to(target.global_position)
+	return true
+
+
 func _scan_for_targets() -> Node2D:
 	var root := _scene_root if _scene_root != null else get_parent()
 	if root == null:
@@ -752,30 +717,23 @@ func _scan_for_targets() -> Node2D:
 	var scan_radius: float = float(_combat_config.get("aggro_scan_radius", 6)) * TILE_SIZE
 	var candidates: Array = []
 	for child in root.get_children():
-		if child == self:
-			continue
-		if not (child is Node2D):
+		if child == self or not (child is Node2D):
 			continue
 		if not CombatResolver.is_hostile(self, child):
 			continue
 		if "hp" in child and child.hp <= 0:
 			continue
-		var dist: float = position.distance_to(child.global_position)
-		if dist > scan_radius:
+		if position.distance_to(child.global_position) > scan_radius:
 			continue
-		# Skip enemies on tiles not visible to this unit's owner
 		if _visibility_manager != null and "owner_id" in child and child.owner_id != owner_id:
-			var grid_pos := _screen_to_grid(child.global_position)
-			if not _visibility_manager.is_visible(owner_id, grid_pos):
+			if not _visibility_manager.is_visible(owner_id, _screen_to_grid(child.global_position)):
 				continue
 		candidates.append(child)
 	if candidates.is_empty():
 		return null
-	# Sort by priority
 	var attack_type := _get_attack_type()
 	var priority_cfg: Dictionary = _combat_config.get("target_priority", {})
 	var sorted := CombatResolver.sort_targets_by_priority(candidates, attack_type, priority_cfg)
-	# Within same priority category, pick nearest
 	var best: Node2D = null
 	var best_dist := INF
 	for candidate in sorted:
@@ -783,11 +741,8 @@ func _scan_for_targets() -> Node2D:
 		if dist < best_dist:
 			best_dist = dist
 			best = candidate
-		# Only check first priority group — break when category changes
 		if best != null:
-			var best_cat := CombatResolver._get_category(best)
-			var cand_cat := CombatResolver._get_category(candidate)
-			if cand_cat != best_cat:
+			if CombatResolver._get_category(candidate) != CombatResolver._get_category(best):
 				break
 	return best
 
@@ -896,6 +851,8 @@ func _die() -> void:
 	_cancel_feed()
 	_cancel_gather()
 	_cancel_combat()
+	if _transport != null:
+		_transport.kill_passengers()
 	var killer: Node2D = _last_attacker
 	if killer != null and is_instance_valid(killer) and "kill_count" in killer:
 		killer.kill_count += 1
@@ -945,14 +902,12 @@ func patrol_between(point_a: Vector2, point_b: Vector2) -> void:
 
 func set_stance(new_stance: Stance) -> void:
 	_stance = new_stance
-	# Stand ground cancels pursuit
-	if new_stance == Stance.STAND_GROUND:
-		if _combat_state == CombatState.PURSUING:
-			_combat_target = null
-			_combat_state = CombatState.NONE
-			_moving = false
-			_path.clear()
-			_path_index = 0
+	if new_stance == Stance.STAND_GROUND and _combat_state == CombatState.PURSUING:
+		_combat_target = null
+		_combat_state = CombatState.NONE
+		_moving = false
+		_path.clear()
+		_path_index = 0
 
 
 func _cancel_combat() -> void:
@@ -963,7 +918,6 @@ func _cancel_combat() -> void:
 
 
 func _return_from_combat() -> void:
-	# Return to previous task based on combat state
 	var prev_state := _combat_state
 	_combat_target = null
 	if prev_state == CombatState.ATTACK_MOVING:
@@ -997,6 +951,16 @@ func _get_min_range() -> int:
 	if stats != null and stats._base_stats.has("min_range"):
 		return int(stats._base_stats["min_range"])
 	return 0
+
+
+func _get_attack_range_pixels() -> float:
+	var r := _get_attack_range()
+	return TILE_SIZE if r <= 0 else maxf(1.0, float(r)) * TILE_SIZE
+
+
+func _is_below_min_range(dist: float) -> bool:
+	var mr := _get_min_range()
+	return mr > 0 and dist < float(mr) * TILE_SIZE
 
 
 func _get_stance_config() -> Dictionary:
@@ -1035,6 +999,35 @@ func resolve_combat_target(scene_root: Node) -> void:
 	if target is Node2D:
 		_combat_target = target
 	_pending_combat_target_name = ""
+
+
+func embark_unit(unit: Node2D) -> bool:
+	return _transport.embark_unit(unit) if _transport != null else false
+
+
+func disembark_all(shore_pos: Vector2) -> void:
+	if _transport == null or _transport.embarked_units.is_empty():
+		return
+	_transport.pending_disembark_pos = shore_pos
+	_transport.is_unloading = true
+	move_to(shore_pos)
+
+
+func can_embark() -> bool:
+	return _transport.can_embark() if _transport != null else false
+
+
+func get_embarked_count() -> int:
+	return _transport.get_count() if _transport != null else 0
+
+
+func get_transport_capacity() -> int:
+	return _transport_capacity
+
+
+func resolve_embarked(scene_root: Node) -> void:
+	if _transport != null:
+		_transport.resolve(scene_root)
 
 
 func _draw() -> void:
@@ -1107,6 +1100,8 @@ func is_point_inside(point: Vector2) -> bool:
 func get_entity_category() -> String:
 	if entity_category != "":
 		return entity_category
+	if _transport_capacity > 0 and owner_id == 0:
+		return "own_transport"
 	return "enemy_unit" if owner_id != 0 else ""
 
 
@@ -1148,6 +1143,8 @@ func save_state() -> Dictionary:
 		state["feed_target_name"] = str(_feed_target.name)
 	if stats != null:
 		state["stats"] = stats.save_state()
+	if _transport != null:
+		state.merge(_transport.save_state())
 	return state
 
 
@@ -1195,3 +1192,5 @@ func load_state(data: Dictionary) -> void:
 		if stats == null:
 			stats = UnitStats.new()
 		stats.load_state(data["stats"])
+	if _transport != null and data.has("embarked_unit_names"):
+		_transport.load_state(data)
