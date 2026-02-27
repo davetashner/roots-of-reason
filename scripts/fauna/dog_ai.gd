@@ -80,7 +80,7 @@ func _find_scene_root() -> void:
 
 
 func _process(delta: float) -> void:
-	var game_delta: float = _get_game_delta(delta)
+	var game_delta: float = GameUtils.get_game_delta(delta)
 	if game_delta == 0.0:
 		return
 	if _dog == null or not is_instance_valid(_dog):
@@ -112,16 +112,6 @@ func _process(delta: float) -> void:
 			_tick_flee(game_delta)
 		DogState.FOLLOW:
 			_tick_follow(game_delta)
-
-
-func _get_game_delta(delta: float) -> float:
-	if Engine.has_singleton("GameManager"):
-		return GameManager.get_game_delta(delta)
-	var ml := Engine.get_main_loop() if is_instance_valid(Engine.get_main_loop()) else null
-	var gm: Node = ml.root.get_node_or_null("GameManager") if ml else null
-	if gm and gm.has_method("get_game_delta"):
-		return gm.get_game_delta(delta)
-	return delta
 
 
 # -- IDLE --

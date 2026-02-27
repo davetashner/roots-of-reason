@@ -95,7 +95,7 @@ func _ready() -> void:
 	_load_gather_config()
 	_load_combat_config()
 	_init_transport()
-	var cbm: Node = _get_autoload("CivBonusManager")
+	var cbm: Node = GameUtils.get_autoload("CivBonusManager")
 	if cbm != null and stats != null:
 		cbm.apply_bonus_to_unit(stats, unit_type, owner_id)
 
@@ -129,30 +129,17 @@ func clear_formation_speed() -> void:
 	_formation_speed_override = 0.0
 
 
-func _get_autoload(autoload_name: String) -> Node:
-	if is_instance_valid(Engine.get_main_loop()):
-		return Engine.get_main_loop().root.get_node_or_null(autoload_name)
-	return null
-
-
 func _get_civ_build_multiplier() -> float:
-	var cbm: Node = _get_autoload("CivBonusManager")
+	var cbm: Node = GameUtils.get_autoload("CivBonusManager")
 	if cbm != null:
 		return cbm.get_build_speed_multiplier(owner_id)
 	return 1.0
 
 
 func _dl_unit_stats(id: String) -> Dictionary:
-	var dl: Node = _get_autoload("DataLoader")
+	var dl: Node = GameUtils.get_autoload("DataLoader")
 	if dl != null and dl.has_method("get_unit_stats"):
 		return dl.get_unit_stats(id)
-	return {}
-
-
-func _dl_settings(id: String) -> Dictionary:
-	var dl: Node = _get_autoload("DataLoader")
-	if dl != null and dl.has_method("get_settings"):
-		return dl.get_settings(id)
 	return {}
 
 
@@ -160,7 +147,7 @@ func _load_build_config() -> void:
 	var unit_cfg := _dl_unit_stats("villager")
 	if not unit_cfg.is_empty():
 		_build_speed = float(unit_cfg.get("build_speed", _build_speed))
-	var con_cfg := _dl_settings("construction")
+	var con_cfg := GameUtils.dl_settings("construction")
 	if not con_cfg.is_empty():
 		_build_reach = float(con_cfg.get("build_reach", _build_reach))
 
@@ -172,14 +159,14 @@ func _load_gather_config() -> void:
 		var rates: Variant = unit_cfg.get("gather_rates", {})
 		if rates is Dictionary:
 			_gather_rates = rates
-	var gather_cfg := _dl_settings("gathering")
+	var gather_cfg := GameUtils.dl_settings("gathering")
 	if not gather_cfg.is_empty():
 		_gather_reach = float(gather_cfg.get("gather_reach", _gather_reach))
 		_drop_off_reach = float(gather_cfg.get("drop_off_reach", _drop_off_reach))
 
 
 func _load_combat_config() -> void:
-	var cfg := _dl_settings("combat")
+	var cfg := GameUtils.dl_settings("combat")
 	if not cfg.is_empty():
 		_combat_config = cfg
 	if stats != null:
@@ -201,7 +188,7 @@ func _init_transport() -> void:
 	if _transport_capacity > 0:
 		_transport = TransportHandlerScript.new()
 		_transport.capacity = _transport_capacity
-		_transport.config = _dl_settings("transport")
+		_transport.config = GameUtils.dl_settings("transport")
 
 
 func _process(delta: float) -> void:
@@ -534,7 +521,7 @@ func assign_feed_target(wolf: Node2D) -> void:
 	_build_target = null
 	_pending_build_target_name = ""
 	# Load feed config from fauna settings
-	var fauna_cfg: Dictionary = _dl_settings("fauna")
+	var fauna_cfg: Dictionary = GameUtils.dl_settings("fauna")
 	var wolf_cfg: Dictionary = fauna_cfg.get("wolf", {})
 	_feed_duration = float(wolf_cfg.get("feed_duration", 5.0))
 	_feed_reach = float(wolf_cfg.get("feed_distance_tiles", 2)) * TILE_SIZE

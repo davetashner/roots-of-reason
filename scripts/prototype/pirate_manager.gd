@@ -32,13 +32,7 @@ func setup(scene_root: Node, map_node: Node, target_detector: Node, tech_manager
 
 
 func _load_config() -> Dictionary:
-	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_settings("pirates")
-	if is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			return dl.get_settings("pirates")
-	return {}
+	return GameUtils.dl_settings("pirates")
 
 
 func _on_tech_researched(_player_id: int, tech_id: String, _effects: Dictionary) -> void:
@@ -48,7 +42,7 @@ func _on_tech_researched(_player_id: int, tech_id: String, _effects: Dictionary)
 
 
 func _process(delta: float) -> void:
-	var game_delta: float = _get_game_delta(delta)
+	var game_delta: float = GameUtils.get_game_delta(delta)
 	if game_delta == 0.0:
 		return
 	# Clean dead pirates
@@ -222,16 +216,6 @@ func _get_current_age() -> int:
 		if gm and "current_age" in gm:
 			return gm.current_age
 	return 3  # Default to Medieval
-
-
-func _get_game_delta(delta: float) -> float:
-	if Engine.has_singleton("GameManager"):
-		return GameManager.get_game_delta(delta)
-	var ml := Engine.get_main_loop() if is_instance_valid(Engine.get_main_loop()) else null
-	var gm: Node = ml.root.get_node_or_null("GameManager") if ml else null
-	if gm and gm.has_method("get_game_delta"):
-		return gm.get_game_delta(delta)
-	return delta
 
 
 func get_active_pirate_count() -> int:

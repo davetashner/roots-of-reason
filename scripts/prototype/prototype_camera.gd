@@ -23,13 +23,7 @@ func _ready() -> void:
 
 
 func _load_config() -> void:
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("camera")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("camera")
+	var cfg: Dictionary = GameUtils.dl_settings("camera")
 	if cfg.is_empty():
 		return
 	_pan_speed = cfg.get("pan_speed", _pan_speed)

@@ -43,13 +43,7 @@ func _ready() -> void:
 
 
 func _load_config() -> void:
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("selection")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("selection")
+	var cfg: Dictionary = GameUtils.dl_settings("selection")
 	if cfg.is_empty():
 		return
 	_max_selection_size = int(cfg.get("max_selection_size", _max_selection_size))
@@ -57,26 +51,14 @@ func _load_config() -> void:
 
 
 func _load_command_config() -> void:
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("commands")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("commands")
+	var cfg: Dictionary = GameUtils.dl_settings("commands")
 	if not cfg.is_empty():
 		_command_config = cfg
 
 
 func _load_formation_config() -> void:
 	_formation_manager = FormationManagerScript.new()
-	var cfg: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		cfg = DataLoader.get_settings("formations")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_settings"):
-			cfg = dl.get_settings("formations")
+	var cfg: Dictionary = GameUtils.dl_settings("formations")
 	if cfg.is_empty():
 		return
 	_formation_manager.spacing = float(cfg.get("spacing", _formation_manager.spacing))
