@@ -129,9 +129,21 @@ func _get_commands_for_selection(units: Array) -> Array:
 			if "unit_type" in unit:
 				lookup_key = unit.unit_type
 				break
+	var result: Array = []
 	if commands_map.has(lookup_key):
-		return commands_map[lookup_key]
-	return commands_map.get("default", [])
+		result = commands_map[lookup_key].duplicate()
+	else:
+		result = commands_map.get("default", []).duplicate()
+	# Add "Unload" button for transports with passengers
+	if _selection_has_embarked(units):
+		var unload_cmd := {
+			"id": "unload_all",
+			"label": "Unload",
+			"tooltip": "Unload all embarked units",
+			"action": "unload",
+		}
+		result.append(unload_cmd)
+	return result
 
 
 func _create_button(command: Dictionary, hotkey: String) -> Button:
@@ -192,6 +204,8 @@ func _on_command_pressed(command: Dictionary) -> void:
 			_issue_stop()
 		"hold":
 			_issue_hold()
+		"unload":
+			_issue_unload()
 
 
 func _issue_stop() -> void:
@@ -210,6 +224,24 @@ func _issue_hold() -> void:
 	for unit in selected:
 		if is_instance_valid(unit) and unit.has_method("hold_position"):
 			unit.hold_position()
+
+
+func _issue_unload() -> void:
+	if _input_handler == null:
+		return
+	var selected: Array = _input_handler._get_selected_units()
+	for unit in selected:
+		if is_instance_valid(unit) and unit.has_method("disembark_all"):
+			if unit.get_embarked_count() > 0:
+				unit.disembark_all(unit.global_position)
+
+
+func _selection_has_embarked(units: Array) -> bool:
+	for unit in units:
+		if is_instance_valid(unit) and unit.has_method("get_embarked_count"):
+			if unit.get_embarked_count() > 0:
+				return true
+	return false
 
 
 func _execute_trade(command: Dictionary) -> void:

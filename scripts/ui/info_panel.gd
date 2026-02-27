@@ -167,6 +167,11 @@ func show_unit(unit: Node2D) -> void:
 	var stats_text: String = "ATK: %d  DEF: %d  SPD: %.1f" % [atk, def, spd]
 	if unit.has_meta("bounty_gold"):
 		stats_text += "  Bounty: %d Gold" % int(unit.get_meta("bounty_gold"))
+	if unit.has_method("get_embarked_count") and unit.has_method("get_transport_capacity"):
+		var cargo_count: int = unit.get_embarked_count()
+		var cargo_cap: int = unit.get_transport_capacity()
+		if cargo_cap > 0:
+			stats_text += "  Cargo: %d/%d" % [cargo_count, cargo_cap]
 	_stats_label.text = stats_text
 	_update_unit_hp(unit, stats)
 
