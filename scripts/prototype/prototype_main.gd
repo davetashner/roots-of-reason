@@ -25,6 +25,7 @@ const VictoryScreenScript := preload("res://scripts/ui/victory_screen.gd")
 const TechTreeViewerScript := preload("res://scripts/ui/tech_tree_viewer.gd")
 const SingularityRegressionScript := preload("res://scripts/prototype/singularity_regression.gd")
 const AISingularityScript := preload("res://scripts/ai/ai_singularity.gd")
+const SingularityCinematicVFXScript := preload("res://scripts/prototype/singularity_cinematic_vfx.gd")
 const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen.gd")
 const PauseMenuScript := preload("res://scripts/ui/pause_menu.gd")
 const MinimapScript := preload("res://scripts/ui/minimap.gd")
@@ -62,6 +63,8 @@ var _ai_singularity: Node = null
 var _civ_selection_screen: PanelContainer = null
 var _pause_menu: PanelContainer = null
 var _minimap: Control = null
+var _singularity_cinematic: Node = null
+var _pending_victory_tech: Array = []
 
 
 func _ready() -> void:
@@ -538,6 +541,26 @@ func _on_player_victorious(player_id: int, condition: String) -> void:
 		_victory_screen.show_victory(label)
 
 
+func _on_victory_tech_completed(player_id: int, tech_id: String) -> void:
+	if player_id == 0 and _singularity_cinematic != null:
+		_pending_victory_tech = [player_id, tech_id]
+		get_tree().paused = true
+		_singularity_cinematic.process_mode = Node.PROCESS_MODE_ALWAYS
+		_singularity_cinematic.play_cinematic()
+		_singularity_cinematic.cinematic_complete.connect(_on_singularity_cinematic_complete, CONNECT_ONE_SHOT)
+	else:
+		_victory_manager.on_victory_tech_completed(player_id, tech_id)
+
+
+func _on_singularity_cinematic_complete() -> void:
+	get_tree().paused = false
+	if not _pending_victory_tech.is_empty():
+		var pid: int = int(_pending_victory_tech[0])
+		var tid: String = str(_pending_victory_tech[1])
+		_pending_victory_tech = []
+		_victory_manager.on_victory_tech_completed(pid, tid)
+
+
 func _setup_river_transport() -> void:
 	_river_transport = Node.new()
 	_river_transport.name = "RiverTransport"
@@ -835,6 +858,8 @@ func _setup_tech() -> void:
 	_singularity_regression.set_script(SingularityRegressionScript)
 	add_child(_singularity_regression)
 	_singularity_regression.setup(_tech_manager, _notification_panel)
+	# Wire victory tech completion signal for singularity cinematic
+	_tech_manager.victory_tech_completed.connect(_on_victory_tech_completed)
 
 
 func _setup_corruption() -> void:
@@ -896,6 +921,12 @@ func _setup_hud() -> void:
 	_knowledge_burning_vfx.set_script(KnowledgeBurningVFXScript)
 	add_child(_knowledge_burning_vfx)
 	_knowledge_burning_vfx.setup(self, _camera, _notification_panel)
+	# Singularity cinematic VFX — plays when AGI Core completes
+	_singularity_cinematic = Node.new()
+	_singularity_cinematic.name = "SingularityCinematicVFX"
+	_singularity_cinematic.set_script(SingularityCinematicVFXScript)
+	add_child(_singularity_cinematic)
+	_singularity_cinematic.setup(self, _camera)
 	# River overlay (sibling Node2D, higher z_index than tilemap)
 	_river_overlay = Node2D.new()
 	_river_overlay.name = "RiverOverlay"
