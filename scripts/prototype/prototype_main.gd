@@ -76,6 +76,11 @@ func _ready() -> void:
 		_show_civ_selection()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		_free_orphaned_nodes()
+
+
 func _show_civ_selection() -> void:
 	var civ_layer := CanvasLayer.new()
 	civ_layer.name = "CivSelectionLayer"
@@ -133,6 +138,69 @@ func save_state() -> Dictionary:
 func load_state(data: Dictionary) -> void:
 	if _save_handler != null:
 		await _save_handler.load_state(data)
+
+
+# -- Cleanup -----------------------------------------------------------------
+
+
+func _free_orphaned_nodes() -> void:
+	# Release RefCounted helpers first so they drop their references to child
+	# nodes before the tree tears down.  This prevents stale _root references
+	# from interfering with the scene-tree's deletion order.
+	_bootstrapper = null
+	_flow = null
+	_save_handler = null
+	_entity_registry = null
+
+	# Free any Node instance-vars that ended up outside the scene tree.
+	# Normally every node is a child of `self` and freed automatically, but
+	# ordering edge-cases during shutdown can leave orphans.
+	var refs: Array = [
+		_camera,
+		_input_handler,
+		_map_node,
+		_pathfinder,
+		_target_detector,
+		_cursor_overlay,
+		_building_placer,
+		_info_panel,
+		_population_manager,
+		_resource_bar,
+		_tech_manager,
+		_war_bonus,
+		_ai_economy,
+		_ai_military,
+		_ai_tech,
+		_visibility_manager,
+		_unit_upgrade_manager,
+		_corruption_manager,
+		_fog_layer,
+		_river_transport,
+		_trade_manager,
+		_notification_panel,
+		_river_overlay,
+		_victory_manager,
+		_war_survival,
+		_victory_screen,
+		_knowledge_burning_vfx,
+		_tech_tree_viewer,
+		_singularity_regression,
+		_ai_singularity,
+		_civ_selection_screen,
+		_pause_menu,
+		_minimap,
+		_singularity_cinematic,
+		_pirate_manager,
+		_pandemic_manager,
+		_pandemic_vfx,
+		_historical_event_manager,
+		_historical_event_vfx,
+		_game_stats_tracker,
+		_postgame_stats_screen,
+	]
+	for node in refs:
+		if node is Node and is_instance_valid(node) and not node.is_inside_tree():
+			node.free()
 
 
 # -- Infrastructure setup (runs before game start) ---------------------------
