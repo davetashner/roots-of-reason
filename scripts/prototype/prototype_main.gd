@@ -29,6 +29,7 @@ const SingularityCinematicVFXScript := preload("res://scripts/prototype/singular
 const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen.gd")
 const PauseMenuScript := preload("res://scripts/ui/pause_menu.gd")
 const MinimapScript := preload("res://scripts/ui/minimap.gd")
+const PirateManagerScript := preload("res://scripts/prototype/pirate_manager.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -64,6 +65,7 @@ var _civ_selection_screen: PanelContainer = null
 var _pause_menu: PanelContainer = null
 var _minimap: Control = null
 var _singularity_cinematic: Node = null
+var _pirate_manager: Node = null
 var _pending_victory_tech: Array = []
 
 
@@ -113,6 +115,7 @@ func _start_game() -> void:
 	_setup_river_transport()
 	_setup_trade()
 	_setup_ai()
+	_setup_pirates()
 	_setup_hud()
 	# Initial visibility update after all units are placed
 	_update_fog_of_war()
@@ -638,6 +641,14 @@ func _setup_ai() -> void:
 	_ai_singularity.personality = ai_pers
 	add_child(_ai_singularity)
 	_ai_singularity.setup(_tech_manager, _ai_military, _ai_tech)
+
+
+func _setup_pirates() -> void:
+	_pirate_manager = Node.new()
+	_pirate_manager.name = "PirateManager"
+	_pirate_manager.set_script(PirateManagerScript)
+	add_child(_pirate_manager)
+	_pirate_manager.setup(self, _map_node, _target_detector, _tech_manager)
 
 
 func _load_ai_tier_config(difficulty: String) -> Dictionary:
