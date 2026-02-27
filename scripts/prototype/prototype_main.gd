@@ -173,6 +173,8 @@ func _setup_map() -> void:
 	map_layer.name = "Map"
 	map_layer.set_script(load("res://scripts/map/tilemap_terrain.gd"))
 	map_layer.z_index = 0
+	# Offset so Godot's tile centers align with IsoUtils top-corner coords
+	map_layer.position = Vector2(-IsoUtils.HALF_W, -IsoUtils.HALF_H)
 	add_child(map_layer)
 	_map_node = map_layer
 
@@ -191,6 +193,8 @@ func _setup_fog_of_war() -> void:
 	_fog_layer.name = "FogOfWar"
 	_fog_layer.set_script(load("res://scripts/map/fog_of_war_layer.gd"))
 	_fog_layer.z_index = 1
+	# Offset so Godot's tile centers align with IsoUtils top-corner coords
+	_fog_layer.position = Vector2(-IsoUtils.HALF_W, -IsoUtils.HALF_H)
 	add_child(_fog_layer)
 	_fog_layer.setup(dims.x, dims.y, 0)
 
