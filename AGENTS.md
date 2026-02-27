@@ -7,6 +7,19 @@ See `CLAUDE.md` for beads commands, project structure, quality gates, and the st
 
 ---
 
+## System Architecture
+
+Detailed architecture documentation lives in `docs/architecture/`:
+
+| Document | Contents |
+|----------|----------|
+| [autoload_signals.md](docs/architecture/autoload_signals.md) | Autoload signal flow, responsibilities, and key signal chains |
+| [scene_tree.md](docs/architecture/scene_tree.md) | Scene tree conventions for units, buildings, and map nodes |
+| [state_machines.md](docs/architecture/state_machines.md) | Unit gather/combat state machines, building construction states |
+| [system_relationships.md](docs/architecture/system_relationships.md) | How major systems connect: resource flow, tech effects, combat chain |
+
+---
+
 ## Architecture Decisions (ADRs)
 
 These are locked decisions. Do not deviate without creating a new ADR to supersede.
