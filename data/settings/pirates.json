@@ -23,6 +23,12 @@
       "6": 0.5
     }
   },
+  "bounty_vfx": {
+    "scatter_radius": 25.0,
+    "dot_count": 5,
+    "rise_distance": 35.0,
+    "duration": 1.0
+  },
   "spawn_rate_by_age": {
     "3": 1.0,
     "4": 0.8,

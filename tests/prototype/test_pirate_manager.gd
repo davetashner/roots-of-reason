@@ -269,3 +269,95 @@ func test_save_load_round_trip() -> void:
 	mgr2.load_state(saved)
 	assert_bool(mgr2.is_enabled()).is_true()
 	assert_float(mgr2._spawn_timer).is_equal_approx(45.0, 0.01)
+
+
+# -- Bounty tests --
+
+
+func test_pirate_has_bounty_assigned_on_spawn() -> void:
+	var mgr := _create_manager()
+	var map := _create_mock_map()
+	var td := _create_mock_target_detector()
+	var tm := _create_mock_tech_manager()
+	mgr.setup(self, map, td, tm)
+	mgr._config = _config
+	mgr._enabled = true
+	mgr._spawn_pirate()
+	for p in mgr._active_pirates:
+		auto_free(p)
+	var pirate: Node2D = mgr._active_pirates[0]
+	assert_bool(pirate.has_meta("bounty_gold")).is_true()
+	var bounty: int = int(pirate.get_meta("bounty_gold"))
+	# Default age 3 scale = 1.0, so bounty in [30, 120]
+	assert_bool(bounty >= 30 and bounty <= 120).is_true()
+
+
+func test_bounty_uses_stored_value_on_death() -> void:
+	var mgr := _create_manager()
+	var map := _create_mock_map()
+	var td := _create_mock_target_detector()
+	var tm := _create_mock_tech_manager()
+	mgr.setup(self, map, td, tm)
+	mgr._config = _config
+	mgr._enabled = true
+	mgr._spawn_pirate()
+	for p in mgr._active_pirates:
+		auto_free(p)
+	var pirate: Node2D = mgr._active_pirates[0]
+	# Override bounty to a known value
+	pirate.set_meta("bounty_gold", 77)
+	# Create a mock killer
+	var killer := Node2D.new()
+	killer.set_script(UnitScript)
+	killer.owner_id = 0
+	killer.hp = 50
+	killer.max_hp = 50
+	add_child(killer)
+	auto_free(killer)
+	# Track bounty_awarded signal
+	var awards: Array = []
+	mgr.bounty_awarded.connect(func(p, pid, amt): awards.append([p, pid, amt]))
+	# Simulate pirate death
+	mgr._on_pirate_died(pirate, killer)
+	assert_array(awards).is_not_empty()
+	assert_int(awards[0][2]).is_equal(77)
+
+
+func test_bounty_awarded_signal_includes_correct_player() -> void:
+	var mgr := _create_manager()
+	var map := _create_mock_map()
+	var td := _create_mock_target_detector()
+	var tm := _create_mock_tech_manager()
+	mgr.setup(self, map, td, tm)
+	mgr._config = _config
+	mgr._enabled = true
+	mgr._spawn_pirate()
+	for p in mgr._active_pirates:
+		auto_free(p)
+	var pirate: Node2D = mgr._active_pirates[0]
+	pirate.set_meta("bounty_gold", 50)
+	# Killer with owner_id = 2
+	var killer := Node2D.new()
+	killer.set_script(UnitScript)
+	killer.owner_id = 2
+	killer.hp = 50
+	killer.max_hp = 50
+	add_child(killer)
+	auto_free(killer)
+	var awards: Array = []
+	mgr.bounty_awarded.connect(func(p, pid, amt): awards.append([p, pid, amt]))
+	mgr._on_pirate_died(pirate, killer)
+	assert_int(awards[0][1]).is_equal(2)
+
+
+func test_calculate_bounty_within_range() -> void:
+	var mgr := _create_manager()
+	var map := _create_mock_map()
+	var td := _create_mock_target_detector()
+	var tm := _create_mock_tech_manager()
+	mgr.setup(self, map, td, tm)
+	mgr._config = _config
+	# Run 50 calculations to verify range
+	for i in 50:
+		var bounty: int = mgr._calculate_bounty()
+		assert_bool(bounty >= 30 and bounty <= 120).is_true()

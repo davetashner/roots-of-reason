@@ -3,6 +3,7 @@ extends Node
 ## is researched. Manages pirate lifecycle, bounties, and spawn timing.
 
 signal pirate_destroyed(pirate: Node2D, killer: Node2D)
+signal bounty_awarded(pirate: Node2D, player_id: int, amount: int)
 
 const PirateAIScript := preload("res://scripts/fauna/pirate_ai.gd")
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
@@ -129,6 +130,9 @@ func _spawn_pirate() -> void:
 		unit.stats.set_base_stat("range", float(pirate_stats.get("range", 4)))
 		unit.stats.set_base_stat("los", float(pirate_stats.get("los", 6)))
 		unit.stats.set_base_stat("attack_speed", 1.5)
+	# Assign bounty at spawn
+	var bounty: int = _calculate_bounty()
+	unit.set_meta("bounty_gold", bounty)
 	# Register with target detector
 	if _target_detector != null:
 		_target_detector.register_entity(unit)
@@ -154,14 +158,14 @@ func _on_pirate_died(unit: Node2D, killer: Node2D) -> void:
 	if killer != null and is_instance_valid(killer) and "owner_id" in killer:
 		var killer_owner: int = killer.owner_id
 		if killer_owner >= 0:
-			_award_bounty(killer_owner)
+			_award_bounty(killer_owner, unit)
 	# Unregister from target detector
 	if _target_detector != null:
 		_target_detector.unregister_entity(unit)
 	pirate_destroyed.emit(unit, killer)
 
 
-func _award_bounty(player_id: int) -> void:
+func _calculate_bounty() -> int:
 	var bounty_cfg: Dictionary = _config.get("bounty", {})
 	var min_gold: int = int(bounty_cfg.get("min_gold", 30))
 	var max_gold: int = int(bounty_cfg.get("max_gold", 120))
@@ -170,9 +174,23 @@ func _award_bounty(player_id: int) -> void:
 	var final_amount: int = int(float(base_amount) * scale)
 	if final_amount < 1:
 		final_amount = 1
+	return final_amount
+
+
+func _award_bounty(player_id: int, pirate: Node2D) -> void:
+	var amount: int = 0
+	if pirate != null and is_instance_valid(pirate) and pirate.has_meta("bounty_gold"):
+		amount = int(pirate.get_meta("bounty_gold"))
+	else:
+		amount = _calculate_bounty()
 	var rm: Node = _get_resource_manager()
 	if rm != null and rm.has_method("add_resource"):
-		rm.add_resource(player_id, rm.ResourceType.GOLD, final_amount)
+		rm.add_resource(player_id, rm.ResourceType.GOLD, amount)
+	# Spawn gold drop VFX
+	if pirate != null and is_instance_valid(pirate) and _scene_root != null:
+		var vfx_cfg: Dictionary = _config.get("bounty_vfx", {})
+		CombatVisual.spawn_gold_drop(_scene_root, pirate.global_position, amount, vfx_cfg)
+	bounty_awarded.emit(pirate, player_id, amount)
 
 
 func _get_resource_manager() -> Node:

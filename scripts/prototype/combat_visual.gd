@@ -103,6 +103,43 @@ static func spawn_resource_scatter(parent: Node, world_pos: Vector2, config: Dic
 		tween.tween_callback(dot.queue_free)
 
 
+static func spawn_gold_drop(parent: Node, world_pos: Vector2, amount: int, config: Dictionary) -> void:
+	# Floating "+N Gold" label
+	var label := Label.new()
+	label.text = "+%d Gold" % amount
+	label.position = world_pos + Vector2(-30, -20)
+	label.z_index = 100
+	label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.1))
+	parent.add_child(label)
+
+	var rise: float = float(config.get("rise_distance", 35.0))
+	var duration: float = float(config.get("duration", 1.0))
+
+	var label_tween := label.create_tween()
+	label_tween.set_parallel(true)
+	label_tween.tween_property(label, "position:y", world_pos.y - 20 - rise, duration)
+	label_tween.tween_property(label, "modulate:a", 0.0, duration)
+	label_tween.set_parallel(false)
+	label_tween.tween_callback(label.queue_free)
+
+	# Gold scatter dots
+	var scatter_radius: float = float(config.get("scatter_radius", 25.0))
+	var dot_count: int = int(config.get("dot_count", 5))
+	for i in dot_count:
+		var dot := _GoldDot.new()
+		dot.position = world_pos
+		dot.z_index = 94
+		parent.add_child(dot)
+		var angle: float = TAU * float(i) / float(dot_count)
+		var target := world_pos + Vector2(cos(angle), sin(angle)) * scatter_radius
+		var tween := dot.create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(dot, "position", target, duration)
+		tween.tween_property(dot, "modulate:a", 0.0, duration)
+		tween.set_parallel(false)
+		tween.tween_callback(dot.queue_free)
+
+
 ## Internal node used for projectile drawing.
 class _ProjectileDot:
 	extends Node2D
@@ -135,3 +172,11 @@ class _ScatterDot:
 
 	func _draw() -> void:
 		draw_circle(Vector2.ZERO, 3.0, Color(0.9, 0.8, 0.2, 0.8))
+
+
+## Gold coin dot for bounty drop effect.
+class _GoldDot:
+	extends Node2D
+
+	func _draw() -> void:
+		draw_circle(Vector2.ZERO, 4.0, Color(1.0, 0.85, 0.1, 0.9))

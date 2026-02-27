@@ -164,7 +164,10 @@ func show_unit(unit: Node2D) -> void:
 	var atk: int = int(stats.get("attack", 0))
 	var def: int = int(stats.get("defense", 0))
 	var spd: float = float(stats.get("speed", 0.0))
-	_stats_label.text = "ATK: %d  DEF: %d  SPD: %.1f" % [atk, def, spd]
+	var stats_text: String = "ATK: %d  DEF: %d  SPD: %.1f" % [atk, def, spd]
+	if unit.has_meta("bounty_gold"):
+		stats_text += "  Bounty: %d Gold" % int(unit.get_meta("bounty_gold"))
+	_stats_label.text = stats_text
 	_update_unit_hp(unit, stats)
 
 
