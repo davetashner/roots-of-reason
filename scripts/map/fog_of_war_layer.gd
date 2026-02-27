@@ -26,6 +26,7 @@ func setup(map_width: int, map_height: int, player_id: int = 0) -> void:
 func _build_tileset() -> void:
 	var ts := TileSet.new()
 	ts.tile_shape = TileSet.TILE_SHAPE_ISOMETRIC
+	ts.tile_layout = TileSet.TILE_LAYOUT_DIAMOND_DOWN
 	ts.tile_size = TILE_SIZE
 
 	var source_id := 0
