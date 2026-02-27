@@ -161,7 +161,8 @@ func _process(delta: float) -> void:
 		if _ruins_timer >= _ruins_decay_time:
 			queue_free()
 		return
-	_tick_garrison_arrows(game_delta)
+	if not _garrisoned_units.is_empty():
+		_tick_garrison_arrows(game_delta)
 
 
 func get_entity_category() -> String:
