@@ -1,0 +1,21 @@
+{
+  "name": "Artillery",
+  "hp": 100,
+  "attack": 25,
+  "defense": 1,
+  "speed": 0.5,
+  "range": 10,
+  "min_range": 3,
+  "los": 8,
+  "population_cost": 3,
+  "train_time": 55,
+  "train_cost": { "wood": 150, "gold": 250 },
+  "bonus_vs": { "building": 6.0 },
+  "building_damage_ignore_reduction": 0.60,
+  "armor_type": "siege",
+  "attack_speed": 5.0,
+  "attack_type": "siege",
+  "movement_type": "land",
+  "unit_category": "military",
+  "default_stance": "defensive"
+}

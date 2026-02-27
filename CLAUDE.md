@@ -35,10 +35,12 @@ A civilization RTS inspired by Age of Empires where the endgame is achieving AGI
 Run before committing:
 
 ```bash
-ror test        # Run GdUnit4 tests
-ror lint        # Run gdtoolkit lint + format check
-ror coverage    # Check 90% line coverage on gameplay scripts
+./tools/ror test        # Run GdUnit4 tests
+./tools/ror lint        # Run gdtoolkit lint + format check
+./tools/ror coverage    # Check 90% line coverage on gameplay scripts
 ```
+
+> **Note:** `ror` is a local script at `./tools/ror`, not a global command. Always invoke it with the `./tools/` prefix.
 
 Use `/gdtest` skill to generate test suites for new scripts.
 
@@ -60,7 +62,7 @@ When tests fail, check these first before debugging from scratch:
 - **Never push directly to main** — always create a PR
 - **Run `bd sync` before pushing** to keep beads backlog in sync
 - **Reference beads issue IDs** in commit messages (e.g., `feat: add camera [roots-of-reason-317.1]`)
-- **Run `ror lint` before committing** — CI enforces zero warnings
+- **Run `./tools/ror lint` before committing** — CI enforces zero warnings
 - **Sign off commits** with `git commit -s`
 - **Every PR body MUST include explicit `Closes` lines** for each bead it completes — one per line, using the full ID. Example:
   ```
@@ -74,8 +76,8 @@ When tests fail, check these first before debugging from scratch:
 
 After implementing a feature, execute this sequence without interruption:
 
-1. Run all tests (`ror test`) and fix failures
-2. Run linter/formatter (`ror lint`) and fix issues
+1. Run all tests (`./tools/ror test`) and fix failures
+2. Run linter/formatter (`./tools/ror lint`) and fix issues
 3. Commit with conventional message referencing bead ID (`git commit -s`)
 4. Push branch and create PR with `Closes` lines
 5. Wait for CI — fix any failures

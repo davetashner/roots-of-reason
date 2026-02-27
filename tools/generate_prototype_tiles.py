@@ -66,6 +66,7 @@ BUILDINGS = {
     "market": ("#B8860B", "#A8760B"),
     "library": ("#6A5ACD", "#5A4ABD"),
     "wonder": ("#DAA520", "#CA9510"),
+    "factory": ("#5A5A5A", "#4A4A4A"),
 }
 
 # Diamond vertices for a 128x128 building tile
@@ -100,6 +101,8 @@ UNITS = {
     "transport_ship": ("#4A8BA0", "#3A7B90", "T"),
     "cannon_ship":    ("#8B3A3A", "#7B2A2A", "K"),
     "wolf":     ("#808080", "#606060", "W"),
+    "tank":     ("#4A6B4A", "#3A5B3A", "T"),
+    "artillery": ("#8B5A2A", "#7B4A1A", "R"),
 }
 
 UNIT_SIZE = 32

@@ -1,0 +1,19 @@
+{
+  "name": "Tank",
+  "hp": 300,
+  "attack": 15,
+  "defense": 5,
+  "speed": 1.8,
+  "range": 2,
+  "los": 5,
+  "population_cost": 3,
+  "train_time": 45,
+  "train_cost": { "gold": 200, "stone": 100 },
+  "bonus_vs": { "infantry": 3.0, "archer": 2.0 },
+  "armor_type": "heavy",
+  "attack_speed": 2.0,
+  "attack_type": "melee",
+  "movement_type": "land",
+  "unit_category": "military",
+  "default_stance": "aggressive"
+}
