@@ -30,6 +30,8 @@ const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen
 const PauseMenuScript := preload("res://scripts/ui/pause_menu.gd")
 const MinimapScript := preload("res://scripts/ui/minimap.gd")
 const PirateManagerScript := preload("res://scripts/prototype/pirate_manager.gd")
+const PandemicManagerScript := preload("res://scripts/prototype/pandemic_manager.gd")
+const PandemicVFXScript := preload("res://scripts/prototype/pandemic_vfx.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -66,6 +68,8 @@ var _pause_menu: PanelContainer = null
 var _minimap: Control = null
 var _singularity_cinematic: Node = null
 var _pirate_manager: Node = null
+var _pandemic_manager: Node = null
+var _pandemic_vfx: Node = null
 var _pending_victory_tech: Array = []
 
 
@@ -111,6 +115,7 @@ func _start_game() -> void:
 	_setup_fauna()
 	_setup_tech()
 	_setup_corruption()
+	_setup_pandemic()
 	_setup_victory()
 	_setup_river_transport()
 	_setup_trade()
@@ -915,6 +920,34 @@ func _setup_corruption() -> void:
 	_corruption_manager.setup(_population_manager, _tech_manager)
 
 
+func _setup_pandemic() -> void:
+	_pandemic_manager = Node.new()
+	_pandemic_manager.name = "PandemicManager"
+	_pandemic_manager.set_script(PandemicManagerScript)
+	add_child(_pandemic_manager)
+	_pandemic_manager.setup(_population_manager, _tech_manager, self)
+	_pandemic_manager.pandemic_started.connect(_on_pandemic_started)
+	_pandemic_manager.pandemic_ended.connect(_on_pandemic_ended)
+
+
+func _on_pandemic_started(player_id: int, _severity: float) -> void:
+	if _pandemic_vfx != null:
+		# Find town center position for VFX
+		var tc_pos := Vector2.ZERO
+		for child in get_children():
+			if child is Node2D and "building_name" in child:
+				if child.building_name == "town_center" and "owner_id" in child:
+					if child.owner_id == player_id:
+						tc_pos = child.position
+						break
+		_pandemic_vfx.play_outbreak_effect(tc_pos, player_id)
+
+
+func _on_pandemic_ended(player_id: int) -> void:
+	if _pandemic_vfx != null:
+		_pandemic_vfx.play_outbreak_end(player_id)
+
+
 func _setup_hud() -> void:
 	var hud := CanvasLayer.new()
 	hud.name = "HUD"
@@ -966,6 +999,12 @@ func _setup_hud() -> void:
 	_knowledge_burning_vfx.set_script(KnowledgeBurningVFXScript)
 	add_child(_knowledge_burning_vfx)
 	_knowledge_burning_vfx.setup(self, _camera, _notification_panel)
+	# Pandemic VFX — green plague cloud + notification
+	_pandemic_vfx = Node.new()
+	_pandemic_vfx.name = "PandemicVFX"
+	_pandemic_vfx.set_script(PandemicVFXScript)
+	add_child(_pandemic_vfx)
+	_pandemic_vfx.setup(self, _camera, _notification_panel)
 	# Singularity cinematic VFX — plays when AGI Core completes
 	_singularity_cinematic = Node.new()
 	_singularity_cinematic.name = "SingularityCinematicVFX"
