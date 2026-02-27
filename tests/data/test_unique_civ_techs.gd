@@ -143,12 +143,12 @@ func test_unique_techs_have_costs() -> void:
 		assert_dict(data["cost"]).is_not_empty()
 
 
-# -- Total tech count (84 base + 6 unique = 90) --
+# -- Total tech count (85 base + 6 unique = 91) --
 
 
-func test_total_tech_count_is_90() -> void:
+func test_total_tech_count_is_91() -> void:
 	var data: Variant = DataLoader.load_json("res://data/tech/tech_tree.json")
-	assert_int(data.size()).is_equal(90)
+	assert_int(data.size()).is_equal(91)
 
 
 # -- Mesopotamia civ data references unique techs --

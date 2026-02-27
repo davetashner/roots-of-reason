@@ -97,6 +97,8 @@ UNITS = {
     "cavalry":  ("#8B6914", "#7B5904", "C"),
     "siege":    ("#6B4A3A", "#5B3A2A", "S"),
     "naval":    ("#2A6B8B", "#1A5B7B", "N"),
+    "transport_ship": ("#4A8BA0", "#3A7B90", "T"),
+    "cannon_ship":    ("#8B3A3A", "#7B2A2A", "K"),
     "wolf":     ("#808080", "#606060", "W"),
 }
 

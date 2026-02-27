@@ -153,7 +153,7 @@
     "prerequisites": [],
     "effects": {
       "unlock_buildings": ["dock"],
-      "unlock_units": ["fishing_boat", "merchant_ship"]
+      "unlock_units": ["fishing_boat", "merchant_ship", "transport_ship"]
     },
     "flavor_text": "The horizon beckons."
   },
@@ -472,6 +472,18 @@
       "economic_bonus": { "transport_capacity": 0.50 }
     },
     "flavor_text": "Carvel hulls carry cargo the world over."
+  },
+  {
+    "id": "galleon",
+    "name": "Galleon",
+    "age": 4,
+    "cost": { "wood": 400, "gold": 250 },
+    "research_time": 75,
+    "prerequisites": ["shipbuilding", "gunpowder"],
+    "effects": {
+      "unlock_units": ["cannon_ship"]
+    },
+    "flavor_text": "Broadsides of iron reshape naval warfare."
   },
   {
     "id": "crop_rotation",

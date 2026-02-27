@@ -8,7 +8,7 @@ const ALL_UNITS: Array[String] = [
 	"archer",
 	"cavalry",
 	"siege",
-	"naval",
+	"war_galley",
 ]
 
 
@@ -73,8 +73,8 @@ func test_siege_has_high_building_damage() -> void:
 	assert_float(float(bonus["building"])).is_greater(1.0)
 
 
-func test_naval_is_water_unit() -> void:
-	var stats := DataLoader.get_unit_stats("naval")
+func test_war_galley_is_water_unit() -> void:
+	var stats := DataLoader.get_unit_stats("war_galley")
 	assert_str(str(stats["movement_type"])).is_equal("water")
 	assert_bool(stats.has("transport_capacity")).is_true()
 	assert_int(int(stats["transport_capacity"])).is_greater(0)

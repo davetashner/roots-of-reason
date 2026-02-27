@@ -1,0 +1,20 @@
+{
+  "name": "Transport Ship",
+  "hp": 150,
+  "attack": 0,
+  "defense": 4,
+  "speed": 1.4,
+  "range": 0,
+  "los": 5,
+  "population_cost": 2,
+  "train_time": 30,
+  "train_cost": { "wood": 125, "gold": 25 },
+  "bonus_vs": {},
+  "armor_type": "heavy",
+  "attack_speed": 0,
+  "attack_type": "melee",
+  "movement_type": "water",
+  "transport_capacity": 10,
+  "unit_category": "civilian",
+  "default_stance": "defensive"
+}
