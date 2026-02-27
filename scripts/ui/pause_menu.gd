@@ -308,35 +308,14 @@ func _on_load_confirm() -> void:
 
 
 func _refresh_save_slots() -> void:
-	for i in SaveManager.MAX_SLOTS:
-		var info := SaveManager.get_save_info(i)
-		if info.get("exists", false):
-			var ts: float = info.get("timestamp", 0.0)
-			var dt := Time.get_datetime_dict_from_unix_time(int(ts))
-			var time_str := (
-				"%04d-%02d-%02d %02d:%02d"
-				% [
-					dt.get("year", 0),
-					dt.get("month", 0),
-					dt.get("day", 0),
-					dt.get("hour", 0),
-					dt.get("minute", 0),
-				]
-			)
-			_save_slot_buttons[i].text = (
-				"Slot %d: %s — %s (%s)"
-				% [
-					i + 1,
-					info.get("civ_name", "?"),
-					info.get("age_name", "?"),
-					time_str,
-				]
-			)
-		else:
-			_save_slot_buttons[i].text = "Slot %d: Empty" % (i + 1)
+	_refresh_slot_buttons(_save_slot_buttons, false)
 
 
 func _refresh_load_slots() -> void:
+	_refresh_slot_buttons(_load_slot_buttons, true)
+
+
+func _refresh_slot_buttons(buttons: Array[Button], disable_empty: bool) -> void:
 	for i in SaveManager.MAX_SLOTS:
 		var info := SaveManager.get_save_info(i)
 		if info.get("exists", false):
@@ -352,7 +331,7 @@ func _refresh_load_slots() -> void:
 					dt.get("minute", 0),
 				]
 			)
-			_load_slot_buttons[i].text = (
+			buttons[i].text = (
 				"Slot %d: %s — %s (%s)"
 				% [
 					i + 1,
@@ -362,5 +341,6 @@ func _refresh_load_slots() -> void:
 				]
 			)
 		else:
-			_load_slot_buttons[i].text = "Slot %d: Empty" % (i + 1)
-			_load_slot_buttons[i].disabled = true
+			buttons[i].text = "Slot %d: Empty" % (i + 1)
+			if disable_empty:
+				buttons[i].disabled = true

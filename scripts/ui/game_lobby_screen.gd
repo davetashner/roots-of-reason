@@ -4,12 +4,19 @@ extends PanelContainer
 signal start_game(settings: Dictionary)
 signal back_pressed
 
-const CIV_COLORS: Dictionary = {
-	"mesopotamia": Color(0.76, 0.65, 0.36),
-	"rome": Color(0.72, 0.15, 0.15),
-	"polynesia": Color(0.20, 0.60, 0.60),
+const LOBBY_CARD_OPTIONS: Dictionary = {
+	"card_size": Vector2(200, 300),
+	"content_margin": 10,
+	"banner_height": 50,
+	"name_font_size": 20,
+	"desc_font_size": 11,
+	"bonus_font_size": 12,
+	"detail_font_size": 12,
+	"separation": 4,
+	"show_bonus_header": false,
+	"indent_bonuses": false,
+	"show_unique_techs": false,
 }
-const DEFAULT_CIV_COLOR := Color(0.5, 0.5, 0.5)
 
 var _selected_civ: String = ""
 var _cards: Dictionary = {}
@@ -236,99 +243,8 @@ func _populate_ai_picker() -> void:
 
 
 func _build_civ_card(civ_id: String) -> PanelContainer:
-	var civ_data: Dictionary = DataLoader.get_civ_data(civ_id)
-	var civ_name: String = civ_data.get("name", civ_id.capitalize())
-	var civ_color: Color = CIV_COLORS.get(civ_id, DEFAULT_CIV_COLOR)
-
-	var card := PanelContainer.new()
-	card.name = "Card_%s" % civ_id
-	card.custom_minimum_size = Vector2(200, 300)
-
-	var normal_style := StyleBoxFlat.new()
-	normal_style.bg_color = Color(0.12, 0.12, 0.18)
-	normal_style.border_color = Color(0.3, 0.3, 0.4)
-	normal_style.set_border_width_all(2)
-	normal_style.set_corner_radius_all(6)
-	normal_style.set_content_margin_all(10)
-
-	var selected_style := StyleBoxFlat.new()
-	selected_style.bg_color = Color(0.15, 0.15, 0.25)
-	selected_style.border_color = Color(1.0, 0.85, 0.3)
-	selected_style.set_border_width_all(3)
-	selected_style.set_corner_radius_all(6)
-	selected_style.set_content_margin_all(10)
-
-	_card_styles[civ_id] = {"normal": normal_style, "selected": selected_style}
-	card.add_theme_stylebox_override("panel", normal_style)
-
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
-	card.add_child(vbox)
-
-	# Color banner
-	var banner := ColorRect.new()
-	banner.name = "Banner"
-	banner.color = civ_color
-	banner.custom_minimum_size = Vector2(0, 50)
-	vbox.add_child(banner)
-
-	# Civ name
-	var name_label := Label.new()
-	name_label.text = civ_name
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 20)
-	name_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	vbox.add_child(name_label)
-
-	# Description
-	var desc_label := Label.new()
-	desc_label.name = "DescLabel"
-	desc_label.text = civ_data.get("description", "")
-	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc_label.add_theme_font_size_override("font_size", 11)
-	desc_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(desc_label)
-
-	var sep := HSeparator.new()
-	vbox.add_child(sep)
-
-	# Bonuses summary
-	var bonuses: Dictionary = civ_data.get("bonuses", {})
-	if not bonuses.is_empty():
-		for key: String in bonuses:
-			var value: float = float(bonuses[key])
-			var pct: int = int((value - 1.0) * 100.0)
-			var bonus_label := Label.new()
-			bonus_label.text = "+%d%% %s" % [pct, key.replace("_", " ")]
-			bonus_label.add_theme_font_size_override("font_size", 12)
-			bonus_label.add_theme_color_override("font_color", Color(0.9, 0.8, 0.5))
-			vbox.add_child(bonus_label)
-
-	# Unique building
-	var unique_bld: Dictionary = civ_data.get("unique_building", {})
-	if not unique_bld.is_empty():
-		var bld_label := Label.new()
-		bld_label.name = "UniqueBuildingLabel"
-		bld_label.text = "Building: %s" % unique_bld.get("name", "")
-		bld_label.add_theme_font_size_override("font_size", 12)
-		bld_label.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
-		vbox.add_child(bld_label)
-
-	# Unique unit
-	var unique_unit: Dictionary = civ_data.get("unique_unit", {})
-	if not unique_unit.is_empty():
-		var unit_label := Label.new()
-		unit_label.name = "UniqueUnitLabel"
-		unit_label.text = "Unit: %s" % unique_unit.get("name", "")
-		unit_label.add_theme_font_size_override("font_size", 12)
-		unit_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6))
-		vbox.add_child(unit_label)
-
-	# Click detection
+	var card := CivCardBuilder.build(civ_id, _card_styles, _cards, LOBBY_CARD_OPTIONS)
 	card.gui_input.connect(func(event: InputEvent) -> void: _on_card_input(event, civ_id))
-
-	_cards[civ_id] = card
 	return card
 
 
