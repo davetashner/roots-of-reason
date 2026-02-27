@@ -46,6 +46,18 @@ func test_init_player_defaults_from_config() -> void:
 	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.KNOWLEDGE)).is_equal(0)
 
 
+# --- has_player tests ---
+
+
+func test_has_player_returns_true_after_init() -> void:
+	ResourceManager.init_player(99, {})
+	assert_bool(ResourceManager.has_player(99)).is_true()
+
+
+func test_has_player_returns_false_for_unknown() -> void:
+	assert_bool(ResourceManager.has_player(999)).is_false()
+
+
 # --- get_amount tests ---
 
 

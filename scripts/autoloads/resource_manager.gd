@@ -40,6 +40,10 @@ func _load_config() -> void:
 		_config = {}
 
 
+func has_player(player_id: int) -> bool:
+	return player_id in _stockpiles
+
+
 func get_amount(player_id: int, resource_type: ResourceType) -> int:
 	if player_id not in _stockpiles:
 		return 0

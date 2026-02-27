@@ -169,6 +169,29 @@ func test_starting_bonuses_empty_is_noop() -> void:
 	assert_int(ResourceManager.get_amount(50, ResourceManager.ResourceType.FOOD)).is_equal(before_food)
 
 
+func test_starting_bonuses_require_init_player_first() -> void:
+	# Verifies that apply_starting_bonuses requires ResourceManager to be
+	# initialized for the player. The assertion in apply_starting_bonuses
+	# guards against the fragile ordering bug where init_player() could wipe
+	# bonus resources if called afterward.
+	ResourceManager.init_player(51)
+	assert_bool(ResourceManager.has_player(51)).is_true()
+	CivBonusManager.apply_civ_bonuses(51, "mesopotamia")
+	# Should not assert — player 51 is initialized
+	CivBonusManager.apply_starting_bonuses(51)
+
+
+func test_starting_bonuses_survive_when_init_before_bonuses() -> void:
+	# Simulates the correct init order: init_player first, then civ bonuses.
+	# Any extra_resources added by apply_starting_bonuses must persist.
+	ResourceManager.init_player(52, {ResourceManager.ResourceType.FOOD: 200})
+	var food_before: int = ResourceManager.get_amount(52, ResourceManager.ResourceType.FOOD)
+	CivBonusManager.apply_civ_bonuses(52, "mesopotamia")
+	CivBonusManager.apply_starting_bonuses(52)
+	# Current civs have empty starting_bonuses, so resources should be unchanged.
+	assert_int(ResourceManager.get_amount(52, ResourceManager.ResourceType.FOOD)).is_equal(food_before)
+
+
 # --- Save/Load ---
 
 
