@@ -1,8 +1,6 @@
 extends Node2D
 ## Main prototype scene — assembles map, camera, units, input, and HUD at runtime.
 
-signal knowledge_burned(attacker_id: int, defender_id: int, regressed_techs: Array)
-
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
 const ProductionQueueScript := preload("res://scripts/prototype/production_queue.gd")
 const AIEconomyScript := preload("res://scripts/ai/ai_economy.gd")
@@ -480,7 +478,7 @@ func _on_building_destroyed(building: Node2D) -> void:
 	):
 		var regressed: Array = _tech_manager.trigger_knowledge_burning(building.owner_id)
 		if not regressed.is_empty():
-			knowledge_burned.emit(building.last_attacker_id, building.owner_id, regressed)
+			EventBus.emit_knowledge_burned(building.last_attacker_id, building.owner_id, regressed)
 			_play_knowledge_burning_vfx(building.position, building.owner_id, building.last_attacker_id, regressed)
 	if "owner_id" in building and int(building.owner_id) == 1:
 		if _ai_military != null:
@@ -819,6 +817,7 @@ func _on_unit_produced(unit_type: String, building: Node2D) -> void:
 		_unit_upgrade_manager.apply_upgrades_to_unit(unit, owner_id)
 	CivBonusManager.apply_bonus_to_unit(unit.stats, unit.unit_type, owner_id)
 	unit.unit_died.connect(_on_unit_died)
+	EventBus.emit_unit_spawned(unit, owner_id, resolved_type)
 	if _game_stats_tracker != null:
 		_game_stats_tracker.record_unit_produced(owner_id, resolved_type)
 	if unit_type == "trade_cart" or unit_type == "merchant_ship":
@@ -834,12 +833,14 @@ func _on_resource_depleted(node: Node2D) -> void:
 
 
 func _on_unit_died(unit: Node2D, killer: Node2D) -> void:
+	var owner_id: int = unit.owner_id if "owner_id" in unit else -1
+	EventBus.emit_unit_died(unit, killer, owner_id)
 	if _target_detector != null:
 		_target_detector.unregister_entity(unit)
-	if _population_manager != null and "owner_id" in unit:
-		_population_manager.unregister_unit(unit, unit.owner_id)
-	if _game_stats_tracker != null and "owner_id" in unit:
-		_game_stats_tracker.record_unit_lost(unit.owner_id)
+	if _population_manager != null and owner_id >= 0:
+		_population_manager.unregister_unit(unit, owner_id)
+	if _game_stats_tracker != null and owner_id >= 0:
+		_game_stats_tracker.record_unit_lost(owner_id)
 		if killer != null and "owner_id" in killer:
 			_game_stats_tracker.record_unit_kill(killer.owner_id)
 	_update_fog_of_war()
