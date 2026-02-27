@@ -76,14 +76,16 @@ When tests fail, check these first before debugging from scratch:
 
 After implementing a feature, execute this sequence without interruption:
 
-1. Run all tests (`./tools/ror test`) and fix failures
-2. Run linter/formatter (`./tools/ror lint`) and fix issues
-3. Commit with conventional message referencing bead ID (`git commit -s`)
-4. Push branch and create PR with `Closes` lines
-5. Wait for CI — fix any failures
-6. Merge to main (`gh pr merge --squash --delete-branch`)
-7. Close related beads (`bd close <id>`)
-8. Pull main and clean up (`git pull origin main && git fetch --prune`)
+1. Create a worktree from latest main: `git fetch origin main && git worktree add .claude/worktrees/<branch> -b <branch> origin/main`
+2. Work in the worktree directory
+3. Run all tests (`./tools/ror test`) and fix failures
+4. Run linter/formatter (`./tools/ror lint`) and fix issues
+5. Commit with conventional message referencing bead ID (`git commit -s`)
+6. Push branch and create PR with `Closes` lines (pre-push hook will rebase on main automatically)
+7. Wait for CI — fix any failures
+8. Merge to main (`gh pr merge --squash --delete-branch`)
+9. Close related beads (`bd close <id>`)
+10. Clean up: `git worktree remove .claude/worktrees/<branch> && git fetch --prune`
 
 When a session includes multiple tasks, **complete the first task fully through merge** before starting the next. One merged feature is better than two half-done features.
 
