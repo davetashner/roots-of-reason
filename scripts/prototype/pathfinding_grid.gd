@@ -91,12 +91,15 @@ func get_formation_targets(
 	if formation_type < 0:
 		formation_type = fm.FormationType.STAGGERED
 	var offsets: Array[Vector2] = fm.get_offsets(formation_type, count, facing)
+	# Dictionary set for O(1) membership checks instead of O(n) array scan
+	var used: Dictionary = {}
 	# Convert pixel offsets to grid cell offsets and validate
 	for offset in offsets:
 		var grid_offset := Vector2i(roundi(offset.x / 64.0), roundi(offset.y / 64.0))
 		var pos := center + grid_offset
-		if _is_valid_cell(pos) and not _astar.is_point_solid(pos) and pos not in result:
+		if _is_valid_cell(pos) and not _astar.is_point_solid(pos) and not used.has(pos):
 			result.append(pos)
+			used[pos] = true
 	# Fill remaining with spiral fallback if some slots were solid
 	if result.size() < count:
 		var radius := 1
@@ -106,8 +109,9 @@ func get_formation_targets(
 					if abs(dx) != radius and abs(dy) != radius:
 						continue
 					var pos := center + Vector2i(dx, dy)
-					if _is_valid_cell(pos) and not _astar.is_point_solid(pos) and pos not in result:
+					if _is_valid_cell(pos) and not _astar.is_point_solid(pos) and not used.has(pos):
 						result.append(pos)
+						used[pos] = true
 						if result.size() >= count:
 							return result
 			radius += 1

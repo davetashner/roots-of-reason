@@ -163,6 +163,7 @@ func _build_layout() -> void:
 
 func _connect_signals() -> void:
 	ResourceManager.resources_changed.connect(_on_resources_changed)
+	EventBus.age_advanced.connect(_on_age_advanced)
 
 
 func _refresh_all_resources() -> void:
@@ -186,9 +187,17 @@ func _update_resource_label(resource_name: String, amount: int) -> void:
 
 func setup_transit(river_transport: Node) -> void:
 	_river_transport = river_transport
+	if _river_transport != null:
+		if _river_transport.has_signal("barge_dispatched"):
+			_river_transport.barge_dispatched.connect(_on_transit_changed)
+		if _river_transport.has_signal("barge_arrived"):
+			_river_transport.barge_arrived.connect(_on_transit_changed)
+		if _river_transport.has_signal("barge_destroyed"):
+			_river_transport.barge_destroyed.connect(_on_transit_changed)
+		_update_transit_labels()
 
 
-func _process(_delta: float) -> void:
+func _on_transit_changed(_barge: Node2D) -> void:
 	_update_transit_labels()
 
 
@@ -257,6 +266,11 @@ func update_corruption(rate: float) -> void:
 func update_population(current: int, cap: int) -> void:
 	if _population_label != null:
 		_population_label.text = "Pop: %d/%d" % [current, cap]
+
+
+func _on_age_advanced(player_id: int, _new_age: int) -> void:
+	if player_id == PLAYER_ID:
+		_update_age()
 
 
 func update_age() -> void:

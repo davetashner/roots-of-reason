@@ -94,3 +94,61 @@ func test_unexplored_stays_fogged() -> void:
 	# (7,7) was never explored — should still be black
 	var cell := layer.get_cell_source_id(Vector2i(7, 7))
 	assert_int(cell).is_equal(0)  # black source
+
+
+# -- Batch helper tests --
+
+
+func test_batch_skips_redundant_set() -> void:
+	var layer := _make_fog_layer()
+	layer._source_id_black = 0
+	layer._source_id_dim = 1
+	layer._map_width = MAP_W
+	layer._map_height = MAP_H
+
+	# Manually set a cell to dim
+	var ts := TileSet.new()
+	ts.tile_shape = TileSet.TILE_SHAPE_ISOMETRIC
+	ts.tile_size = Vector2i(128, 64)
+	var src0 := TileSetAtlasSource.new()
+	src0.texture = PlaceholderTexture2D.new()
+	src0.texture_region_size = Vector2i(128, 64)
+	ts.add_source(src0, 0)
+	src0.create_tile(Vector2i.ZERO)
+	var src1 := TileSetAtlasSource.new()
+	src1.texture = PlaceholderTexture2D.new()
+	src1.texture_region_size = Vector2i(128, 64)
+	ts.add_source(src1, 1)
+	src1.create_tile(Vector2i.ZERO)
+	layer.tile_set = ts
+
+	# Set cell to dim, then batch-set to dim again — should be a no-op
+	layer.set_cell(Vector2i(2, 2), 1, Vector2i.ZERO)
+	var tiles: Array[Vector2i] = [Vector2i(2, 2)]
+	layer._apply_batch_set(tiles, 1)
+	# Cell should still be dim (source 1)
+	assert_int(layer.get_cell_source_id(Vector2i(2, 2))).is_equal(1)
+
+
+func test_batch_erase_skips_already_erased() -> void:
+	var layer := _make_fog_layer()
+	layer._source_id_black = 0
+	layer._source_id_dim = 1
+	layer._map_width = MAP_W
+	layer._map_height = MAP_H
+
+	# Cell starts erased (-1) — batch erase should not crash
+	var tiles: Array[Vector2i] = [Vector2i(5, 5)]
+	layer._apply_batch_erase(tiles)
+	assert_int(layer.get_cell_source_id(Vector2i(5, 5))).is_equal(-1)
+
+
+func test_batch_empty_arrays_noop() -> void:
+	var layer := _make_fog_layer()
+	layer._source_id_black = 0
+	layer._source_id_dim = 1
+
+	# Empty batches should not crash
+	var empty: Array[Vector2i] = []
+	layer._apply_batch_set(empty, 0)
+	layer._apply_batch_erase(empty)
