@@ -1,70 +1,26 @@
-extends Node
+extends BaseFaunaAI
 ## Pirate AI — state machine driving patrol, hunt, attack, flee behavior for pirate ships.
 ## Attached as child of a prototype_unit with owner_id == -1 (Gaia).
 
 enum PirateState { PATROL, HUNT, ATTACK, FLEE }
 
-const TILE_SIZE: float = 64.0
-
-var spawn_origin: Vector2 = Vector2.ZERO
-
 var _state: PirateState = PirateState.PATROL
-var _cfg: Dictionary = {}
-var _pirate: Node2D = null
-var _combat_target: Node2D = null
-var _patrol_idle_timer: float = 0.0
-var _flee_timer: float = 0.0
-var _scan_timer: float = 0.0
-var _scene_root: Node = null
-var _move_target: Vector2 = Vector2.ZERO
-var _is_moving: bool = false
-var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
-
-
-func _ready() -> void:
-	_pirate = get_parent()
-	if _pirate == null:
-		return
-	_cfg = _load_config()
-	spawn_origin = _pirate.position
-	# Suppress prototype_unit's built-in combat
-	_pirate._stance = _pirate.Stance.STAND_GROUND
-	_pirate._combat_state = _pirate.CombatState.NONE
-	_pirate._cancel_combat()
-	# Find scene root after ready
-	call_deferred("_find_scene_root")
-	# Start with a random idle delay before first patrol move
-	_patrol_idle_timer = _rng.randf_range(1.0, 3.0)
 
 
 func _load_config() -> Dictionary:
 	return GameUtils.dl_settings("pirates")
 
 
-func _find_scene_root() -> void:
-	if _pirate == null:
+func _deferred_init() -> void:
+	super()
+	if _unit == null:
 		return
-	var root := _pirate.get_parent()
-	if root != null:
-		_scene_root = root
+	spawn_origin = _unit.position
+	# Start with a random idle delay before first patrol move
+	_patrol_idle_timer = _rng.randf_range(1.0, 3.0)
 
 
-func _process(delta: float) -> void:
-	var game_delta: float = GameUtils.get_game_delta(delta)
-	if game_delta == 0.0:
-		return
-	if _pirate == null or not is_instance_valid(_pirate):
-		return
-	# Keep prototype_unit's combat suppressed
-	if _pirate._combat_state != _pirate.CombatState.NONE:
-		_pirate._cancel_combat()
-	if _pirate._moving:
-		_pirate._moving = false
-		_pirate._path.clear()
-		_pirate._path_index = 0
-
-	_scan_timer += game_delta
-
+func _tick(game_delta: float) -> void:
 	match _state:
 		PirateState.PATROL:
 			_tick_patrol(game_delta)
@@ -105,14 +61,7 @@ func _tick_patrol(game_delta: float) -> void:
 
 func _pick_patrol_target() -> void:
 	var patrol_radius: float = 10.0 * TILE_SIZE
-	_move_target = (
-		spawn_origin
-		+ Vector2(
-			_rng.randf_range(-patrol_radius, patrol_radius),
-			_rng.randf_range(-patrol_radius, patrol_radius),
-		)
-	)
-	_is_moving = true
+	_pick_random_offset_target(spawn_origin, patrol_radius)
 
 
 # -- HUNT --
@@ -144,7 +93,7 @@ func _tick_hunt(game_delta: float) -> void:
 
 	# Check chase abandon distance
 	var max_chase: float = float(_get_stats().get("los", 6)) * 2.0 * TILE_SIZE
-	if _pirate.position.distance_to(_combat_target.global_position) > max_chase:
+	if _unit.position.distance_to(_combat_target.global_position) > max_chase:
 		_enter_patrol()
 		return
 
@@ -155,7 +104,7 @@ func _tick_hunt(game_delta: float) -> void:
 
 	# Check if in attack range
 	var attack_range: float = float(_get_stats().get("range", 4)) * TILE_SIZE
-	var dist := _pirate.position.distance_to(_combat_target.global_position)
+	var dist := _unit.position.distance_to(_combat_target.global_position)
 	if dist <= attack_range:
 		_enter_attack(_combat_target)
 
@@ -188,31 +137,18 @@ func _tick_attack(game_delta: float) -> void:
 
 	# Check range — if target moved out of range, go back to HUNT
 	var attack_range: float = float(_get_stats().get("range", 4)) * TILE_SIZE
-	var dist := _pirate.position.distance_to(_combat_target.global_position)
+	var dist := _unit.position.distance_to(_combat_target.global_position)
 	if dist > attack_range * 1.5:
 		_enter_hunt(_combat_target)
 		return
 
 	# Chase abandon
 	var max_chase: float = float(_get_stats().get("los", 6)) * 2.0 * TILE_SIZE
-	if _pirate.position.distance_to(_combat_target.global_position) > max_chase:
+	if _unit.position.distance_to(_combat_target.global_position) > max_chase:
 		_enter_patrol()
 		return
 
-	# Face the target
-	var dir := _combat_target.global_position - _pirate.position
-	if dir.length() > 0.1:
-		_pirate._facing = dir.normalized()
-
-	# Deal damage when cooldown expires
-	if _pirate._attack_cooldown <= 0.0:
-		_pirate._combat_target = _combat_target
-		_pirate._deal_damage_to_target()
-		var cooldown: float = _pirate.get_stat("attack_speed")
-		if cooldown <= 0.0:
-			cooldown = 1.5
-		_pirate._attack_cooldown = cooldown
-	_pirate._attack_cooldown -= game_delta
+	_deal_damage(game_delta)
 
 
 # -- FLEE --
@@ -223,13 +159,13 @@ func _enter_flee() -> void:
 	_flee_timer = 5.0
 	_combat_target = null
 	_is_moving = true
-	_pirate._cancel_combat()
+	_unit._cancel_combat()
 	# Move away from threat centroid
 	var threat := _get_threat_centroid()
 	if threat != Vector2.ZERO:
-		var away := (_pirate.position - threat).normalized()
+		var away := (_unit.position - threat).normalized()
 		var flee_dist: float = 10.0 * TILE_SIZE
-		_move_target = _pirate.position + away * flee_dist
+		_move_target = _unit.position + away * flee_dist
 	else:
 		_move_target = spawn_origin
 
@@ -257,32 +193,19 @@ func _enter_patrol() -> void:
 
 
 func _scan_for_target() -> Node2D:
-	if _scene_root == null:
-		return null
 	var targets: Array = _cfg.get("targets", [])
 	var los: float = float(_get_stats().get("los", 6)) * TILE_SIZE
-	var best: Node2D = null
-	var best_dist := INF
-	for child in _scene_root.get_children():
-		if child == _pirate:
-			continue
-		if not (child is Node2D):
-			continue
-		if "owner_id" not in child or child.owner_id < 0:
-			continue
-		if "hp" in child and child.hp <= 0:
-			continue
-		if "unit_type" not in child:
-			continue
-		if child.unit_type not in targets:
-			continue
-		var dist: float = _pirate.position.distance_to(child.global_position)
-		if dist > los:
-			continue
-		if dist < best_dist:
-			best_dist = dist
-			best = child
-	return best
+	return _scan_nearest(
+		los,
+		func(child: Node2D) -> bool:
+			if not BaseFaunaAI._is_living_player_entity(child):
+				return false
+			if "unit_type" not in child:
+				return false
+			if child.unit_type not in targets:
+				return false
+			return true,
+	)
 
 
 func _should_flee() -> bool:
@@ -291,7 +214,7 @@ func _should_flee() -> bool:
 	var avoids: Array = _cfg.get("avoids", [])
 	var los: float = float(_get_stats().get("los", 6)) * TILE_SIZE
 	for child in _scene_root.get_children():
-		if child == _pirate:
+		if child == _unit:
 			continue
 		if not (child is Node2D):
 			continue
@@ -299,7 +222,7 @@ func _should_flee() -> bool:
 			continue
 		if "hp" in child and child.hp <= 0:
 			continue
-		var dist: float = _pirate.position.distance_to(child.global_position)
+		var dist: float = _unit.position.distance_to(child.global_position)
 		if dist > los:
 			continue
 		# Check unit_type against avoids list (excluding dock_with_garrison)
@@ -320,7 +243,7 @@ func _get_threat_centroid() -> Vector2:
 	var sum := Vector2.ZERO
 	var count := 0
 	for child in _scene_root.get_children():
-		if child == _pirate:
+		if child == _unit:
 			continue
 		if not (child is Node2D):
 			continue
@@ -328,7 +251,7 @@ func _get_threat_centroid() -> Vector2:
 			continue
 		if "hp" in child and child.hp <= 0:
 			continue
-		var dist: float = _pirate.position.distance_to(child.global_position)
+		var dist: float = _unit.position.distance_to(child.global_position)
 		if dist > los:
 			continue
 		var is_threat := false
@@ -349,51 +272,15 @@ func _get_stats() -> Dictionary:
 	return _cfg.get("stats", {})
 
 
-# -- Movement --
-
-
-func _tick_movement(game_delta: float, speed: float) -> void:
-	if not _is_moving:
-		return
-	var dist := _pirate.position.distance_to(_move_target)
-	if dist < 2.0:
-		_pirate.position = _move_target
-		_is_moving = false
-	else:
-		var direction := (_move_target - _pirate.position).normalized()
-		_pirate._facing = direction
-		_pirate.position = _pirate.position.move_toward(_move_target, speed * game_delta)
-	_pirate.queue_redraw()
-
-
 # -- Save / Load --
 
 
 func save_state() -> Dictionary:
-	return {
-		"state": _state,
-		"spawn_origin_x": spawn_origin.x,
-		"spawn_origin_y": spawn_origin.y,
-		"patrol_idle_timer": _patrol_idle_timer,
-		"flee_timer": _flee_timer,
-		"scan_timer": _scan_timer,
-		"is_moving": _is_moving,
-		"move_target_x": _move_target.x,
-		"move_target_y": _move_target.y,
-	}
+	var data := super()
+	data["state"] = _state
+	return data
 
 
 func load_state(data: Dictionary) -> void:
+	super(data)
 	_state = int(data.get("state", PirateState.PATROL)) as PirateState
-	spawn_origin = Vector2(
-		float(data.get("spawn_origin_x", 0.0)),
-		float(data.get("spawn_origin_y", 0.0)),
-	)
-	_patrol_idle_timer = float(data.get("patrol_idle_timer", 0.0))
-	_flee_timer = float(data.get("flee_timer", 0.0))
-	_scan_timer = float(data.get("scan_timer", 0.0))
-	_is_moving = bool(data.get("is_moving", false))
-	_move_target = Vector2(
-		float(data.get("move_target_x", 0.0)),
-		float(data.get("move_target_y", 0.0)),
-	)

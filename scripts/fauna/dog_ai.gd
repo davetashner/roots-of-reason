@@ -1,4 +1,4 @@
-extends Node
+extends BaseFaunaAI
 ## Dog AI — state machine for domesticated dogs.
 ## Behaviors: town patrol, hunt assist, danger alert (passive), flee, follow.
 ## Attached as child of a prototype_unit with entity_category == "dog".
@@ -8,20 +8,7 @@ signal hunt_presence_changed(dog: Node2D, active: bool)
 
 enum DogState { IDLE, TOWN_PATROL, HUNT_ASSIST, FLEE, FOLLOW }
 
-const TILE_SIZE: float = 64.0
-
 var _state: DogState = DogState.IDLE
-var _cfg: Dictionary = {}
-var _dog: Node2D = null
-var _scene_root: Node = null
-var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
-
-# Movement
-var _move_target: Vector2 = Vector2.ZERO
-var _is_moving: bool = false
-
-# Town patrol
-var _patrol_idle_timer: float = 0.0
 
 # Hunt assist
 var _hunt_target: Node2D = null
@@ -40,25 +27,8 @@ var _flee_destination: Vector2 = Vector2.ZERO
 var _follow_target: Node2D = null
 var _pending_follow_target_name: String = ""
 
-# Scan timer
-var _scan_timer: float = 0.0
-
 # LOS bonus tracking
 var _los_bonus_buildings: Array[Node2D] = []
-
-
-func _ready() -> void:
-	_dog = get_parent()
-	if _dog == null:
-		return
-	_cfg = _load_config()
-	# Suppress prototype_unit's built-in combat
-	_dog._stance = _dog.Stance.STAND_GROUND
-	_dog._combat_state = _dog.CombatState.NONE
-	_dog._cancel_combat()
-	if _dog.has_signal("unit_died"):
-		_dog.unit_died.connect(_on_dog_died)
-	call_deferred("_find_scene_root")
 
 
 func _load_config() -> Dictionary:
@@ -72,29 +42,12 @@ func _load_config() -> Dictionary:
 	return {}
 
 
-func _find_scene_root() -> void:
-	if _dog == null:
-		return
-	_scene_root = _dog.get_parent()
+func _deferred_init() -> void:
+	super()
 	_try_enter_patrol()
 
 
-func _process(delta: float) -> void:
-	var game_delta: float = GameUtils.get_game_delta(delta)
-	if game_delta == 0.0:
-		return
-	if _dog == null or not is_instance_valid(_dog):
-		return
-	# Keep prototype_unit's combat suppressed
-	if _dog._combat_state != _dog.CombatState.NONE:
-		_dog._cancel_combat()
-	if _dog._moving:
-		_dog._moving = false
-		_dog._path.clear()
-		_dog._path_index = 0
-
-	_scan_timer += game_delta
-
+func _tick(game_delta: float) -> void:
 	# Passive danger alert runs every tick in all states
 	_tick_danger_alert(game_delta)
 
@@ -130,7 +83,7 @@ func _try_enter_patrol() -> void:
 		_patrol_idle_timer = 2.0
 		return
 	var patrol_radius: float = float(_cfg.get("town_patrol_radius_tiles", 12)) * TILE_SIZE
-	if _dog.position.distance_to(tc.global_position) <= patrol_radius:
+	if _unit.position.distance_to(tc.global_position) <= patrol_radius:
 		_enter_town_patrol()
 	else:
 		_state = DogState.IDLE
@@ -211,7 +164,7 @@ func _find_random_building_near(center: Vector2, radius: float) -> Node2D:
 			continue
 		if child.entity_category != "own_building":
 			continue
-		if "owner_id" not in child or child.owner_id != _dog.owner_id:
+		if "owner_id" not in child or child.owner_id != _unit.owner_id:
 			continue
 		if child.global_position.distance_to(center) > radius:
 			continue
@@ -238,9 +191,9 @@ func _update_town_los_bonus() -> void:
 			continue
 		if not child.has_method("set_dog_los_bonus"):
 			continue
-		if "owner_id" not in child or child.owner_id != _dog.owner_id:
+		if "owner_id" not in child or child.owner_id != _unit.owner_id:
 			continue
-		if child.global_position.distance_to(_dog.position) > patrol_radius:
+		if child.global_position.distance_to(_unit.position) > patrol_radius:
 			continue
 		var current: int = child.get_los()
 		var capped: int = mini(current + los_bonus, max_stacks * los_bonus)
@@ -264,7 +217,7 @@ func _enter_hunt_assist(hunter: Node2D) -> void:
 	_is_moving = true
 	# Apply gather bonus
 	hunter._gather_rate_multiplier = 1.0 + float(_cfg.get("hunt_gather_bonus", 0.25))
-	hunt_presence_changed.emit(_dog, true)
+	hunt_presence_changed.emit(_unit, true)
 
 
 func _tick_hunt_assist(game_delta: float) -> void:
@@ -284,7 +237,7 @@ func _tick_hunt_assist(game_delta: float) -> void:
 		return
 	# Follow at distance
 	var follow_dist: float = float(_cfg.get("hunt_follow_distance_tiles", 3)) * TILE_SIZE
-	var dist: float = _dog.position.distance_to(_hunt_target.global_position)
+	var dist: float = _unit.position.distance_to(_hunt_target.global_position)
 	if dist > follow_dist:
 		_move_target = _hunt_target.global_position
 		_is_moving = true
@@ -296,33 +249,27 @@ func _tick_hunt_assist(game_delta: float) -> void:
 func _remove_hunt_bonus() -> void:
 	if _hunt_target != null and is_instance_valid(_hunt_target):
 		_hunt_target._gather_rate_multiplier = 1.0
-	hunt_presence_changed.emit(_dog, false)
+	hunt_presence_changed.emit(_unit, false)
 	_hunt_target = null
 
 
 func _find_hunting_villager() -> Node2D:
-	if _scene_root == null:
-		return null
 	var hunt_radius: float = float(_cfg.get("hunt_assist_radius_tiles", 8)) * TILE_SIZE
-	for child in _scene_root.get_children():
-		if child == _dog:
-			continue
-		if not (child is Node2D):
-			continue
-		if "owner_id" not in child or child.owner_id != _dog.owner_id:
-			continue
-		if "unit_category" not in child or child.unit_category != "civilian":
-			continue
-		if "_gather_state" not in child:
-			continue
-		if child._gather_state == child.GatherState.NONE:
-			continue
-		if "_gather_type" not in child or child._gather_type != "food":
-			continue
-		var dist: float = _dog.position.distance_to(child.global_position)
-		if dist <= hunt_radius:
-			return child
-	return null
+	return _scan_nearest(
+		hunt_radius,
+		func(child: Node2D) -> bool:
+			if "owner_id" not in child or child.owner_id != _unit.owner_id:
+				return false
+			if "unit_category" not in child or child.unit_category != "civilian":
+				return false
+			if "_gather_state" not in child:
+				return false
+			if child._gather_state == child.GatherState.NONE:
+				return false
+			if "_gather_type" not in child or child._gather_type != "food":
+				return false
+			return true,
+	)
 
 
 # -- DANGER ALERT (passive) --
@@ -342,7 +289,7 @@ func _tick_danger_alert(game_delta: float) -> void:
 	# Trigger alert
 	_alert_cooldown_timer = float(_cfg.get("alert_cooldown", 15.0))
 	_apply_alert_buff()
-	danger_alert.emit(_dog.global_position, _dog.owner_id)
+	danger_alert.emit(_unit.global_position, _unit.owner_id)
 	# Transition to flee
 	_remove_hunt_bonus()
 	_clear_los_bonus()
@@ -356,17 +303,17 @@ func _apply_alert_buff() -> void:
 	var buff_amount: float = float(_cfg.get("alert_speed_buff", 0.10))
 	_alert_buff_targets.clear()
 	for child in _scene_root.get_children():
-		if child == _dog:
+		if child == _unit:
 			continue
 		if not (child is Node2D):
 			continue
-		if "owner_id" not in child or child.owner_id != _dog.owner_id:
+		if "owner_id" not in child or child.owner_id != _unit.owner_id:
 			continue
 		if "hp" in child and child.hp <= 0:
 			continue
 		if not child.has_method("get_stat"):
 			continue
-		var dist: float = _dog.position.distance_to(child.global_position)
+		var dist: float = _unit.position.distance_to(child.global_position)
 		if dist > buff_radius:
 			continue
 		# Apply speed modifier via UnitStats
@@ -396,25 +343,19 @@ func _remove_alert_buff() -> void:
 
 
 func _find_enemy_military(radius: float) -> Node2D:
-	if _scene_root == null:
-		return null
-	for child in _scene_root.get_children():
-		if child == _dog:
-			continue
-		if not (child is Node2D):
-			continue
-		if "owner_id" not in child:
-			continue
-		if child.owner_id == _dog.owner_id or child.owner_id < 0:
-			continue
-		if "unit_category" not in child or child.unit_category != "military":
-			continue
-		if "hp" in child and child.hp <= 0:
-			continue
-		var dist: float = _dog.position.distance_to(child.global_position)
-		if dist <= radius:
-			return child
-	return null
+	return _scan_nearest(
+		radius,
+		func(child: Node2D) -> bool:
+			if "owner_id" not in child:
+				return false
+			if child.owner_id == _unit.owner_id or child.owner_id < 0:
+				return false
+			if "unit_category" not in child or child.unit_category != "military":
+				return false
+			if "hp" in child and child.hp <= 0:
+				return false
+			return true,
+	)
 
 
 # -- FLEE --
@@ -432,7 +373,7 @@ func _enter_flee() -> void:
 		_flee_destination = military.global_position
 	else:
 		# Flee away from enemies
-		_flee_destination = _dog.position + Vector2(_rng.randf_range(-200, 200), _rng.randf_range(-200, 200))
+		_flee_destination = _unit.position + Vector2(_rng.randf_range(-200, 200), _rng.randf_range(-200, 200))
 	_move_target = _flee_destination
 
 
@@ -457,7 +398,7 @@ func _find_nearest_tc() -> Node2D:
 	for child in _scene_root.get_children():
 		if not (child is Node2D):
 			continue
-		if "owner_id" not in child or child.owner_id != _dog.owner_id:
+		if "owner_id" not in child or child.owner_id != _unit.owner_id:
 			continue
 		if "building_name" not in child:
 			continue
@@ -465,7 +406,7 @@ func _find_nearest_tc() -> Node2D:
 			continue
 		if "hp" in child and child.hp <= 0:
 			continue
-		var dist: float = _dog.position.distance_to(child.global_position)
+		var dist: float = _unit.position.distance_to(child.global_position)
 		if dist < best_dist:
 			best_dist = dist
 			best = child
@@ -478,17 +419,17 @@ func _find_nearest_friendly_military() -> Node2D:
 	var best: Node2D = null
 	var best_dist := INF
 	for child in _scene_root.get_children():
-		if child == _dog:
+		if child == _unit:
 			continue
 		if not (child is Node2D):
 			continue
-		if "owner_id" not in child or child.owner_id != _dog.owner_id:
+		if "owner_id" not in child or child.owner_id != _unit.owner_id:
 			continue
 		if "unit_category" not in child or child.unit_category != "military":
 			continue
 		if "hp" in child and child.hp <= 0:
 			continue
-		var dist: float = _dog.position.distance_to(child.global_position)
+		var dist: float = _unit.position.distance_to(child.global_position)
 		if dist < best_dist:
 			best_dist = dist
 			best = child
@@ -517,7 +458,7 @@ func _tick_follow(game_delta: float) -> void:
 		_try_enter_patrol()
 		return
 	var follow_dist: float = float(_cfg.get("follow_distance_tiles", 3)) * TILE_SIZE
-	var dist: float = _dog.position.distance_to(_follow_target.global_position)
+	var dist: float = _unit.position.distance_to(_follow_target.global_position)
 	if dist > follow_dist:
 		_move_target = _follow_target.global_position
 		_is_moving = true
@@ -526,27 +467,10 @@ func _tick_follow(game_delta: float) -> void:
 		_is_moving = false
 
 
-# -- Movement --
-
-
-func _tick_movement(game_delta: float, speed: float) -> void:
-	if not _is_moving:
-		return
-	var dist := _dog.position.distance_to(_move_target)
-	if dist < 2.0:
-		_dog.position = _move_target
-		_is_moving = false
-	else:
-		var direction := (_move_target - _dog.position).normalized()
-		_dog._facing = direction
-		_dog.position = _dog.position.move_toward(_move_target, speed * game_delta)
-	_dog.queue_redraw()
-
-
 # -- Death handler --
 
 
-func _on_dog_died(_unit: Node2D, _killer: Node2D = null) -> void:
+func _on_unit_died(_dead_unit: Node2D, _killer: Node2D = null) -> void:
 	_remove_hunt_bonus()
 	_remove_alert_buff()
 	_clear_los_bonus()
@@ -562,31 +486,21 @@ func _get_target_name(target: Node2D) -> String:
 
 
 func save_state() -> Dictionary:
-	return {
-		"state": _state,
-		"move_target_x": _move_target.x,
-		"move_target_y": _move_target.y,
-		"is_moving": _is_moving,
-		"patrol_idle_timer": _patrol_idle_timer,
-		"alert_cooldown_timer": _alert_cooldown_timer,
-		"alert_buff_timer": _alert_buff_timer,
-		"alert_buff_active": _alert_buff_active,
-		"flee_destination_x": _flee_destination.x,
-		"flee_destination_y": _flee_destination.y,
-		"scan_timer": _scan_timer,
-		"follow_target_name": _get_target_name(_follow_target),
-		"hunt_target_name": _get_target_name(_hunt_target),
-	}
+	var data := super()
+	data["state"] = _state
+	data["alert_cooldown_timer"] = _alert_cooldown_timer
+	data["alert_buff_timer"] = _alert_buff_timer
+	data["alert_buff_active"] = _alert_buff_active
+	data["flee_destination_x"] = _flee_destination.x
+	data["flee_destination_y"] = _flee_destination.y
+	data["follow_target_name"] = _get_target_name(_follow_target)
+	data["hunt_target_name"] = _get_target_name(_hunt_target)
+	return data
 
 
 func load_state(data: Dictionary) -> void:
+	super(data)
 	_state = int(data.get("state", DogState.IDLE)) as DogState
-	_move_target = Vector2(
-		float(data.get("move_target_x", 0.0)),
-		float(data.get("move_target_y", 0.0)),
-	)
-	_is_moving = bool(data.get("is_moving", false))
-	_patrol_idle_timer = float(data.get("patrol_idle_timer", 0.0))
 	_alert_cooldown_timer = float(data.get("alert_cooldown_timer", 0.0))
 	_alert_buff_timer = float(data.get("alert_buff_timer", 0.0))
 	_alert_buff_active = bool(data.get("alert_buff_active", false))
@@ -594,7 +508,6 @@ func load_state(data: Dictionary) -> void:
 		float(data.get("flee_destination_x", 0.0)),
 		float(data.get("flee_destination_y", 0.0)),
 	)
-	_scan_timer = float(data.get("scan_timer", 0.0))
 	_pending_follow_target_name = str(data.get("follow_target_name", ""))
 	_pending_hunt_target_name = str(data.get("hunt_target_name", ""))
 

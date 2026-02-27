@@ -119,7 +119,7 @@ func test_stays_within_patrol_radius() -> void:
 	var origin := Vector2(500, 500)
 	var wolf := _create_wolf(origin)
 	var ai := _get_ai(wolf)
-	var radius: float = float(_cfg["patrol_radius_tiles"]) * WolfAIScript.TILE_SIZE
+	var radius: float = float(_cfg["patrol_radius_tiles"]) * BaseFaunaAI.TILE_SIZE
 	# Pick patrol target many times and verify all are within bounds
 	for i in 20:
 		ai._pick_patrol_target()
@@ -252,7 +252,7 @@ func test_packmate_death_triggers_flee() -> void:
 	ai1._pack_members.append(ai2)
 	ai2._pack_members.append(ai1)
 	# wolf1 dies
-	ai1._on_wolf_died(wolf1)
+	ai1._on_unit_died(wolf1)
 	# Packmate should flee
 	assert_int(ai2._state).is_equal(WolfAIScript.WolfState.FLEE)
 
