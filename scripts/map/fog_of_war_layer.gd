@@ -19,6 +19,8 @@ func setup(map_width: int, map_height: int, player_id: int = 0) -> void:
 	_player_id = player_id
 	_build_tileset()
 	_initialize_fog()
+	queue_redraw()
+	notify_runtime_tile_data_update()
 
 
 func _build_tileset() -> void:
