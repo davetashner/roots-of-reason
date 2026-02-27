@@ -142,6 +142,7 @@ func _setup_map() -> void:
 	var map_layer := TileMapLayer.new()
 	map_layer.name = "Map"
 	map_layer.set_script(load("res://scripts/map/tilemap_terrain.gd"))
+	map_layer.z_index = 0
 	add_child(map_layer)
 	_map_node = map_layer
 
@@ -159,6 +160,7 @@ func _setup_fog_of_war() -> void:
 	_fog_layer = TileMapLayer.new()
 	_fog_layer.name = "FogOfWar"
 	_fog_layer.set_script(load("res://scripts/map/fog_of_war_layer.gd"))
+	_fog_layer.z_index = 1
 	add_child(_fog_layer)
 	_fog_layer.setup(dims.x, dims.y, 0)
 

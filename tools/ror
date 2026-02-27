@@ -69,10 +69,22 @@ cmd_test() {
     fi
     info "Using Godot: $godot"
 
+    local live=false
     local test_args=()
-    if [[ $# -gt 0 ]]; then
+    local raw_args=()
+
+    # Separate --live flag from test path arguments
+    for arg in "$@"; do
+        if [[ "$arg" == "--live" ]]; then
+            live=true
+        else
+            raw_args+=("$arg")
+        fi
+    done
+
+    if [[ ${#raw_args[@]} -gt 0 ]]; then
         # Convert filesystem paths to res:// paths for GdUnit4
-        for arg in "$@"; do
+        for arg in "${raw_args[@]}"; do
             if [[ "$arg" == tests/* ]] || [[ "$arg" == ./tests/* ]]; then
                 arg="${arg#./}"
                 test_args+=("--add" "res://$arg")
@@ -92,8 +104,21 @@ cmd_test() {
     info "Importing project resources ..."
     "$godot" --headless --path . --import >/dev/null 2>&1 || true
 
-    printf "${BOLD}Running GdUnit4 tests …${RESET}\n"
-    "$godot" --path . -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+    local godot_flags=("-s" "-d")
+    if $live; then
+        godot_flags+=("--verbose")
+        printf "${BOLD}Running GdUnit4 tests (live) …${RESET}\n"
+        info "Godot window will display test scenes — output streams in real time"
+        # Use stdbuf to disable output buffering for live streaming
+        if command -v stdbuf &>/dev/null; then
+            stdbuf -oL "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+        else
+            "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+        fi
+    else
+        printf "${BOLD}Running GdUnit4 tests …${RESET}\n"
+        "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+    fi
     local exit_code=$?
 
     # Copy logs silently
@@ -569,9 +594,12 @@ ${BOLD}USAGE${RESET}
   ror <command> [options]
 
 ${BOLD}COMMANDS${RESET}
-  test [path...]      Run GdUnit4 tests (headless)
+  test [path...] [--live]
+                      Run GdUnit4 tests
                         ror test                    — run all tests
                         ror test tests/autoloads/   — run a subset
+                        ror test --live             — stream output in real time
+                        ror test tests/ui/ --live   — live subset run
   lint [--fix] [path] Run gdlint + gdformat check
                         ror lint                    — check scripts/ tests/
                         ror lint --fix              — auto-format then lint

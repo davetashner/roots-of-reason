@@ -46,6 +46,8 @@ func _ready() -> void:
 	_load_config()
 	_build_tileset()
 	_generate_map()
+	queue_redraw()
+	notify_runtime_tile_data_update()
 
 
 func _load_config() -> void:
@@ -537,3 +539,6 @@ func load_state(state: Dictionary) -> void:
 					)
 				)
 		_fauna_positions[fauna_name] = packs
+
+	queue_redraw()
+	notify_runtime_tile_data_update()
