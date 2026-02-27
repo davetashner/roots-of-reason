@@ -22,6 +22,13 @@ var pending_combat_target_name: String = ""
 var visibility_manager: Node = null
 
 var _unit: Node2D = null
+var _cached_attacker_stats: Dictionary = {}
+var _attacker_stats_dirty: bool = true
+var _reusable_target_stats: Dictionary = {
+	"defense": 0.0,
+	"unit_category": "",
+	"unit_type": "",
+}
 
 
 func _init(unit: Node2D = null) -> void:
@@ -36,6 +43,9 @@ func load_config(combat_cfg: Dictionary) -> void:
 		if stat_hp > 0:
 			_unit.max_hp = int(stat_hp)
 			_unit.hp = _unit.max_hp
+		if not _unit.stats.stats_changed.is_connected(_invalidate_attacker_stats):
+			_unit.stats.stats_changed.connect(_invalidate_attacker_stats)
+	_attacker_stats_dirty = true
 	var unit_cfg := _dl_unit_stats(_unit.unit_type)
 	if not unit_cfg.is_empty():
 		var stance_str: String = str(unit_cfg.get("default_stance", "aggressive"))
@@ -218,9 +228,9 @@ func _scan_for_targets() -> Node2D:
 func _deal_damage_to_target() -> void:
 	if combat_target == null or not is_instance_valid(combat_target):
 		return
-	var attacker_stats := _build_stats_dict()
-	var defender_stats := _build_target_stats_dict(combat_target)
-	var damage := CombatResolver.calculate_damage(attacker_stats, defender_stats, combat_config)
+	var attacker_stats := _get_attacker_stats()
+	_fill_target_stats(combat_target)
+	var damage := CombatResolver.calculate_damage(attacker_stats, _reusable_target_stats, combat_config)
 	_play_attack_visuals(damage)
 	if combat_target.has_method("take_damage"):
 		combat_target.take_damage(damage, _unit)
@@ -244,42 +254,48 @@ func _play_attack_visuals(damage: int) -> void:
 		CombatVisual.spawn_damage_number(vfx_parent, num_pos, damage, combat_config)
 
 
-func _build_stats_dict() -> Dictionary:
-	var result: Dictionary = {
-		"attack": _unit.get_stat("attack"),
-		"defense": _unit.get_stat("defense"),
-		"unit_category": _unit.unit_category,
-		"unit_type": _unit.unit_type,
-		"attack_type": _get_attack_type(),
-	}
+func _invalidate_attacker_stats() -> void:
+	_attacker_stats_dirty = true
+
+
+func _get_attacker_stats() -> Dictionary:
+	if not _attacker_stats_dirty:
+		return _cached_attacker_stats
+	_cached_attacker_stats["attack"] = _unit.get_stat("attack")
+	_cached_attacker_stats["defense"] = _unit.get_stat("defense")
+	_cached_attacker_stats["unit_category"] = _unit.unit_category
+	_cached_attacker_stats["unit_type"] = _unit.unit_type
+	_cached_attacker_stats["attack_type"] = _get_attack_type()
+	# Remove stale optional keys before potentially re-adding
+	_cached_attacker_stats.erase("bonus_vs")
+	_cached_attacker_stats.erase("building_damage_ignore_reduction")
 	if _unit.stats != null:
 		var raw: Dictionary = _unit.stats._base_stats
 		if raw.has("bonus_vs"):
-			result["bonus_vs"] = raw["bonus_vs"]
+			_cached_attacker_stats["bonus_vs"] = raw["bonus_vs"]
 		if raw.has("building_damage_ignore_reduction"):
-			result["building_damage_ignore_reduction"] = raw["building_damage_ignore_reduction"]
-	return result
+			_cached_attacker_stats["building_damage_ignore_reduction"] = raw["building_damage_ignore_reduction"]
+	_attacker_stats_dirty = false
+	return _cached_attacker_stats
 
 
-func _build_target_stats_dict(target: Node2D) -> Dictionary:
-	var result: Dictionary = {
-		"defense": 0.0,
-		"unit_category": "",
-		"unit_type": "",
-	}
+func _fill_target_stats(target: Node2D) -> void:
+	_reusable_target_stats["defense"] = 0.0
+	_reusable_target_stats["unit_category"] = ""
+	_reusable_target_stats["unit_type"] = ""
+	_reusable_target_stats.erase("armor_type")
 	if target.has_method("get_stat"):
-		result["defense"] = target.get_stat("defense")
+		_reusable_target_stats["defense"] = target.get_stat("defense")
 	elif "defense" in target:
-		result["defense"] = float(target.defense)
+		_reusable_target_stats["defense"] = float(target.defense)
 	if "unit_category" in target:
-		result["unit_category"] = target.unit_category
+		_reusable_target_stats["unit_category"] = target.unit_category
 	elif "entity_category" in target:
-		result["unit_category"] = target.entity_category
+		_reusable_target_stats["unit_category"] = target.entity_category
 	if "unit_type" in target:
-		result["unit_type"] = target.unit_type
+		_reusable_target_stats["unit_type"] = target.unit_type
 	if "stats" in target and target.stats and target.stats._base_stats.has("armor_type"):
-		result["armor_type"] = target.stats._base_stats["armor_type"]
-	return result
+		_reusable_target_stats["armor_type"] = target.stats._base_stats["armor_type"]
 
 
 func take_damage(amount: int, attacker: Node2D) -> void:
