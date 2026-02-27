@@ -1,0 +1,18 @@
+{
+  "snapshot_interval_seconds": 30.0,
+  "player_colors": {
+    "0": "#4A90D9",
+    "1": "#D94A4A"
+  },
+  "graph": {
+    "width": 600,
+    "height": 250,
+    "grid_line_color": "#333333",
+    "axis_color": "#888888",
+    "line_width": 2.0
+  },
+  "comparison_bar": {
+    "max_width": 200,
+    "height": 20
+  }
+}
