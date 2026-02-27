@@ -22,6 +22,7 @@ const TERRAIN_COLORS: Dictionary = {
 	"deep_water": Color("2B5F8A"),
 }
 const DEFAULT_TERRAIN_COLOR := Color(0.2, 0.2, 0.2)
+const REFRESH_INTERVAL: float = 0.2
 
 var _map_node: Node = null
 var _camera: Camera2D = null
@@ -37,6 +38,11 @@ var _terrain_texture: ImageTexture = null
 var _fog_image: Image = null
 var _fog_texture: ImageTexture = null
 var _fog_dirty: bool = true
+
+var _dirty: bool = true
+var _refresh_timer: float = 0.0
+var _prev_camera_pos: Vector2 = Vector2.ZERO
+var _prev_camera_zoom: float = 1.0
 
 
 func setup(map_node: Node, camera: Camera2D, visibility_mgr: Node, scene_root: Node) -> void:
@@ -63,8 +69,23 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 
-func _process(_delta: float) -> void:
-	queue_redraw()
+func _process(delta: float) -> void:
+	# Timer-based fallback for moving entities (~5Hz)
+	_refresh_timer += delta
+	if _refresh_timer >= REFRESH_INTERVAL:
+		_refresh_timer = 0.0
+		_dirty = true
+
+	# Detect camera movement
+	if _camera != null and _camera.is_inside_tree():
+		if _camera.position != _prev_camera_pos or _camera.zoom.x != _prev_camera_zoom:
+			_prev_camera_pos = _camera.position
+			_prev_camera_zoom = _camera.zoom.x
+			_dirty = true
+
+	if _dirty:
+		_dirty = false
+		queue_redraw()
 
 
 func _bake_terrain_texture() -> void:
@@ -241,6 +262,7 @@ func _handle_left_click(local_pos: Vector2) -> void:
 		return
 	var world_pos := _minimap_to_world(local_pos)
 	_camera.position = world_pos
+	_dirty = true
 
 
 func _handle_right_click(local_pos: Vector2) -> void:
@@ -266,6 +288,11 @@ func _minimap_to_world(minimap_px: Vector2) -> Vector2:
 func _on_visibility_changed(player_id: int) -> void:
 	if player_id == 0:
 		_fog_dirty = true
+		_dirty = true
+
+
+func mark_dirty() -> void:
+	_dirty = true
 
 
 func get_terrain_texture() -> ImageTexture:

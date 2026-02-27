@@ -283,3 +283,65 @@ func test_draw_no_crash_with_full_setup() -> void:
 	await get_tree().process_frame
 	assert_bool(is_instance_valid(_minimap)).is_true()
 	scene_root.queue_free()
+
+
+# -- Dirty flag tests --
+
+
+func test_dirty_flag_starts_true() -> void:
+	assert_bool(_minimap._dirty).is_true()
+
+
+func test_process_clears_dirty_flag() -> void:
+	_minimap._dirty = true
+	_minimap._process(0.01)
+	assert_bool(_minimap._dirty).is_false()
+
+
+func test_process_skips_redraw_when_not_dirty() -> void:
+	_minimap._dirty = false
+	_minimap._refresh_timer = 0.0
+	# With a small delta and no camera, dirty stays false
+	_minimap._process(0.01)
+	assert_bool(_minimap._dirty).is_false()
+
+
+func test_refresh_timer_sets_dirty() -> void:
+	_minimap._dirty = false
+	_minimap._refresh_timer = 0.19
+	_minimap._process(0.02)  # Timer exceeds 0.2
+	# Timer fired, set dirty, then _process cleared it
+	# But we can check the timer was reset
+	assert_float(_minimap._refresh_timer).is_less(0.01)
+
+
+func test_camera_movement_sets_dirty() -> void:
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap._dirty = false
+	_minimap._refresh_timer = 0.0
+	_minimap._prev_camera_pos = Vector2.ZERO
+	_mock_camera.position = Vector2(100, 100)
+	_minimap._process(0.001)
+	# Camera moved -> dirty was set then cleared by queue_redraw path
+	# Verify prev_camera_pos was updated
+	assert_that(_minimap._prev_camera_pos).is_equal(Vector2(100, 100))
+
+
+func test_visibility_changed_sets_dirty() -> void:
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap._dirty = false
+	_mock_vis.visibility_changed.emit(0)
+	assert_bool(_minimap._dirty).is_true()
+
+
+func test_mark_dirty_sets_flag() -> void:
+	_minimap._dirty = false
+	_minimap.mark_dirty()
+	assert_bool(_minimap._dirty).is_true()
+
+
+func test_left_click_sets_dirty() -> void:
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap._dirty = false
+	_minimap._handle_left_click(Vector2(100, 100))
+	assert_bool(_minimap._dirty).is_true()
