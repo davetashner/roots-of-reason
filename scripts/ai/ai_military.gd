@@ -27,6 +27,7 @@ var _scene_root: Node = null
 var _population_manager: Node = null
 var _target_detector: Node = null
 var _ai_economy: Node = null
+var _entity_registry: RefCounted = null
 
 var _tick_timer: float = 0.0
 var _config: Dictionary = {}
@@ -68,12 +69,14 @@ func setup(
 	target_detector: Node,
 	ai_economy: Node,
 	tech_manager: Node = null,
+	entity_registry: RefCounted = null,
 ) -> void:
 	_scene_root = scene_root
 	_population_manager = pop_mgr
 	_target_detector = target_detector
 	_ai_economy = ai_economy
 	_tech_manager = tech_manager
+	_entity_registry = entity_registry
 	_load_config()
 	_load_tr_config()
 	_setup_components()
@@ -181,6 +184,9 @@ func _refresh_entity_lists() -> void:
 	_enemy_units.clear()
 	_enemy_buildings.clear()
 	_enemy_town_centers.clear()
+	if _entity_registry != null:
+		_refresh_from_registry()
+		return
 	if _scene_root == null:
 		return
 	for child in _scene_root.get_children():
@@ -193,6 +199,23 @@ func _refresh_entity_lists() -> void:
 			_classify_own_entity(child)
 		elif _is_enemy_entity(child, child_owner):
 			_classify_enemy_entity(child)
+
+
+func _refresh_from_registry() -> void:
+	# Own entities — use registry O(1) lookups
+	var own_entities: Array[Node2D] = _entity_registry.get_by_owner(player_id)
+	for entity in own_entities:
+		_classify_own_entity(entity)
+	# Enemy entities — iterate non-own factions from registry
+	# Collect all enemy player IDs we might face
+	for entity in _entity_registry.get_by_owner(0):
+		if player_id != 0:
+			_classify_enemy_entity(entity)
+	# AI player 1 is self when player_id == 1, so check other owners
+	if player_id != 1:
+		for entity in _entity_registry.get_by_owner(1):
+			_classify_enemy_entity(entity)
+	# Gaia entities (owner_id == -1) are not enemies
 
 
 func _classify_own_entity(entity: Node2D) -> void:

@@ -23,6 +23,7 @@ var _pathfinder: Node = null
 var _map_node: Node = null
 var _target_detector: Node = null
 var _tech_manager: Node = null
+var _entity_registry: RefCounted = null
 
 var _tick_timer: float = 0.0
 var _config: Dictionary = {}
@@ -50,6 +51,7 @@ func setup(
 	map_node: Node,
 	target_detector: Node,
 	tech_manager: Node = null,
+	entity_registry: RefCounted = null,
 ) -> void:
 	_scene_root = scene_root
 	_population_manager = pop_mgr
@@ -57,6 +59,7 @@ func setup(
 	_map_node = map_node
 	_target_detector = target_detector
 	_tech_manager = tech_manager
+	_entity_registry = entity_registry
 	_load_config()
 	_load_build_order()
 	_load_tr_config()
@@ -69,6 +72,7 @@ func _setup_components() -> void:
 	_build_planner.build_order_index = _build_order_index
 	_build_planner.trained_count = _trained_count
 	_build_planner.destroyed_tc_positions = _destroyed_tc_positions
+	_build_planner._entity_registry = _entity_registry
 	_build_planner.setup(
 		_scene_root,
 		_population_manager,
@@ -181,6 +185,26 @@ func _sync_planner_state() -> void:
 	_build_order_index = _build_planner.build_order_index
 	_trained_count = _build_planner.trained_count
 	_destroyed_tc_positions = _build_planner.destroyed_tc_positions
+
+
+func _count_military_units(owner: int) -> int:
+	if _entity_registry != null:
+		return _entity_registry.get_count_by_owner_and_category(owner, "military")
+	var count: int = 0
+	if _scene_root == null:
+		return count
+	for child in _scene_root.get_children():
+		if not (child is Node2D):
+			continue
+		if "owner_id" not in child:
+			continue
+		if int(child.owner_id) != owner:
+			continue
+		if not child.has_method("is_idle"):
+			continue
+		if "unit_category" in child and str(child.unit_category) == "military":
+			count += 1
+	return count
 
 
 func _refresh_entity_lists() -> void:
