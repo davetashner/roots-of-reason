@@ -327,7 +327,7 @@ func test_cleanup_on_dog_death() -> void:
 	ai._enter_hunt_assist(villager)
 	ai._update_town_los_bonus()
 	# Dog dies
-	ai._on_dog_died(dog)
+	ai._on_unit_died(dog)
 	assert_float(villager._gather_rate_multiplier).is_equal_approx(1.0, 0.001)
 	assert_int(tc._dog_los_bonus).is_equal(0)
 
