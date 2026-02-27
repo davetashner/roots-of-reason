@@ -366,27 +366,21 @@ func _create_graph(container: VBoxContainer) -> Control:
 
 
 func _build_resource_time_series() -> Array:
-	var result: Array = []
-	for pid in [0, 1]:
-		var pdata: Dictionary = _stats_data.get(pid, _stats_data.get(str(pid), {}))
-		var snapshots: Array = pdata.get("time_snapshots", [])
-		var values: Array = []
-		for snap: Dictionary in snapshots:
-			values.append(float(snap.get("resources_gathered_total", 0)))
-		var label := "Player" if pid == 0 else "AI"
-		var color: Color = _player_colors.get(pid, Color.WHITE)
-		result.append({"label": label, "color": color, "values": values})
-	return result
+	return _build_time_series_for_field("resources_gathered_total")
 
 
 func _build_kills_time_series() -> Array:
+	return _build_time_series_for_field("units_killed")
+
+
+func _build_time_series_for_field(snapshot_field: String) -> Array:
 	var result: Array = []
 	for pid in [0, 1]:
 		var pdata: Dictionary = _stats_data.get(pid, _stats_data.get(str(pid), {}))
 		var snapshots: Array = pdata.get("time_snapshots", [])
 		var values: Array = []
 		for snap: Dictionary in snapshots:
-			values.append(float(snap.get("units_killed", 0)))
+			values.append(float(snap.get(snapshot_field, 0)))
 		var label := "Player" if pid == 0 else "AI"
 		var color: Color = _player_colors.get(pid, Color.WHITE)
 		result.append({"label": label, "color": color, "values": values})
@@ -404,29 +398,21 @@ func _build_time_labels() -> Array:
 
 
 func _build_resource_type_bars() -> Array:
-	var result: Array = []
-	var types := _get_all_resource_types()
-	for pid in [0, 1]:
-		var pdata: Dictionary = _stats_data.get(pid, _stats_data.get(str(pid), {}))
-		var gathered: Dictionary = pdata.get("resources_gathered", {})
-		var values: Array = []
-		for t: String in types:
-			values.append(float(gathered.get(t, 0)))
-		var label := "Player" if pid == 0 else "AI"
-		var color: Color = _player_colors.get(pid, Color.WHITE)
-		result.append({"label": label, "color": color, "values": values})
-	return result
+	return _build_type_bars("resources_gathered", _get_all_resource_types())
 
 
 func _build_unit_type_bars() -> Array:
+	return _build_type_bars("units_produced", _get_all_unit_types())
+
+
+func _build_type_bars(stat_field: String, types: Array) -> Array:
 	var result: Array = []
-	var types := _get_all_unit_types()
 	for pid in [0, 1]:
 		var pdata: Dictionary = _stats_data.get(pid, _stats_data.get(str(pid), {}))
-		var produced: Dictionary = pdata.get("units_produced", {})
+		var field_data: Dictionary = pdata.get(stat_field, {})
 		var values: Array = []
 		for t: String in types:
-			values.append(float(produced.get(t, 0)))
+			values.append(float(field_data.get(t, 0)))
 		var label := "Player" if pid == 0 else "AI"
 		var color: Color = _player_colors.get(pid, Color.WHITE)
 		result.append({"label": label, "color": color, "values": values})
