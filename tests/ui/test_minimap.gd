@@ -59,17 +59,20 @@ var _minimap: Control
 var _mock_map: _MockMap
 var _mock_vis: _MockVisibility
 var _mock_camera: _MockCamera
+var _mock_scene_root: Node2D
 
 
 func before_test() -> void:
 	_mock_map = _MockMap.new()
 	_mock_vis = _MockVisibility.new()
 	_mock_camera = _MockCamera.new()
+	_mock_scene_root = Node2D.new()
 	_minimap = Control.new()
 	_minimap.set_script(MinimapScript)
 	add_child(_mock_map)
 	add_child(_mock_vis)
 	add_child(_mock_camera)
+	add_child(_mock_scene_root)
 	add_child(_minimap)
 
 
@@ -82,6 +85,8 @@ func after_test() -> void:
 		_mock_vis.queue_free()
 	if is_instance_valid(_mock_camera):
 		_mock_camera.queue_free()
+	if is_instance_valid(_mock_scene_root):
+		_mock_scene_root.queue_free()
 
 
 # -- Setup tests --
@@ -101,7 +106,7 @@ func test_setup_stores_references() -> void:
 func test_setup_computes_scale_square_map() -> void:
 	_mock_map._width = 64
 	_mock_map._height = 64
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	# scale = 200 / max(64, 64) = 3.125
 	assert_float(_minimap.get_minimap_scale()).is_equal_approx(200.0 / 64.0, 0.01)
 
@@ -109,7 +114,7 @@ func test_setup_computes_scale_square_map() -> void:
 func test_setup_computes_scale_rectangular_map() -> void:
 	_mock_map._width = 100
 	_mock_map._height = 50
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	# scale = 200 / max(100, 50) = 2.0
 	assert_float(_minimap.get_minimap_scale()).is_equal_approx(2.0, 0.01)
 
@@ -131,7 +136,7 @@ func test_mouse_filter_stop() -> void:
 func test_grid_to_minimap_conversion() -> void:
 	_mock_map._width = 100
 	_mock_map._height = 100
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	# scale = 200/100 = 2.0, so grid(50,50) -> minimap(100,100)
 	var result: Vector2 = _minimap._grid_to_minimap(Vector2(50, 50))
 	assert_float(result.x).is_equal_approx(100.0, 0.01)
@@ -141,7 +146,7 @@ func test_grid_to_minimap_conversion() -> void:
 func test_minimap_to_grid_conversion() -> void:
 	_mock_map._width = 100
 	_mock_map._height = 100
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	# scale = 2.0, so minimap(100,100) -> grid(50,50)
 	var result: Vector2 = _minimap._minimap_to_grid(Vector2(100, 100))
 	assert_float(result.x).is_equal_approx(50.0, 0.01)
@@ -151,7 +156,7 @@ func test_minimap_to_grid_conversion() -> void:
 func test_grid_to_minimap_origin() -> void:
 	_mock_map._width = 64
 	_mock_map._height = 64
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	var result: Vector2 = _minimap._grid_to_minimap(Vector2.ZERO)
 	assert_float(result.x).is_equal_approx(0.0, 0.01)
 	assert_float(result.y).is_equal_approx(0.0, 0.01)
@@ -169,12 +174,12 @@ func test_minimap_to_grid_zero_scale_returns_zero() -> void:
 
 func test_terrain_texture_created() -> void:
 	_mock_map._tile_grid[Vector2i(0, 0)] = "grass"
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	assert_that(_minimap.get_terrain_texture()).is_not_null()
 
 
 func test_terrain_texture_not_null_empty_grid() -> void:
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	assert_that(_minimap.get_terrain_texture()).is_not_null()
 
 
@@ -184,7 +189,7 @@ func test_river_terrain_uses_river_color() -> void:
 	_mock_map._height = 10
 	_mock_map._tile_grid[Vector2i(5, 5)] = "grass"
 	_mock_map._rivers[Vector2i(5, 5)] = true
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	# The terrain image should exist
 	assert_that(_minimap._terrain_image).is_not_null()
 
@@ -193,26 +198,26 @@ func test_river_terrain_uses_river_color() -> void:
 
 
 func test_fog_texture_created() -> void:
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	assert_that(_minimap.get_fog_texture()).is_not_null()
 
 
 func test_fog_image_correct_size() -> void:
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	var fog_img: Image = _minimap._fog_image
 	assert_int(fog_img.get_width()).is_equal(200)
 	assert_int(fog_img.get_height()).is_equal(200)
 
 
 func test_fog_dirty_on_visibility_changed() -> void:
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	_minimap._fog_dirty = false
 	_mock_vis.visibility_changed.emit(0)
 	assert_bool(_minimap._fog_dirty).is_true()
 
 
 func test_fog_not_dirty_on_other_player() -> void:
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	_minimap._fog_dirty = false
 	_mock_vis.visibility_changed.emit(1)
 	assert_bool(_minimap._fog_dirty).is_false()
@@ -245,7 +250,7 @@ func test_right_click_emits_move_signal() -> void:
 func test_left_click_pans_camera() -> void:
 	_mock_map._width = 64
 	_mock_map._height = 64
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 
 	var old_pos: Vector2 = _mock_camera.position
 	var event := InputEventMouseButton.new()
@@ -316,7 +321,7 @@ func test_refresh_timer_sets_dirty() -> void:
 
 
 func test_camera_movement_sets_dirty() -> void:
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	_minimap._dirty = false
 	_minimap._refresh_timer = 0.0
 	_minimap._prev_camera_pos = Vector2.ZERO
@@ -328,7 +333,7 @@ func test_camera_movement_sets_dirty() -> void:
 
 
 func test_visibility_changed_sets_dirty() -> void:
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	_minimap._dirty = false
 	_mock_vis.visibility_changed.emit(0)
 	assert_bool(_minimap._dirty).is_true()
@@ -341,7 +346,7 @@ func test_mark_dirty_sets_flag() -> void:
 
 
 func test_left_click_sets_dirty() -> void:
-	_minimap.setup(_mock_map, _mock_camera, _mock_vis, Node.new())
+	_minimap.setup(_mock_map, _mock_camera, _mock_vis, _mock_scene_root)
 	_minimap._dirty = false
 	_minimap._handle_left_click(Vector2(100, 100))
 	assert_bool(_minimap._dirty).is_true()
