@@ -31,6 +31,7 @@ var _camera: Camera2D = null
 var _pathfinder: Node = null
 var _map_node: Node = null
 var _target_detector: Node = null
+var _tech_manager: Node = null
 
 
 func _ready() -> void:
@@ -42,11 +43,13 @@ func setup(
 	pathfinder: Node,
 	map_node: Node,
 	target_detector: Node,
+	tech_manager: Node = null,
 ) -> void:
 	_camera = camera
 	_pathfinder = pathfinder
 	_map_node = map_node
 	_target_detector = target_detector
+	_tech_manager = tech_manager
 
 
 func is_active() -> bool:
@@ -63,6 +66,10 @@ func start_placement(building_name: String, player_id: int = 0) -> bool:
 		return false
 	var age_req: int = int(_building_stats.get("age_required", 0))
 	if age_req > GameManager.current_age:
+		return false
+	if not _check_required_techs(_building_stats, player_id):
+		return false
+	if not _check_required_buildings(_building_stats, player_id):
 		return false
 	var costs := _parse_costs(_building_stats.get("build_cost", {}))
 	if not ResourceManager.can_afford(_player_id, costs):
@@ -231,6 +238,38 @@ func _screen_to_world(screen_pos: Vector2) -> Vector2:
 	var vp_size := _camera.get_viewport_rect().size
 	var offset := screen_pos - vp_size / 2.0
 	return _camera.position + offset / _camera.zoom
+
+
+func _check_required_techs(stats: Dictionary, player_id: int) -> bool:
+	var req_techs: Array = stats.get("required_techs", [])
+	if req_techs.is_empty():
+		return true
+	if _tech_manager == null or not _tech_manager.has_method("is_tech_researched"):
+		return false
+	for tech_id: String in req_techs:
+		if not _tech_manager.is_tech_researched(tech_id, player_id):
+			return false
+	return true
+
+
+func _check_required_buildings(stats: Dictionary, player_id: int) -> bool:
+	var req_buildings: Array = stats.get("required_buildings", [])
+	if req_buildings.is_empty():
+		return true
+	for req_name: String in req_buildings:
+		var found := false
+		for entry: Dictionary in _placed_buildings:
+			if entry.get("building_name", "") != req_name:
+				continue
+			if int(entry.get("player_id", -1)) != player_id:
+				continue
+			var node: Node2D = entry.get("node")
+			if is_instance_valid(node) and not node.under_construction:
+				found = true
+				break
+		if not found:
+			return false
+	return true
 
 
 func save_state() -> Dictionary:

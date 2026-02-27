@@ -158,10 +158,12 @@ func test_agi_core_requires_transformer_lab() -> void:
 	assert_array(prereqs).contains(["transformer_lab"])
 
 
-func test_agi_core_marked_as_victory_tech() -> void:
+func test_agi_core_unlocks_building() -> void:
 	var tm := _create_tech_manager()
 	var data: Dictionary = tm.get_tech_data("agi_core")
-	assert_bool(bool(data.get("victory_tech", false))).is_true()
+	var effects: Dictionary = data.get("effects", {})
+	var unlock_buildings: Array = effects.get("unlock_buildings", [])
+	assert_array(unlock_buildings).contains(["agi_core"])
 
 
 func test_research_chain_is_valid() -> void:
@@ -183,8 +185,8 @@ func test_research_chain_is_valid() -> void:
 # -- Victory trigger --
 
 
-func test_victory_tech_completed_signal_on_agi_core() -> void:
-	## AGI Core completion should emit victory_tech_completed signal.
+func test_agi_core_tech_does_not_emit_victory_tech_signal() -> void:
+	## AGI Core tech no longer has victory_tech flag — victory comes from building.
 	var tm := _create_tech_manager()
 	_research_prereq_chain(tm, 0)
 	_give_resources(0, 99999, 99999, 99999, 99999, 99999)
@@ -195,13 +197,11 @@ func test_victory_tech_completed_signal_on_agi_core() -> void:
 	var victory_signals: Array = []
 	tm.victory_tech_completed.connect(func(pid: int, tid: String) -> void: victory_signals.append([pid, tid]))
 	_quick_research(tm, 0, "agi_core")
-	assert_int(victory_signals.size()).is_equal(1)
-	assert_int(int(victory_signals[0][0])).is_equal(0)
-	assert_str(victory_signals[0][1]).is_equal("agi_core")
+	assert_int(victory_signals.size()).is_equal(0)
 
 
-func test_singularity_victory_triggers_via_victory_manager() -> void:
-	## When victory_tech_completed fires, VictoryManager should trigger singularity victory.
+func test_agi_core_tech_research_does_not_trigger_victory() -> void:
+	## Researching agi_core tech no longer directly triggers singularity victory.
 	var tm := _create_tech_manager()
 	var vm := Node.new()
 	vm.set_script(VictoryManagerScript)
@@ -209,7 +209,6 @@ func test_singularity_victory_triggers_via_victory_manager() -> void:
 	auto_free(vm)
 	vm._defeat_delay = 0.0
 	vm._singularity_age = 6
-	# Connect tech manager victory signal to victory manager
 	tm.victory_tech_completed.connect(vm.on_victory_tech_completed)
 	var victory_results: Array = []
 	vm.player_victorious.connect(func(pid: int, cond: String) -> void: victory_results.append([pid, cond]))
@@ -221,9 +220,8 @@ func test_singularity_victory_triggers_via_victory_manager() -> void:
 	_quick_research(tm, 0, "transformer_lab")
 	_give_resources(0, 99999, 99999, 99999, 99999, 99999)
 	_quick_research(tm, 0, "agi_core")
-	assert_int(victory_results.size()).is_equal(1)
-	assert_int(int(victory_results[0][0])).is_equal(0)
-	assert_str(victory_results[0][1]).is_equal("singularity")
+	# No victory triggered — that now comes from building the AGI Core
+	assert_int(victory_results.size()).is_equal(0)
 
 
 # -- Tech regression --
@@ -246,8 +244,8 @@ func test_tech_regression_can_undo_agi_core() -> void:
 	assert_bool(tm.is_tech_researched("agi_core", 0)).is_false()
 
 
-func test_victory_tech_disrupted_signal_on_regression() -> void:
-	## Reverting a victory tech should emit victory_tech_disrupted.
+func test_agi_core_regression_does_not_emit_disrupted() -> void:
+	## AGI Core no longer has victory_tech flag — no disrupted signal on regression.
 	var tm := _create_tech_manager()
 	_research_prereq_chain(tm, 0)
 	_give_resources(0, 99999, 99999, 99999, 99999, 99999)
@@ -259,12 +257,11 @@ func test_victory_tech_disrupted_signal_on_regression() -> void:
 	var disrupted_signals: Array = []
 	tm.victory_tech_disrupted.connect(func(pid: int, tid: String) -> void: disrupted_signals.append([pid, tid]))
 	tm.revert_tech_effects(0, "agi_core")
-	assert_int(disrupted_signals.size()).is_equal(1)
-	assert_str(disrupted_signals[0][1]).is_equal("agi_core")
+	assert_int(disrupted_signals.size()).is_equal(0)
 
 
-func test_victory_tech_research_started_signal() -> void:
-	## Starting AGI Core research should emit victory_tech_research_started.
+func test_agi_core_research_start_does_not_emit_started() -> void:
+	## AGI Core no longer has victory_tech flag — no started signal on research.
 	var tm := _create_tech_manager()
 	_research_prereq_chain(tm, 0)
 	_give_resources(0, 99999, 99999, 99999, 99999, 99999)
@@ -275,5 +272,4 @@ func test_victory_tech_research_started_signal() -> void:
 	var started_signals: Array = []
 	tm.victory_tech_research_started.connect(func(pid: int, tid: String) -> void: started_signals.append([pid, tid]))
 	tm.start_research(0, "agi_core")
-	assert_int(started_signals.size()).is_equal(1)
-	assert_str(started_signals[0][1]).is_equal("agi_core")
+	assert_int(started_signals.size()).is_equal(0)

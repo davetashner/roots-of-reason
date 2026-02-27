@@ -3,11 +3,11 @@
   "hp": 5000,
   "footprint": [5, 5],
   "build_time": 600,
-  "build_cost": { "wood": 1000, "stone": 1000, "gold": 1000 },
+  "build_cost": { "wood": 2000, "stone": 2000, "gold": 2000 },
   "population_bonus": 0,
   "is_drop_off": false,
   "drop_off_types": [],
   "units_produced": [],
-  "age_required": 5,
+  "age_required": 3,
   "victory_countdown": 600
 }
