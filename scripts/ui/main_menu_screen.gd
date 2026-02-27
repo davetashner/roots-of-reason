@@ -3,6 +3,7 @@ extends Control
 ## Shows title, single player, settings, credits, and quit buttons.
 
 const GameLobbyScreenScript := preload("res://scripts/ui/game_lobby_screen.gd")
+const SettingsPanelScript := preload("res://scripts/ui/settings_panel.gd")
 
 var _lobby: PanelContainer = null
 var _settings_panel: PanelContainer = null
@@ -88,8 +89,21 @@ func _build_ui() -> void:
 	_lobby.start_game.connect(_on_lobby_start_game)
 	_lobby.back_pressed.connect(_on_lobby_back)
 
-	# Settings placeholder
-	_settings_panel = _build_placeholder_panel("SettingsPanel", "Settings — Coming Soon")
+	# Settings panel
+	_settings_panel = PanelContainer.new()
+	_settings_panel.name = "SettingsPanel"
+	_settings_panel.visible = false
+	_settings_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var settings_style := StyleBoxFlat.new()
+	settings_style.bg_color = Color(0.05, 0.05, 0.1, 0.95)
+	_settings_panel.add_theme_stylebox_override("panel", settings_style)
+	var settings_center := CenterContainer.new()
+	settings_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_settings_panel.add_child(settings_center)
+	var settings_vbox := VBoxContainer.new()
+	settings_vbox.set_script(SettingsPanelScript)
+	settings_center.add_child(settings_vbox)
+	settings_vbox.build(func() -> void: _settings_panel.visible = false)
 	add_child(_settings_panel)
 
 	# Credits placeholder
