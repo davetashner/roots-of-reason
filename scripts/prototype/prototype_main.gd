@@ -35,6 +35,7 @@ const HistoricalEventManagerScript := preload("res://scripts/prototype/historica
 const HistoricalEventVFXScript := preload("res://scripts/prototype/historical_event_vfx.gd")
 const GameStatsTrackerScript := preload("res://scripts/prototype/game_stats_tracker.gd")
 const PostGameStatsScreenScript := preload("res://scripts/ui/postgame_stats_screen.gd")
+const SceneSaveHandlerScript := preload("res://scripts/prototype/scene_save_handler.gd")
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -77,6 +78,7 @@ var _historical_event_manager: Node = null
 var _historical_event_vfx: Node = null
 var _game_stats_tracker: Node = null
 var _postgame_stats_screen: PanelContainer = null
+var _save_handler: RefCounted = null
 var _pending_victory_tech: Array = []
 
 
@@ -85,10 +87,8 @@ func _ready() -> void:
 	_setup_fog_of_war()
 	_setup_camera()
 	_setup_pathfinding()
-	_setup_target_detection()
 	_setup_input()
 	_setup_building_placer()
-	_setup_population()
 	if GameManager.get_player_civilization(0) != "":
 		_start_game()
 	else:
@@ -131,6 +131,21 @@ func _start_game() -> void:
 	_setup_game_stats_tracker()
 	_setup_hud()
 	_update_fog_of_war()
+	_save_handler = SceneSaveHandlerScript.new()
+	_save_handler.setup(self)
+	SaveManager.register_scene_provider(self)
+	tree_exiting.connect(func() -> void: SaveManager.register_scene_provider(null))
+
+
+func save_state() -> Dictionary:
+	if _save_handler != null:
+		return _save_handler.save_state()
+	return {}
+
+
+func load_state(data: Dictionary) -> void:
+	if _save_handler != null:
+		await _save_handler.load_state(data)
 
 
 func _setup_map() -> void:
@@ -227,9 +242,6 @@ func _setup_pathfinding() -> void:
 	_pathfinder.set_script(load("res://scripts/prototype/pathfinding_grid.gd"))
 	add_child(_pathfinder)
 	_pathfinder.build(_map_node.get_map_size(), _map_node.get_tile_grid(), {})
-
-
-func _setup_target_detection() -> void:
 	_target_detector = Node.new()
 	_target_detector.name = "TargetDetector"
 	_target_detector.set_script(load("res://scripts/prototype/target_detector.gd"))
@@ -247,14 +259,11 @@ func _setup_input() -> void:
 		_input_handler.setup(_camera, _pathfinder, _target_detector)
 
 
-func _setup_population() -> void:
+func _setup_building_placer() -> void:
 	_population_manager = Node.new()
 	_population_manager.name = "PopulationManager"
 	_population_manager.set_script(load("res://scripts/prototype/population_manager.gd"))
 	add_child(_population_manager)
-
-
-func _setup_building_placer() -> void:
 	_building_placer = Node.new()
 	_building_placer.name = "BuildingPlacer"
 	_building_placer.set_script(load("res://scripts/prototype/building_placer.gd"))
@@ -304,7 +313,7 @@ func _setup_civilizations() -> void:
 
 func _setup_units() -> void:
 	var offsets := _get_villager_offsets()
-	var tc_pos := _get_player_start_position()
+	var tc_pos := _get_start_position(0)
 	for i in offsets.size():
 		var unit := Node2D.new()
 		unit.name = "Unit_%d" % i
@@ -348,7 +357,7 @@ func _setup_demo_entities() -> void:
 	var building := Node2D.new()
 	building.name = "Building_0"
 	building.set_script(BuildingScript)
-	var bld_pos := _get_player_start_position()
+	var bld_pos := _get_start_position(0)
 	building.position = IsoUtils.grid_to_screen(Vector2(bld_pos))
 	building.owner_id = 0
 	building.building_name = "town_center"
@@ -689,7 +698,7 @@ func _load_ai_tier_config(difficulty: String) -> Dictionary:
 
 
 func _create_ai_town_center() -> Node2D:
-	var tc_pos := _get_ai_start_position()
+	var tc_pos := _get_start_position(1)
 	var building := Node2D.new()
 	building.name = "AI_TownCenter"
 	building.set_script(BuildingScript)
@@ -742,11 +751,9 @@ func _find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
 	var best: Node2D = null
 	var best_dist := INF
 	for child in get_children():
-		if not child.has_method("is_idle"):
+		if not child.has_method("is_idle") or not child.is_idle():
 			continue
 		if "owner_id" in child and child.owner_id != 0:
-			continue
-		if not child.is_idle():
 			continue
 		var dist: float = child.global_position.distance_to(target_pos)
 		if dist < best_dist:
@@ -1039,7 +1046,7 @@ func _setup_hud() -> void:
 	_river_overlay.set_script(RiverOverlayScript)
 	_river_overlay.z_index = 5
 	add_child(_river_overlay)
-	_river_overlay.setup(_map_node, _get_player_start_position())
+	_river_overlay.setup(_map_node, _get_start_position(0))
 	_input_handler._river_overlay = _river_overlay
 	var victory_layer := CanvasLayer.new()
 	victory_layer.name = "VictoryLayer"
@@ -1171,17 +1178,12 @@ func _find_naval_spawn_point(building: Node2D) -> Vector2i:
 	return Vector2i(-1, -1)
 
 
-func _get_player_start_position() -> Vector2i:
+func _get_start_position(player_index: int) -> Vector2i:
 	var positions: Array = _map_node.get_starting_positions()
-	if positions.size() >= 1:
-		return positions[0] as Vector2i
-	return Vector2i(4, 4)
-
-
-func _get_ai_start_position() -> Vector2i:
-	var positions: Array = _map_node.get_starting_positions()
-	if positions.size() >= 2:
-		return positions[1] as Vector2i
+	if positions.size() > player_index:
+		return positions[player_index] as Vector2i
+	if player_index == 0:
+		return Vector2i(4, 4)
 	var map_size: int = _map_node.get_map_size()
 	return Vector2i(map_size - 7, map_size - 7)
 

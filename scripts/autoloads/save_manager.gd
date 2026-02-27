@@ -1,11 +1,20 @@
 extends Node
-## Orchestrates save/load file I/O for autoload state.
-## Collects save_state() from GameManager, ResourceManager, CivBonusManager
-## and writes JSON to user://saves/slot_N.json.
+## Orchestrates save/load file I/O for game state.
+## Collects save_state() from autoloads (GameManager, ResourceManager,
+## CivBonusManager) and optionally from a registered scene provider
+## (prototype_main) for full scene entity persistence.
+
+signal load_complete
 
 const SAVE_DIR := "user://saves/"
 const MAX_SLOTS := 3
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
+
+var _scene_provider: Node = null
+
+
+func register_scene_provider(node: Node) -> void:
+	_scene_provider = node
 
 
 func save_game(slot: int) -> bool:
@@ -20,6 +29,8 @@ func save_game(slot: int) -> bool:
 		"resource_manager": ResourceManager.save_state(),
 		"civ_bonus_manager": CivBonusManager.save_state(),
 	}
+	if _scene_provider != null and _scene_provider.has_method("save_state"):
+		data["scene"] = _scene_provider.save_state()
 	var json_str := JSON.stringify(data, "\t")
 	var path := _slot_path(slot)
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -48,7 +59,11 @@ func load_game(slot: int) -> Dictionary:
 	if parsed == null or not (parsed is Dictionary):
 		push_error("SaveManager: Failed to parse save file %s" % path)
 		return {}
-	return parsed as Dictionary
+	var data: Dictionary = parsed as Dictionary
+	var version: int = int(data.get("version", 1))
+	if version < 2:
+		data = _migrate_v1_to_v2(data)
+	return data
 
 
 func apply_loaded_state(data: Dictionary) -> void:
@@ -58,6 +73,9 @@ func apply_loaded_state(data: Dictionary) -> void:
 		ResourceManager.load_state(data["resource_manager"])
 	if data.has("civ_bonus_manager"):
 		CivBonusManager.load_state(data["civ_bonus_manager"])
+	if data.has("scene") and _scene_provider != null and _scene_provider.has_method("load_state"):
+		await _scene_provider.load_state(data["scene"])
+	load_complete.emit()
 
 
 func get_save_info(slot: int) -> Dictionary:
@@ -101,3 +119,10 @@ func _slot_path(slot: int) -> String:
 func _ensure_save_dir() -> void:
 	if not DirAccess.dir_exists_absolute(SAVE_DIR):
 		DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+
+
+func _migrate_v1_to_v2(data: Dictionary) -> Dictionary:
+	if not data.has("scene"):
+		data["scene"] = {}
+	data["version"] = 2
+	return data
