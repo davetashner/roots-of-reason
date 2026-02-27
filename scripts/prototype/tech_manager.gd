@@ -45,7 +45,7 @@ var _research_config: Dictionary = {}
 ## Optional reference to WarResearchBonus node (set via setup_war_bonus)
 var _war_bonus_node: WarResearchBonus = null
 
-## 1 in-progress + N queued — loaded from data/settings/tech_research.json
+## 1 in-progress + N queued — loaded from data/settings/tech/tech_research.json
 var _max_queue_size: int = 4
 
 ## {player_id: Array[String]} — techs that were regressed (for re-research cost multiplier)

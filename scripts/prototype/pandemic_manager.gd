@@ -2,7 +2,7 @@ class_name PandemicManager
 extends Node
 ## Timer-based pandemic events that reduce villager productivity and cause deaths.
 ## Probability increases with population density; mitigated by techs (Herbalism,
-## Sanitation, Vaccines). Config loaded from data/settings/pandemics.json.
+## Sanitation, Vaccines). Config loaded from data/settings/events/pandemics.json.
 
 signal pandemic_started(player_id: int, severity: float)
 signal pandemic_ended(player_id: int)

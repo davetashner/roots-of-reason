@@ -25,7 +25,7 @@ func _ready() -> void:
 
 
 func _load_config() -> void:
-	var json_text := FileAccess.get_file_as_string("res://data/settings/postgame_stats.json")
+	var json_text := FileAccess.get_file_as_string("res://data/settings/ui/postgame_stats.json")
 	if json_text != "":
 		var parsed: Variant = JSON.parse_string(json_text)
 		if parsed is Dictionary:

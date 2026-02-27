@@ -1,6 +1,6 @@
 extends Control
 ## Right-side notification panel — displays timed messages with auto-dismiss.
-## Config loaded from data/settings/notifications.json.
+## Config loaded from data/settings/ui/notifications.json.
 
 var _config: Dictionary = {}
 var _vbox: VBoxContainer = null

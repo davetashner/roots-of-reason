@@ -18,7 +18,7 @@ var _is_hovering_resource: bool = false
 var _is_hovering_wolf: bool = false
 var _trade_manager: Node = null
 
-# Config loaded from data/settings/info_panel.json
+# Config loaded from data/settings/ui/info_panel.json
 var _hp_green_threshold: float = 0.6
 var _hp_yellow_threshold: float = 0.3
 
