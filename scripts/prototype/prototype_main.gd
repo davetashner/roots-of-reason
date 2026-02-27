@@ -113,6 +113,8 @@ func _on_civ_selected(player_civ: String, ai_civ: String) -> void:
 
 
 func _start_game() -> void:
+	ResourceManager.init_player(0)  # Must precede _setup_civilizations()
+	ResourceManager.init_player(1, null, GameManager.ai_difficulty)
 	_setup_civilizations()
 	_setup_units()
 	_setup_demo_entities()
@@ -633,7 +635,6 @@ func _on_barge_destroyed_with_resources(barge: Node2D, resources: Dictionary) ->
 func _setup_ai() -> void:
 	var difficulty: String = GameManager.ai_difficulty
 	var tier_config: Dictionary = _load_ai_tier_config(difficulty)
-	ResourceManager.init_player(1, null, difficulty)
 	var multiplier: float = tier_config.get("gather_rate_multiplier", 1.0)
 	if not is_equal_approx(multiplier, 1.0):
 		ResourceManager.set_gather_multiplier(1, multiplier)
@@ -1096,7 +1097,6 @@ func _setup_hud() -> void:
 
 
 func _setup_resource_bar() -> void:
-	ResourceManager.init_player(0)
 	var resource_bar_layer := CanvasLayer.new()
 	resource_bar_layer.name = "ResourceBar"
 	resource_bar_layer.layer = 10

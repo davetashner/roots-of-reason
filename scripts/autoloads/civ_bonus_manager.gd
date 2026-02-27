@@ -110,6 +110,13 @@ func apply_bonus_to_unit(unit_stats: UnitStats, unit_id: String, player_id: int)
 func apply_starting_bonuses(player_id: int) -> void:
 	if player_id not in _active_civs:
 		return
+	# ResourceManager must be initialized for this player before applying starting
+	# bonuses, otherwise add_resource() creates an ad-hoc entry that init_player()
+	# later overwrites, silently discarding the bonus.
+	assert(
+		ResourceManager.has_player(player_id),
+		"ResourceManager.init_player(%d) must be called before apply_starting_bonuses" % player_id,
+	)
 	var data := _load_civ_data(_active_civs[player_id])
 	var starting: Dictionary = data.get("starting_bonuses", {})
 	if starting.is_empty():
