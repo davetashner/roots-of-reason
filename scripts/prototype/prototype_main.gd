@@ -7,6 +7,7 @@ const GameFlowControllerScript := preload("res://scripts/prototype/game_flow_con
 const SceneSaveHandlerScript := preload("res://scripts/prototype/scene_save_handler.gd")
 const EntityRegistryScript := preload("res://scripts/prototype/entity_registry.gd")
 const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen.gd")
+const FOG_UPDATE_INTERVAL: float = 0.2  # Update fog every 200ms
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -57,6 +58,8 @@ var _pending_victory_tech: Array = []
 var _bootstrapper: RefCounted = null
 var _flow: RefCounted = null
 
+var _fog_timer: float = 0.0
+
 
 func _ready() -> void:
 	_bootstrapper = GameBootstrapperScript.new()
@@ -76,6 +79,13 @@ func _ready() -> void:
 	else:
 		_show_civ_selection()
 	_print_orphan_count("after _ready")
+
+
+func _process(delta: float) -> void:
+	_fog_timer += delta
+	if _fog_timer >= FOG_UPDATE_INTERVAL:
+		_fog_timer -= FOG_UPDATE_INTERVAL
+		_update_fog_of_war()
 
 
 func _show_civ_selection() -> void:
