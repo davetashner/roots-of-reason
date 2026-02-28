@@ -203,7 +203,7 @@ func _setup_fog_of_war() -> void:
 	_fog_layer = TileMapLayer.new()
 	_fog_layer.name = "FogOfWar"
 	_fog_layer.set_script(load("res://scripts/map/fog_of_war_layer.gd"))
-	_fog_layer.z_index = 1
+	_fog_layer.z_index = 10
 	# Offset so Godot's tile centers align with IsoUtils top-corner coords
 	_fog_layer.position = Vector2(-IsoUtils.HALF_W, -IsoUtils.HALF_H)
 	add_child(_fog_layer)
