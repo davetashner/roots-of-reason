@@ -77,6 +77,7 @@ func _load_config() -> void:
 			"forest": 15,
 			"stone": 10,
 			"mountain": 5,
+			"canyon": 3,
 		}
 	if _terrain_properties.is_empty():
 		_terrain_properties = {
@@ -87,6 +88,7 @@ func _load_config() -> void:
 			"forest": {"buildable": true, "blocks_los": true},
 			"stone": {"buildable": true, "blocks_los": false},
 			"mountain": {"buildable": false, "blocks_los": true},
+			"canyon": {"buildable": false, "blocks_los": true},
 			"river": {"buildable": false, "blocks_los": false},
 		}
 
