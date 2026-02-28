@@ -1,0 +1,16 @@
+{
+  "name": "Aqueduct",
+  "placeholder": true,
+  "description": "A stone channel that carries fresh water into the city, enabling population growth and reducing disease risk. [PLACEHOLDER]",
+  "hp": 2000,
+  "footprint": [3, 1],
+  "build_time": 80,
+  "build_cost": { "stone": 250, "wood": 50 },
+  "population_bonus": 10,
+  "garrison_capacity": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 2,
+  "placement_constraint": "adjacent_to_river"
+}

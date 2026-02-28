@@ -1,0 +1,16 @@
+{
+  "name": "Castle",
+  "placeholder": true,
+  "description": "A massive fortified stronghold with concentric walls and towers. The pinnacle of medieval military architecture. [PLACEHOLDER]",
+  "hp": 6000,
+  "footprint": [4, 4],
+  "build_time": 120,
+  "build_cost": { "stone": 650, "gold": 200, "wood": 100 },
+  "population_bonus": 0,
+  "garrison_capacity": 20,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": ["knight", "trebuchet"],
+  "age_required": 3,
+  "placement_constraint": ""
+}
