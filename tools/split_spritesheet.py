@@ -273,6 +273,10 @@ def main() -> int:
 
         if do_remove_bg:
             sprite = remove_background(sprite, tolerance=args.bg_tolerance)
+            # Crop to bounding box of remaining content so resize preserves aspect ratio
+            content_bbox = sprite.getbbox()
+            if content_bbox:
+                sprite = sprite.crop(content_bbox)
 
         w, h = sprite.size
         label = f"{prefix}_{i:02d}.png"
