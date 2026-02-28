@@ -15,7 +15,21 @@
     },
     "regenerates": { "type": "boolean" },
     "regen_rate": { "type": "number", "minimum": 0 },
-    "regen_delay": { "type": "number", "minimum": 0 }
+    "regen_delay": { "type": "number", "minimum": 0 },
+    "sprite": {
+      "type": "object",
+      "properties": {
+        "base_path": { "type": "string" },
+        "states": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "half_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+        "offset_y": { "type": "number" }
+      },
+      "required": ["base_path", "states"],
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }
