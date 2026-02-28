@@ -74,11 +74,26 @@ func _ready() -> void:
 	_setup_input()
 	_setup_building_placer()
 	tree_exiting.connect(_on_tree_exiting)
+	_apply_quick_start_args()
 	if GameManager.get_player_civilization(0) != "":
 		_start_game()
 	else:
 		_show_civ_selection()
 	_print_orphan_count("after _ready")
+
+
+func _apply_quick_start_args() -> void:
+	var user_args := OS.get_cmdline_user_args()
+	var idx := user_args.find("--quick-start")
+	if idx == -1:
+		return
+	var civ := "mesopotamia"
+	if idx + 1 < user_args.size() and not user_args[idx + 1].begins_with("--"):
+		civ = user_args[idx + 1]
+	if GameManager.get_player_civilization(0) == "":
+		GameManager.set_player_civilization(0, civ)
+	if GameManager.get_player_civilization(1) == "":
+		GameManager.set_player_civilization(1, "rome")
 
 
 func _process(delta: float) -> void:
