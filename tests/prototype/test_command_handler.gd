@@ -7,6 +7,7 @@ const GatherScript := preload("res://scripts/prototype/gather_command_handler.gd
 const GarrisonScript := preload("res://scripts/prototype/garrison_command_handler.gd")
 const EmbarkScript := preload("res://scripts/prototype/embark_command_handler.gd")
 const DisembarkScript := preload("res://scripts/prototype/disembark_command_handler.gd")
+const AttackScript := preload("res://scripts/prototype/attack_command_handler.gd")
 
 var _pos := Vector2(100, 100)
 
@@ -399,3 +400,59 @@ func test_build_execute_with_empty_units_returns_true() -> void:
 	var target := _mock_target(["apply_build_work"])
 	var units: Array[Node] = []
 	assert_bool(handler.execute("build", target, units, _pos)).is_true()
+
+
+# -- AttackCommandHandler --
+
+
+func test_attack_can_handle_with_attack_cmd_and_target() -> void:
+	var handler: CommandHandler = AttackScript.new()
+	var target := _mock_target()
+	var units: Array[Node] = []
+	assert_bool(handler.can_handle("attack", target, units, _pos)).is_true()
+
+
+func test_attack_can_handle_rejects_wrong_cmd() -> void:
+	var handler: CommandHandler = AttackScript.new()
+	var target := _mock_target()
+	var units: Array[Node] = []
+	assert_bool(handler.can_handle("gather", target, units, _pos)).is_false()
+
+
+func test_attack_can_handle_rejects_null_target() -> void:
+	var handler: CommandHandler = AttackScript.new()
+	var units: Array[Node] = []
+	assert_bool(handler.can_handle("attack", null, units, _pos)).is_false()
+
+
+func test_attack_execute_calls_assign_attack_target() -> void:
+	var handler: CommandHandler = AttackScript.new()
+	var target := _mock_target()
+	var unit := _mock_unit(["assign_attack_target"])
+	var units: Array[Node] = [unit]
+	var result := handler.execute("attack", target, units, _pos)
+	assert_bool(result).is_true()
+	assert_bool(unit.assign_attack_target_called).is_true()
+	assert_object(unit.assign_attack_target_arg).is_same(target)
+
+
+func test_attack_execute_skips_units_without_method() -> void:
+	var handler: CommandHandler = AttackScript.new()
+	var target := _mock_target()
+	var unit := _mock_unit([])
+	var units: Array[Node] = [unit]
+	var result := handler.execute("attack", target, units, _pos)
+	assert_bool(result).is_true()
+
+
+func test_attack_execute_returns_false_for_null_target() -> void:
+	var handler: CommandHandler = AttackScript.new()
+	var units: Array[Node] = []
+	assert_bool(handler.execute("attack", null, units, _pos)).is_false()
+
+
+func test_attack_execute_returns_false_for_wrong_cmd() -> void:
+	var handler: CommandHandler = AttackScript.new()
+	var target := _mock_target()
+	var units: Array[Node] = []
+	assert_bool(handler.execute("move", target, units, _pos)).is_false()

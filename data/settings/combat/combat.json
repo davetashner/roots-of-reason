@@ -6,7 +6,7 @@
   "building_damage_reduction": 0.80,
   "stances": {
     "aggressive": { "auto_scan": true, "pursue": true, "retaliate": true },
-    "defensive": { "auto_scan": false, "pursue": false, "retaliate": true },
+    "defensive": { "auto_scan": true, "pursue": false, "retaliate": true },
     "stand_ground": { "auto_scan": false, "pursue": false, "retaliate": false }
   },
   "show_damage_numbers": true,

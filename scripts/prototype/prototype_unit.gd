@@ -589,6 +589,14 @@ func take_damage(amount: int, attacker: Node2D) -> void:
 	_combatant.take_damage(amount, attacker)
 
 
+func assign_attack_target(target: Node2D) -> void:
+	_cancel_gather()
+	_cancel_feed()
+	_build_target = null
+	_pending_build_target_name = ""
+	_combatant.engage_target(target)
+
+
 func attack_move_to(world_pos: Vector2) -> void:
 	_cancel_gather()
 	_build_target = null
