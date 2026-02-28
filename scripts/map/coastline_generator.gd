@@ -15,7 +15,7 @@ const DIRECTIONS_8 := [
 ]
 
 ## Land types that never become shore (they have special terrain behavior).
-const NEVER_SHORE := ["mountain", "river"]
+const NEVER_SHORE := ["mountain", "river", "canyon"]
 
 var _shore_enabled: bool = true
 

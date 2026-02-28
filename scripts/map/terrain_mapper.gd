@@ -14,6 +14,7 @@ var _thresholds: Dictionary = {
 }
 var _forest_moisture_threshold: float = 0.55
 var _dirt_moisture_threshold: float = 0.30
+var _canyon_moisture_threshold: float = 0.30
 
 
 func configure(config: Dictionary) -> void:
@@ -22,6 +23,7 @@ func configure(config: Dictionary) -> void:
 		_thresholds = thresholds
 	_forest_moisture_threshold = float(config.get("forest_moisture_threshold", _forest_moisture_threshold))
 	_dirt_moisture_threshold = float(config.get("dirt_moisture_threshold", _dirt_moisture_threshold))
+	_canyon_moisture_threshold = float(config.get("canyon_moisture_threshold", _canyon_moisture_threshold))
 
 
 func get_terrain(elevation: float, moisture: float) -> String:
@@ -32,6 +34,8 @@ func get_terrain(elevation: float, moisture: float) -> String:
 	if elevation < _thresholds.get("grass", 0.70):
 		return _grass_biome(moisture)
 	if elevation < _thresholds.get("stone", 0.85):
+		if moisture < _canyon_moisture_threshold:
+			return "canyon"
 		return "stone"
 	return "mountain"
 

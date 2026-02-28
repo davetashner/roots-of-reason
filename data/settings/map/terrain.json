@@ -7,6 +7,7 @@
     "desert": 1.5,
     "stone": 1.5,
     "mountain": -1,
+    "canyon": -1,
     "water": -1,
     "shallows": 3.0,
     "deep_water": -1,
@@ -21,6 +22,7 @@
     "forest":     { "buildable": true,  "blocks_los": true  },
     "stone":      { "buildable": true,  "blocks_los": false },
     "mountain":   { "buildable": false, "blocks_los": true  },
+    "canyon":     { "buildable": false, "blocks_los": true  },
     "river":      { "buildable": false, "blocks_los": false },
     "shore":      { "buildable": true,  "blocks_los": false },
     "shallows":   { "buildable": false, "blocks_los": false },
@@ -39,7 +41,8 @@
       "desert": -1,
       "sand": -1,
       "stone": -1,
-      "mountain": -1
+      "mountain": -1,
+      "canyon": -1
     },
     "siege": {
       "forest": -1

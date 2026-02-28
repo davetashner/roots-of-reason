@@ -23,6 +23,7 @@
     "stone": 0.85,
     "mountain": 1.0
   },
+  "canyon_moisture_threshold": 0.30,
   "elevation_noise": {
     "frequency": 0.015,
     "octaves": 4,
@@ -85,7 +86,7 @@
       "gold_mine": {
         "density_per_1000_tiles": 3,
         "terrain_affinity": { "stone": 1.0, "mountain": 0.8, "dirt": 0.3 },
-        "forbidden_terrain": ["water", "river", "shallows", "deep_water", "shore"],
+        "forbidden_terrain": ["water", "river", "shallows", "deep_water", "shore", "canyon"],
         "min_spacing": 8,
         "noise_weight": 0.4,
         "noise_seed_offset": 4000
@@ -93,7 +94,7 @@
       "stone_mine": {
         "density_per_1000_tiles": 4,
         "terrain_affinity": { "stone": 1.0, "mountain": 0.6, "dirt": 0.4 },
-        "forbidden_terrain": ["water", "river", "shallows", "deep_water", "shore"],
+        "forbidden_terrain": ["water", "river", "shallows", "deep_water", "shore", "canyon"],
         "min_spacing": 6,
         "noise_weight": 0.4,
         "noise_seed_offset": 4100
@@ -101,7 +102,7 @@
       "berry_bush": {
         "density_per_1000_tiles": 5,
         "terrain_affinity": { "grass": 1.0, "forest": 0.7, "dirt": 0.5 },
-        "forbidden_terrain": ["water", "river", "mountain", "stone", "shallows", "deep_water", "shore"],
+        "forbidden_terrain": ["water", "river", "mountain", "stone", "shallows", "deep_water", "shore", "canyon"],
         "min_spacing": 4,
         "noise_weight": 0.3,
         "noise_seed_offset": 4200
@@ -109,7 +110,7 @@
       "tree": {
         "density_per_1000_tiles": 12,
         "terrain_affinity": { "forest": 1.0, "grass": 0.6, "dirt": 0.3 },
-        "forbidden_terrain": ["water", "river", "mountain", "shallows", "deep_water", "shore"],
+        "forbidden_terrain": ["water", "river", "mountain", "shallows", "deep_water", "shore", "canyon"],
         "min_spacing": 2,
         "noise_weight": 0.5,
         "noise_seed_offset": 4300
@@ -117,7 +118,7 @@
       "fish": {
         "density_per_1000_tiles": 4,
         "terrain_affinity": { "water": 1.0, "river": 0.6, "shallows": 0.8, "deep_water": 1.0 },
-        "forbidden_terrain": ["mountain", "stone", "forest", "grass", "dirt", "sand", "desert", "shore"],
+        "forbidden_terrain": ["mountain", "stone", "forest", "grass", "dirt", "sand", "desert", "shore", "canyon"],
         "min_spacing": 5,
         "noise_weight": 0.4,
         "noise_seed_offset": 4400
@@ -144,7 +145,7 @@
         "min_distance_from_start": 12,
         "min_distance_between_packs": 8,
         "terrain_affinity": { "forest": 1.0, "grass": 0.6, "dirt": 0.3 },
-        "forbidden_terrain": ["water", "river", "mountain", "shallows", "deep_water", "shore"],
+        "forbidden_terrain": ["water", "river", "mountain", "shallows", "deep_water", "shore", "canyon"],
         "noise_weight": 0.4,
         "noise_seed_offset": 6000
       }
