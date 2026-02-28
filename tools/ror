@@ -558,6 +558,12 @@ cmd_gen_sprites() {
     return 0
 }
 
+# ==================== split-sprites ====================
+cmd_split_sprites() {
+    cd "$PROJECT_ROOT"
+    python3 "$SCRIPT_DIR/split_spritesheet.py" "$@"
+}
+
 # ==================== scene-tree ====================
 cmd_scene_tree() {
     cd "$PROJECT_ROOT"
@@ -626,6 +632,10 @@ ${BOLD}COMMANDS${RESET}
   data-check [opts]   Validate JSON data files against schemas
                         ror data-check              — check all data files
                         ror data-check --verbose    — show per-file detail
+  split-sprites <input.png> [opts]
+                      Split a spritesheet into individual tiles
+                        ror split-sprites assets/raw/terrain/grass_quad.png --tile-size 128x64
+                        ror split-sprites input.png --output-dir out/ --prefix name
   help                Show this help message
 
 ${BOLD}ENVIRONMENT${RESET}
@@ -644,6 +654,7 @@ case "${1:-help}" in
     scene-tree)         shift; cmd_scene_tree "$@" ;;
     validate-assets|va) shift; cmd_validate_assets "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
+    split-sprites)      shift; cmd_split_sprites "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
         err "Unknown command: $1"

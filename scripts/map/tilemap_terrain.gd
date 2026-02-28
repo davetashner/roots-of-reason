@@ -23,7 +23,8 @@ var _map_width: int = 64
 var _map_height: int = 64
 var _seed_value: int = 42
 var _terrain_weights: Dictionary = {}
-var _source_ids: Dictionary = {}  # terrain_name -> source_id
+var _source_ids: Dictionary = {}  # terrain_name -> source_id (primary)
+var _variant_ids: Dictionary = {}  # terrain_name -> Array[int] (all variant source_ids)
 
 # River/elevation data
 var _elevation_grid: Dictionary = {}  # Vector2i -> float
@@ -133,9 +134,40 @@ func _build_tileset() -> void:
 	ts.set_custom_data_layer_name(3, "blocks_los")
 	ts.set_custom_data_layer_type(3, TYPE_BOOL)
 
-	# One atlas source per terrain type
+	# One atlas source per terrain type (+ variant sources)
 	var source_id := 0
 	for terrain_name: String in _terrain_weights:
+		var cost: float = float(_terrain_costs.get(terrain_name, 1.0))
+		var props: Dictionary = _terrain_properties.get(terrain_name, {})
+
+		# Check for variant files: {terrain}_flat_01.png, _02.png, etc.
+		var variants: Array[int] = []
+		var variant_idx := 1
+		while true:
+			var vpath := TEXTURE_BASE_PATH + terrain_name + "_flat_%02d.png" % variant_idx
+			var vtex: Texture2D = load(vpath)
+			if vtex == null:
+				break
+			var vsource := TileSetAtlasSource.new()
+			vsource.texture = vtex
+			vsource.texture_region_size = TILE_SIZE
+			ts.add_source(vsource, source_id)
+			vsource.create_tile(Vector2i.ZERO)
+			var vtile: TileData = vsource.get_tile_data(Vector2i.ZERO, 0)
+			vtile.set_custom_data("terrain_type", terrain_name)
+			vtile.set_custom_data("movement_cost", cost)
+			vtile.set_custom_data("buildable", props.get("buildable", true))
+			vtile.set_custom_data("blocks_los", props.get("blocks_los", false))
+			variants.append(source_id)
+			source_id += 1
+			variant_idx += 1
+
+		if not variants.is_empty():
+			_source_ids[terrain_name] = variants[0]
+			_variant_ids[terrain_name] = variants
+			continue
+
+		# Fallback: single base texture
 		var tex_path := TEXTURE_BASE_PATH + terrain_name + ".png"
 		var tex: Texture2D = load(tex_path)
 		if tex == null:
@@ -148,14 +180,9 @@ func _build_tileset() -> void:
 		ts.add_source(source, source_id)
 		source.create_tile(Vector2i.ZERO)
 
-		# Set custom data on the tile
 		var tile_data: TileData = source.get_tile_data(Vector2i.ZERO, 0)
 		tile_data.set_custom_data("terrain_type", terrain_name)
-
-		var cost: float = float(_terrain_costs.get(terrain_name, 1.0))
 		tile_data.set_custom_data("movement_cost", cost)
-
-		var props: Dictionary = _terrain_properties.get(terrain_name, {})
 		tile_data.set_custom_data("buildable", props.get("buildable", true))
 		tile_data.set_custom_data("blocks_los", props.get("blocks_los", false))
 
@@ -188,6 +215,15 @@ func _build_tileset() -> void:
 		source_id += 1
 
 	tile_set = ts
+
+
+func _pick_variant_sid(terrain: String, pos: Vector2i) -> int:
+	var variants: Array = _variant_ids.get(terrain, [])
+	if variants.is_empty():
+		return _source_ids.get(terrain, -1)
+	# Deterministic selection from seed + position (reproducible across save/load)
+	var hash_val: int = _seed_value + pos.x * 7919 + pos.y * 104729
+	return variants[absi(hash_val) % variants.size()]
 
 
 func _generate_map() -> void:
@@ -227,7 +263,7 @@ func _generate_map() -> void:
 
 	# 4b. Render all tiles (after coastline reclassification)
 	for pos: Vector2i in _tile_grid:
-		var sid: int = _source_ids.get(_tile_grid[pos], -1)
+		var sid: int = _pick_variant_sid(_tile_grid[pos], pos)
 		if sid >= 0:
 			set_cell(pos, sid, Vector2i.ZERO)
 
@@ -241,9 +277,9 @@ func _generate_map() -> void:
 	_river_widths = river_data.get("river_widths", {})
 
 	# 6. Apply river tiles to the map
-	var river_sid: int = _source_ids.get("river", -1)
 	for pos: Vector2i in _river_tiles:
 		_tile_grid[pos] = "river"
+		var river_sid: int = _pick_variant_sid("river", pos)
 		if river_sid >= 0:
 			set_cell(pos, river_sid, Vector2i.ZERO)
 
@@ -471,7 +507,7 @@ func load_state(state: Dictionary) -> void:
 		var pos := Vector2i(int(parts[0]), int(parts[1]))
 		var terrain: String = grid_data[key]
 		_tile_grid[pos] = terrain
-		var sid: int = _source_ids.get(terrain, -1)
+		var sid: int = _pick_variant_sid(terrain, pos)
 		if sid >= 0:
 			set_cell(pos, sid, Vector2i.ZERO)
 
