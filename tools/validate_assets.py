@@ -69,6 +69,24 @@ def check_naming(filename: str, pattern: re.Pattern) -> str | None:
 # Dimension validation
 # ---------------------------------------------------------------------------
 
+def _building_footprint_category(building_name: str) -> str:
+    """Look up a building's footprint from data/buildings/ and return a category."""
+    data_path = SCRIPT_DIR.parent / "data" / "buildings" / f"{building_name}.json"
+    if data_path.is_file():
+        try:
+            with open(data_path) as f:
+                data = json.load(f)
+            fp = data.get("footprint", [1, 1])
+            size = max(int(fp[0]), int(fp[1]))
+            if size >= 3:
+                return "buildings_3x3"
+            if size >= 2:
+                return "buildings_2x2"
+        except (json.JSONDecodeError, IndexError, TypeError):
+            pass
+    return "buildings_1x1"
+
+
 def classify_asset(rel_path: str) -> str | None:
     """Determine the dimension category for an asset based on its path.
 
@@ -80,7 +98,7 @@ def classify_asset(rel_path: str) -> str | None:
     if len(parts) >= 2 and parts[0] == "sprites" and parts[1] == "units":
         return "units"
 
-    # sprites/buildings/ -> try to infer footprint from subdirectory name
+    # sprites/buildings/ -> try to infer footprint from subdirectory or data JSON
     if len(parts) >= 2 and parts[0] == "sprites" and parts[1] == "buildings":
         # Check for explicit size subdirs like "2x2", "3x3"
         for part in parts[2:]:
@@ -88,7 +106,9 @@ def classify_asset(rel_path: str) -> str | None:
                 return "buildings_2x2"
             if part == "3x3":
                 return "buildings_3x3"
-        return "buildings_1x1"
+        # Infer from building data JSON using the filename (without extension)
+        filename = Path(parts[-1]).stem
+        return _building_footprint_category(filename)
 
     # tiles/ -> tiles
     if len(parts) >= 1 and parts[0] == "tiles":
