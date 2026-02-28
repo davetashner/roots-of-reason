@@ -126,7 +126,7 @@ class TestValidData:
     """Valid data files should pass with zero errors."""
 
     def test_all_valid(self, data_dir: Path) -> None:
-        files_checked, error_count, errors = data_check.run(data_dir=data_dir)
+        files_checked, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count == 0
         assert files_checked > 0
         assert errors == []
@@ -139,7 +139,7 @@ class TestMissingRequiredField:
         bad_unit = {"name": "Broken", "attack": 5, "defense": 1, "speed": 1.0}
         (data_dir / "units" / "broken.json").write_text(json.dumps(bad_unit))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "missing required field 'hp'" in e]
         assert len(matching) == 1
@@ -148,7 +148,7 @@ class TestMissingRequiredField:
         bad_unit = {"name": "NoStats"}
         (data_dir / "units" / "nostats.json").write_text(json.dumps(bad_unit))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         # Should report hp, attack, defense, speed all missing
         assert error_count >= 4
 
@@ -166,7 +166,7 @@ class TestWrongType:
         }
         (data_dir / "units" / "badtype.json").write_text(json.dumps(bad_unit))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "expected type" in e and "hp" in e]
         assert len(matching) >= 1
@@ -181,7 +181,7 @@ class TestWrongType:
         }
         (data_dir / "units" / "boolhp.json").write_text(json.dumps(bad_unit))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "boolean" in e]
         assert len(matching) >= 1
@@ -204,7 +204,7 @@ class TestInvalidTechPrerequisite:
         ]
         (data_dir / "tech" / "tech_tree.json").write_text(json.dumps(bad_tree))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "nonexistent_tech" in e and "prerequisite" in e]
         assert len(matching) == 1
@@ -227,7 +227,7 @@ class TestInvalidAgeIndex:
         ]
         (data_dir / "tech" / "tech_tree.json").write_text(json.dumps(bad_tree))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "age index" in e]
         assert len(matching) == 1
@@ -256,7 +256,7 @@ class TestArrayElementValidation:
             json.dumps(tree_with_bad_element)
         )
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         # Should report missing fields for element [1]
         matching = [e for e in errors if "[1]" in e and "missing required" in e]
@@ -269,7 +269,7 @@ class TestArrayElementValidation:
         ]
         (data_dir / "tech" / "ages.json").write_text(json.dumps(bad_ages))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "[1]" in e and "missing required" in e]
         assert len(matching) >= 1
@@ -277,7 +277,7 @@ class TestArrayElementValidation:
     def test_ages_not_array(self, data_dir: Path) -> None:
         (data_dir / "tech" / "ages.json").write_text(json.dumps({"not": "array"}))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "expected array" in e]
         assert len(matching) == 1
@@ -289,7 +289,7 @@ class TestInvalidJSON:
     def test_malformed_json(self, data_dir: Path) -> None:
         (data_dir / "units" / "broken.json").write_text("{not valid json")
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "invalid JSON" in e]
         assert len(matching) == 1
@@ -302,7 +302,7 @@ class TestUnexpectedField:
         unit_with_extra = {**VALID_UNIT, "magic_power": 100}
         (data_dir / "units" / "extra.json").write_text(json.dumps(unit_with_extra))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "unexpected field 'magic_power'" in e]
         assert len(matching) == 1
@@ -321,7 +321,144 @@ class TestMinimumConstraint:
         }
         (data_dir / "units" / "weak.json").write_text(json.dumps(bad_unit))
 
-        _, error_count, errors = data_check.run(data_dir=data_dir)
+        _, error_count, errors, _warnings = data_check.run(data_dir=data_dir)
         assert error_count > 0
         matching = [e for e in errors if "minimum" in e and "hp" in e]
         assert len(matching) == 1
+
+
+BUILDING_SCHEMA = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["id", "name"],
+    "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+    },
+    "additionalProperties": False,
+}
+
+
+@pytest.fixture
+def data_dir_with_buildings(data_dir: Path) -> Path:
+    """Extend data_dir fixture with a buildings directory and schema."""
+    schemas = data_dir / "schemas"
+    (schemas / "building.json").write_text(json.dumps(BUILDING_SCHEMA))
+
+    buildings = data_dir / "buildings"
+    buildings.mkdir()
+    (buildings / "barracks.json").write_text(
+        json.dumps({"id": "barracks", "name": "Barracks"})
+    )
+    return data_dir
+
+
+class TestUnlockBuildingsValidation:
+    """unlock_buildings cross-reference checks emit warnings, not errors."""
+
+    def test_known_building_produces_no_warning(
+        self, data_dir_with_buildings: Path
+    ) -> None:
+        tree = [
+            {
+                "id": "bronze_working",
+                "name": "Bronze Working",
+                "age": 0,
+                "cost": {"food": 100},
+                "research_time": 30,
+                "prerequisites": [],
+                "effects": {"unlock_buildings": ["barracks"]},
+            }
+        ]
+        (data_dir_with_buildings / "tech" / "tech_tree.json").write_text(
+            json.dumps(tree)
+        )
+
+        _, error_count, errors, warnings = data_check.run(
+            data_dir=data_dir_with_buildings
+        )
+        assert error_count == 0
+        assert errors == []
+        assert warnings == []
+
+    def test_unknown_building_produces_warning_not_error(
+        self, data_dir_with_buildings: Path
+    ) -> None:
+        tree = [
+            {
+                "id": "mystery_tech",
+                "name": "Mystery Tech",
+                "age": 0,
+                "cost": {"food": 100},
+                "research_time": 30,
+                "prerequisites": [],
+                "effects": {"unlock_buildings": ["nonexistent_building"]},
+            }
+        ]
+        (data_dir_with_buildings / "tech" / "tech_tree.json").write_text(
+            json.dumps(tree)
+        )
+
+        _, error_count, errors, warnings = data_check.run(
+            data_dir=data_dir_with_buildings
+        )
+        # Must not be an error
+        assert error_count == 0
+        assert errors == []
+        # Must produce exactly one warning mentioning the unknown building
+        assert len(warnings) == 1
+        assert "nonexistent_building" in warnings[0]
+        assert "unlock_buildings" in warnings[0]
+
+    def test_multiple_unknown_buildings_each_produce_a_warning(
+        self, data_dir_with_buildings: Path
+    ) -> None:
+        tree = [
+            {
+                "id": "advanced_tech",
+                "name": "Advanced Tech",
+                "age": 1,
+                "cost": {"gold": 200},
+                "research_time": 60,
+                "prerequisites": [],
+                "effects": {
+                    "unlock_buildings": ["phantom_a", "phantom_b", "barracks"]
+                },
+            }
+        ]
+        (data_dir_with_buildings / "tech" / "tech_tree.json").write_text(
+            json.dumps(tree)
+        )
+
+        _, error_count, errors, warnings = data_check.run(
+            data_dir=data_dir_with_buildings
+        )
+        assert error_count == 0
+        assert errors == []
+        # Only the two unknown ones should warn; barracks is known
+        assert len(warnings) == 2
+        warning_text = " ".join(warnings)
+        assert "phantom_a" in warning_text
+        assert "phantom_b" in warning_text
+        assert "barracks" not in warning_text
+
+    def test_no_buildings_dir_skips_unlock_building_check(
+        self, data_dir: Path
+    ) -> None:
+        """If there is no data/buildings/ directory, no warnings are emitted."""
+        tree = [
+            {
+                "id": "any_tech",
+                "name": "Any Tech",
+                "age": 0,
+                "cost": {"food": 50},
+                "research_time": 20,
+                "prerequisites": [],
+                "effects": {"unlock_buildings": ["some_building"]},
+            }
+        ]
+        (data_dir / "tech" / "tech_tree.json").write_text(json.dumps(tree))
+
+        _, error_count, errors, warnings = data_check.run(data_dir=data_dir)
+        assert error_count == 0
+        assert warnings == []
