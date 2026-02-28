@@ -38,6 +38,7 @@ var _hp_damaged_color: Color = Color(0.9, 0.8, 0.1, 0.9)
 var _hp_critical_color: Color = Color(0.9, 0.2, 0.2, 0.9)
 
 var _garrisoned_units: Array[Node2D] = []
+var _garrison_load_queue: Array[Node2D] = []
 var _garrison_arrow_timer: float = 0.0
 var _garrison_config: Dictionary = {}
 var _pending_garrison_names: Array[String] = []
@@ -207,6 +208,8 @@ func _process(delta: float) -> void:
 		if _ruins_timer >= _ruins_decay_time:
 			queue_free()
 		return
+	if not _garrison_load_queue.is_empty():
+		_tick_garrison_loading()
 	if not _garrisoned_units.is_empty():
 		_tick_garrison_arrows(game_delta)
 
@@ -422,23 +425,21 @@ func _draw_selection_outline() -> void:
 func garrison_unit(unit: Node2D) -> bool:
 	if not can_garrison():
 		return false
-	if unit in _garrisoned_units:
+	if unit in _garrisoned_units or unit in _garrison_load_queue:
 		return false
-	_garrisoned_units.append(unit)
-	unit.visible = false
-	unit.set_process(false)
+	_garrison_load_queue.append(unit)
 	return true
 
 
 func ungarrison_all() -> Array[Node2D]:
 	var ejected: Array[Node2D] = []
 	var radius: float = float(_garrison_config.get("ungarrison_radius_tiles", 2)) * 64.0
+	# Eject fully garrisoned units
 	var count := _garrisoned_units.size()
 	for i in count:
 		var unit: Node2D = _garrisoned_units[i]
 		if not is_instance_valid(unit):
 			continue
-		# Place units in a circle around the building
 		var angle := TAU * float(i) / float(maxi(count, 1))
 		var offset := Vector2(cos(angle), sin(angle)) * radius
 		unit.global_position = global_position + offset
@@ -446,6 +447,11 @@ func ungarrison_all() -> Array[Node2D]:
 		unit.set_process(true)
 		ejected.append(unit)
 	_garrisoned_units.clear()
+	# Cancel queued units — restore them in place (they're still walking)
+	for unit in _garrison_load_queue:
+		if is_instance_valid(unit):
+			ejected.append(unit)
+	_garrison_load_queue.clear()
 	return ejected
 
 
@@ -466,7 +472,25 @@ func can_garrison() -> bool:
 		return false
 	if under_construction:
 		return false
-	return get_garrisoned_count() < garrison_capacity
+	return get_garrisoned_count() + _garrison_load_queue.size() < garrison_capacity
+
+
+func _tick_garrison_loading() -> void:
+	var reach: float = float(_garrison_config.get("garrison_reach_tiles", 2)) * 64.0
+	var i := _garrison_load_queue.size() - 1
+	while i >= 0:
+		var unit: Node2D = _garrison_load_queue[i]
+		if not is_instance_valid(unit):
+			_garrison_load_queue.remove_at(i)
+			i -= 1
+			continue
+		var dist: float = global_position.distance_to(unit.global_position)
+		if dist <= reach:
+			_garrison_load_queue.remove_at(i)
+			_garrisoned_units.append(unit)
+			unit.visible = false
+			unit.set_process(false)
+		i -= 1
 
 
 func _tick_garrison_arrows(game_delta: float) -> void:
@@ -536,6 +560,9 @@ func resolve_garrison(scene_root: Node) -> void:
 func save_state() -> Dictionary:
 	var garrisoned_names: Array[String] = []
 	for unit in _garrisoned_units:
+		if is_instance_valid(unit):
+			garrisoned_names.append(str(unit.name))
+	for unit in _garrison_load_queue:
 		if is_instance_valid(unit):
 			garrisoned_names.append(str(unit.name))
 	return {
