@@ -284,6 +284,7 @@ var _pending_feed_target_name: String:
 
 
 func _ready() -> void:
+	z_index = 3
 	_target_pos = position
 	_gatherer = GathererComponentScript.new(self)
 	_combatant = CombatantComponentScript.new(self)
