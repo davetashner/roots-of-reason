@@ -46,6 +46,7 @@ var _build_reach: float = 80.0
 var _pending_build_target_name: String = ""
 
 var _scene_root: Node = null
+var _pathfinder: Node = null
 
 # Formation speed override — when > 0, caps get_move_speed()
 var _formation_speed_override: float = 0.0
@@ -702,8 +703,7 @@ func _draw() -> void:
 func move_to(world_pos: Vector2) -> void:
 	# Reject moves to impassable terrain (mountain, canyon, deep water, etc.)
 	var grid_pos := Vector2i(IsoUtils.screen_to_grid(world_pos))
-	var pf: Node = get_node_or_null("/root/PrototypeMain/PathfindingGrid")
-	if pf and pf.has_method("is_cell_solid") and pf.is_cell_solid(grid_pos):
+	if _pathfinder and _pathfinder.has_method("is_cell_solid") and _pathfinder.is_cell_solid(grid_pos):
 		return
 	_path.clear()
 	_path_index = 0
