@@ -112,7 +112,7 @@ func setup_demo_entities() -> void:
 			res_node.name = "Resource_%s_%d" % [res_name, res_index]
 			res_node.set_script(ResourceNodeScript)
 			res_node.position = base_screen + offset
-			res_node.z_index = int(res_node.position.y)
+			res_node.z_index = 2
 			res_node.variant_index = res_index
 			_root.add_child(res_node)
 			res_node.setup(res_name)
