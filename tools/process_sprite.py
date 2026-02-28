@@ -15,11 +15,20 @@ import re
 import sys
 from pathlib import Path
 
-try:
-    from PIL import Image
-except ImportError:
-    print("Error: Pillow is required. Install with: pip install Pillow", file=sys.stderr)
-    sys.exit(1)
+Image = None  # lazy import — Pillow not available in all CI environments
+
+
+def _require_pil():
+    """Import PIL lazily so the module can be imported without Pillow."""
+    global Image
+    if Image is not None:
+        return
+    try:
+        from PIL import Image as _Image
+        Image = _Image
+    except ImportError:
+        print("Error: Pillow is required. Install with: pip install Pillow", file=sys.stderr)
+        sys.exit(1)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -94,6 +103,7 @@ def restore_magenta(img: Image.Image) -> tuple[Image.Image, int]:
 
     Returns (processed_image, restored_count).
     """
+    _require_pil()
     img = img.copy()
     get_data = getattr(img, "get_flattened_data", img.getdata)
     pixels = list(get_data())
@@ -125,6 +135,7 @@ def process_sprite(
 
     Returns a summary dict with processing metadata.
     """
+    _require_pil()
     img = Image.open(source_path).convert("RGBA")
     src_w, src_h = img.size
 

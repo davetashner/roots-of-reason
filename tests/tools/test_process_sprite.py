@@ -15,6 +15,14 @@ sys.path.insert(0, str(TOOLS_DIR))
 
 import process_sprite as ps
 
+try:
+    from PIL import Image as _PIL_Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
+requires_pil = pytest.mark.skipif(not HAS_PIL, reason="Pillow not installed")
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -167,6 +175,7 @@ class TestFootprintToCanvas:
 # Magenta restoration
 # ---------------------------------------------------------------------------
 
+@requires_pil
 class TestRestoreMagenta:
     def test_restores_blended_magenta(self):
         from PIL import Image
@@ -210,6 +219,7 @@ class TestRestoreMagenta:
 # Full processing
 # ---------------------------------------------------------------------------
 
+@requires_pil
 class TestProcessSprite:
     def test_basic_processing(self, tmp_path):
         source = tmp_path / "source.png"
@@ -271,6 +281,7 @@ class TestProcessSprite:
 # CLI
 # ---------------------------------------------------------------------------
 
+@requires_pil
 class TestCLI:
     def test_dry_run_cli(self, tmp_path):
         source = tmp_path / "house_01.png"
