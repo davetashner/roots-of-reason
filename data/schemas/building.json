@@ -27,7 +27,17 @@
       "maxItems": 2
     },
     "build_time": { "type": "number", "minimum": 0 },
-    "build_cost": { "type": "object" },
+    "build_cost": {
+      "type": "object",
+      "properties": {
+        "food": { "type": "number", "minimum": 0 },
+        "wood": { "type": "number", "minimum": 0 },
+        "stone": { "type": "number", "minimum": 0 },
+        "gold": { "type": "number", "minimum": 0 },
+        "knowledge": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
     "population_bonus": { "type": "integer", "minimum": 0 },
     "garrison_capacity": { "type": "integer", "minimum": 0 },
     "is_drop_off": { "type": "boolean" },
