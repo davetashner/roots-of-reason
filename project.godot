@@ -24,6 +24,7 @@ CivBonusManager="*res://scripts/autoloads/civ_bonus_manager.gd"
 SaveManager="*res://scripts/autoloads/save_manager.gd"
 SettingsManager="*res://scripts/autoloads/settings_manager.gd"
 EventBus="*res://scripts/autoloads/event_bus.gd"
+DebugServer="*res://scripts/debug/debug_server.gd"
 
 [display]
 
