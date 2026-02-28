@@ -9,6 +9,8 @@ additionalProperties enforcement.
 Cross-reference checks:
   - Tech prerequisites must reference existing tech IDs
   - Tech age values must be valid age indices (0-6)
+  - Tech unlock_buildings entries must reference existing building data files
+    (warnings only — missing files are flagged but do not fail validation)
 """
 from __future__ import annotations
 
@@ -25,6 +27,7 @@ from typing import Any
 _NO_COLOR = os.environ.get("NO_COLOR") or not sys.stdout.isatty()
 _GREEN = "" if _NO_COLOR else "\033[0;32m"
 _RED = "" if _NO_COLOR else "\033[0;31m"
+_YELLOW = "" if _NO_COLOR else "\033[0;33m"
 _CYAN = "" if _NO_COLOR else "\033[0;36m"
 _RESET = "" if _NO_COLOR else "\033[0m"
 
@@ -35,6 +38,10 @@ def _ok(msg: str) -> None:
 
 def _err(msg: str) -> None:
     print(f"{_RED}\u2716{_RESET} {msg}")
+
+
+def _warn(msg: str) -> None:
+    print(f"{_YELLOW}\u26a0{_RESET} {msg}")
 
 
 def _info(msg: str) -> None:
@@ -223,26 +230,38 @@ MAX_AGE_INDEX = 6
 
 def cross_reference_checks(
     data_dir: Path, verbose: bool = False
-) -> list[str]:
-    """Run cross-reference validation on tech data."""
+) -> tuple[list[str], list[str]]:
+    """Run cross-reference validation on tech data.
+
+    Returns a tuple of (errors, warnings). Errors cause a non-zero exit;
+    warnings are informational and do not fail validation.
+    """
     errors: list[str] = []
+    warnings: list[str] = []
     tech_file = data_dir / "tech" / "tech_tree.json"
     ages_file = data_dir / "tech" / "ages.json"
     base_dir = data_dir.parent
 
     if not tech_file.exists():
-        return errors
+        return errors, warnings
 
     try:
         with open(tech_file, "r", encoding="utf-8") as fh:
             techs = json.load(fh)
     except (json.JSONDecodeError, OSError):
-        return errors  # parse errors already reported
+        return errors, warnings  # parse errors already reported
 
     if not isinstance(techs, list):
-        return errors
+        return errors, warnings
 
     tech_ids = {t["id"] for t in techs if isinstance(t, dict) and "id" in t}
+
+    # Collect known building IDs from data/buildings/*.json filenames
+    buildings_dir = data_dir / "buildings"
+    known_building_ids: set[str] = set()
+    if buildings_dir.is_dir():
+        for bfile in buildings_dir.glob("*.json"):
+            known_building_ids.add(bfile.stem)
 
     # Load valid age indices from ages.json if available
     valid_age_indices: set[int] = set()
@@ -282,7 +301,21 @@ def cross_reference_checks(
                 f"(valid: {sorted(valid_age_indices)})"
             )
 
-    return errors
+        # Check unlock_buildings references (warnings only)
+        if known_building_ids:
+            effects = tech.get("effects", {})
+            if isinstance(effects, dict):
+                for building_id in effects.get("unlock_buildings", []):
+                    if building_id not in known_building_ids:
+                        tech_id = tech.get("id", f"[{i}]")
+                        warnings.append(
+                            f"{rel_path}[{i}] (tech '{tech_id}'): "
+                            f"unlock_buildings references unknown building "
+                            f"'{building_id}' — no matching file in "
+                            f"data/buildings/"
+                        )
+
+    return errors, warnings
 
 
 # ---------------------------------------------------------------------------
@@ -290,8 +323,12 @@ def cross_reference_checks(
 # ---------------------------------------------------------------------------
 def run(
     data_dir: Path | None = None, verbose: bool = False
-) -> tuple[int, int, list[str]]:
-    """Run all validations. Returns (files_checked, error_count, error_msgs)."""
+) -> tuple[int, int, list[str], list[str]]:
+    """Run all validations.
+
+    Returns (files_checked, error_count, error_msgs, warning_msgs).
+    Errors cause a non-zero exit; warnings are informational only.
+    """
     if data_dir is None:
         data_dir = _project_root() / "data"
 
@@ -302,6 +339,7 @@ def run(
 
     files = discover_files(data_dir)
     all_errors: list[str] = []
+    all_warnings: list[str] = []
     files_checked = 0
     error_files: set[str] = set()
 
@@ -357,15 +395,21 @@ def run(
                 )
 
     # Cross-reference checks
-    xref_errors = cross_reference_checks(data_dir, verbose=verbose)
+    xref_errors, xref_warnings = cross_reference_checks(data_dir, verbose=verbose)
     if xref_errors:
         for e in xref_errors:
             _err(e)
         all_errors.extend(xref_errors)
     elif verbose and (data_dir / "tech" / "tech_tree.json").exists():
         _info("Cross-reference check: all prerequisites valid... OK")
+    if xref_warnings:
+        for w in xref_warnings:
+            _warn(w)
+        all_warnings.extend(xref_warnings)
+    elif verbose and (data_dir / "tech" / "tech_tree.json").exists():
+        _info("Cross-reference check: all unlock_buildings references valid... OK")
 
-    return files_checked, len(all_errors), all_errors
+    return files_checked, len(all_errors), all_errors, all_warnings
 
 
 def main() -> None:
@@ -383,11 +427,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    files_checked, error_count, _ = run(
+    files_checked, error_count, _, warnings = run(
         data_dir=args.data_dir, verbose=args.verbose
     )
 
     print()
+    if warnings:
+        _warn(f"{len(warnings)} warning(s) found (non-fatal)")
     if error_count == 0:
         _ok(f"All {files_checked} data files passed validation")
         sys.exit(0)
