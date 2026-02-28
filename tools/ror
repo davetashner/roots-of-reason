@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Requires bash 4+ for associative arrays. Install via: brew install bash
 # ror — Roots of Reason developer CLI
 # Usage: ror <command> [options]
 set -euo pipefail
@@ -60,6 +61,220 @@ ensure_gdtoolkit() {
 }
 
 # ==================== test ====================
+
+# Map a changed .gd file to its test file path (relative to project root).
+# scripts/foo/bar.gd  -> tests/foo/test_bar.gd
+# tests/foo/test_x.gd -> tests/foo/test_x.gd (already a test)
+# Returns empty string if no mapping exists.
+_map_to_test_file() {
+    local file="$1"
+    if [[ "$file" == tests/* ]]; then
+        # Already a test file — include it directly
+        if [[ -f "$file" ]]; then
+            echo "$file"
+        fi
+        return
+    fi
+    if [[ "$file" != scripts/* ]]; then
+        return
+    fi
+    # scripts/foo/bar.gd -> tests/foo/test_bar.gd
+    local rel="${file#scripts/}"
+    local dir rel_dir base test_path
+    dir="$(dirname "$rel")"
+    base="$(basename "$rel")"
+    if [[ "$dir" == "." ]]; then
+        test_path="tests/test_${base}"
+    else
+        test_path="tests/${dir}/test_${base}"
+    fi
+    if [[ -f "$test_path" ]]; then
+        echo "$test_path"
+    fi
+}
+
+# Resolve --changed: find test files affected by local changes.
+# Prints file paths to stdout (one per line). Info messages go to stderr.
+_resolve_changed_tests() {
+    local -a test_files=()
+    local -a changed_files=()
+
+    # Uncommitted changes (staged + unstaged)
+    while IFS= read -r f; do
+        [[ -n "$f" ]] && changed_files+=("$f")
+    done < <(git diff --name-only HEAD -- '*.gd' 2>/dev/null)
+
+    # Staged but not yet committed
+    while IFS= read -r f; do
+        [[ -n "$f" ]] && changed_files+=("$f")
+    done < <(git diff --cached --name-only -- '*.gd' 2>/dev/null)
+
+    # Changes since merge-base with main (for feature branches)
+    local merge_base
+    merge_base=$(git merge-base HEAD origin/main 2>/dev/null || echo "")
+    if [[ -n "$merge_base" ]]; then
+        while IFS= read -r f; do
+            [[ -n "$f" ]] && changed_files+=("$f")
+        done < <(git diff --name-only "$merge_base" HEAD -- '*.gd' 2>/dev/null)
+    fi
+
+    # Deduplicate
+    local -A seen=()
+    for f in "${changed_files[@]}"; do
+        local test_file
+        test_file=$(_map_to_test_file "$f")
+        if [[ -n "$test_file" ]] && [[ -z "${seen[$test_file]:-}" ]]; then
+            seen["$test_file"]=1
+            test_files+=("$test_file")
+        fi
+    done
+
+    if [[ ${#test_files[@]} -eq 0 ]]; then
+        warn "No changed test files found — nothing to run" >&2
+        return 1
+    fi
+
+    info "Running ${#test_files[@]} changed test file(s):" >&2
+    for tf in "${test_files[@]}"; do
+        printf "  %s\n" "$tf" >&2
+    done
+
+    # Output file paths to stdout only
+    printf '%s\n' "${test_files[@]}"
+}
+
+# Run a single Godot test process with the given --add arguments.
+# Usage: _run_godot_tests <godot> <live> <test_args...>
+_run_godot_tests() {
+    local godot="$1"
+    local live="$2"
+    shift 2
+    local test_args=("$@")
+
+    local godot_flags=("-s" "-d")
+    if $live; then
+        godot_flags+=("--verbose")
+        printf "${BOLD}Running GdUnit4 tests (live) …${RESET}\n"
+        info "Godot window will display test scenes — output streams in real time"
+        if command -v stdbuf &>/dev/null; then
+            stdbuf -oL "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+        else
+            "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+        fi
+    else
+        "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+    fi
+    return $?
+}
+
+# Run tests sharded across N parallel Godot processes.
+_run_sharded_tests() {
+    local godot="$1"
+    local jobs="$2"
+    shift 2
+    local test_args=("$@")
+
+    # Discover all test files from the provided paths
+    local -a all_test_files=()
+    local i=0
+    while [[ $i -lt ${#test_args[@]} ]]; do
+        if [[ "${test_args[$i]}" == "--add" ]]; then
+            i=$((i + 1))
+            local path="${test_args[$i]}"
+            # Convert res:// to filesystem path
+            path="${path#res://}"
+            if [[ -d "$path" ]]; then
+                while IFS= read -r f; do
+                    all_test_files+=("$f")
+                done < <(find "$path" -name "test_*.gd" -type f | sort)
+            elif [[ -f "$path" ]]; then
+                all_test_files+=("$path")
+            fi
+        fi
+        i=$((i + 1))
+    done
+
+    local total=${#all_test_files[@]}
+    if [[ $total -eq 0 ]]; then
+        warn "No test files found"
+        return 0
+    fi
+
+    # Cap jobs at file count
+    if [[ $jobs -gt $total ]]; then
+        jobs=$total
+    fi
+
+    info "Sharding $total test files across $jobs parallel processes"
+
+    # Distribute files round-robin into shard arrays
+    local -a pids=()
+    local -a shard_logs=()
+    local shard_size=$(( (total + jobs - 1) / jobs ))
+
+    for (( j=0; j<jobs; j++ )); do
+        local -a shard_args=()
+        for (( k=j; k<total; k+=jobs )); do
+            shard_args+=("--add" "res://${all_test_files[$k]}")
+        done
+
+        if [[ ${#shard_args[@]} -eq 0 ]]; then
+            continue
+        fi
+
+        local log_file
+        log_file=$(mktemp "${TMPDIR:-/tmp}/ror-shard-${j}-XXXXXX.log")
+        shard_logs+=("$log_file")
+
+        info "Shard $((j+1))/$jobs: ${#shard_args[@]} args ($(( ${#shard_args[@]} / 2 )) files)"
+
+        (
+            "$godot" --path . -s --headless \
+                res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+                --ignoreHeadlessMode \
+                -rd "reports/shard_${j}" \
+                "${shard_args[@]}" \
+                > "$log_file" 2>&1
+        ) &
+        pids+=($!)
+    done
+
+    # Wait for all shards and track exit codes.
+    # GdUnit4 exit codes: 0 = pass, 100 = failure, 101 = orphan warning (still pass).
+    local worst_exit=0
+    local shard_idx=0
+    for pid in "${pids[@]}"; do
+        local shard_exit=0
+        wait "$pid" || shard_exit=$?
+        # Treat 101 (orphan warning) as success — same as single-process runner
+        local effective_exit=$shard_exit
+        if [[ $effective_exit -eq 101 ]]; then
+            effective_exit=0
+        fi
+        if [[ $effective_exit -gt $worst_exit ]]; then
+            worst_exit=$effective_exit
+        fi
+        # Print shard output
+        printf "\n${BOLD}── Shard %d/%d (exit %d) ──${RESET}\n" "$((shard_idx+1))" "${#pids[@]}" "$shard_exit"
+        # Show only the summary line from each shard
+        grep -E "^(Statistics:|Overall Summary:)" "${shard_logs[$shard_idx]}" 2>/dev/null || tail -5 "${shard_logs[$shard_idx]}"
+        shard_idx=$((shard_idx + 1))
+    done
+
+    # On failure, keep logs for debugging; on success, clean up
+    if [[ $worst_exit -gt 0 ]]; then
+        for (( si=0; si<${#shard_logs[@]}; si++ )); do
+            info "Shard $((si+1)) log: ${shard_logs[$si]}"
+        done
+    else
+        for log in "${shard_logs[@]}"; do
+            rm -f "$log"
+        done
+    fi
+
+    return $worst_exit
+}
+
 cmd_test() {
     local godot
     if ! godot=$(find_godot); then
@@ -70,20 +285,42 @@ cmd_test() {
     info "Using Godot: $godot"
 
     local live=false
+    local changed=false
+    local jobs=0
     local test_args=()
     local raw_args=()
 
-    # Separate --live flag from test path arguments
+    # Parse flags
     for arg in "$@"; do
-        if [[ "$arg" == "--live" ]]; then
-            live=true
-        else
-            raw_args+=("$arg")
-        fi
+        case "$arg" in
+            --live)    live=true ;;
+            --changed) changed=true ;;
+            --jobs=*)  jobs="${arg#--jobs=}" ;;
+            --jobs)    err "--jobs requires a value (e.g., --jobs=4)"; exit 1 ;;
+            *)         raw_args+=("$arg") ;;
+        esac
     done
 
+    cd "$PROJECT_ROOT"
+
+    # Handle --changed: resolve affected test files
+    if $changed; then
+        local -a changed_files=()
+        while IFS= read -r f; do
+            [[ -n "$f" ]] && changed_files+=("$f")
+        done < <(_resolve_changed_tests)
+
+        if [[ ${#changed_files[@]} -eq 0 ]]; then
+            return 0
+        fi
+
+        for tf in "${changed_files[@]}"; do
+            raw_args+=("$tf")
+        done
+    fi
+
+    # Build GdUnit4 --add arguments
     if [[ ${#raw_args[@]} -gt 0 ]]; then
-        # Convert filesystem paths to res:// paths for GdUnit4
         for arg in "${raw_args[@]}"; do
             if [[ "$arg" == tests/* ]] || [[ "$arg" == ./tests/* ]]; then
                 arg="${arg#./}"
@@ -98,31 +335,24 @@ cmd_test() {
         test_args=("--add" "res://tests")
     fi
 
-    cd "$PROJECT_ROOT"
-
     # Ensure .godot cache is fresh (needed for class resolution)
     info "Importing project resources ..."
     "$godot" --headless --path . --import >/dev/null 2>&1 || true
 
-    local godot_flags=("-s" "-d")
-    if $live; then
-        godot_flags+=("--verbose")
-        printf "${BOLD}Running GdUnit4 tests (live) …${RESET}\n"
-        info "Godot window will display test scenes — output streams in real time"
-        # Use stdbuf to disable output buffering for live streaming
-        if command -v stdbuf &>/dev/null; then
-            stdbuf -oL "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
-        else
-            "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
-        fi
+    local exit_code=0
+
+    if [[ $jobs -gt 1 ]]; then
+        printf "${BOLD}Running GdUnit4 tests (${jobs} parallel shards) …${RESET}\n"
+        _run_sharded_tests "$godot" "$jobs" "${test_args[@]}" || exit_code=$?
     else
         printf "${BOLD}Running GdUnit4 tests …${RESET}\n"
-        "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+        _run_godot_tests "$godot" "$live" "${test_args[@]}" || exit_code=$?
     fi
-    local exit_code=$?
 
-    # Copy logs silently
-    "$godot" --headless --path . --quiet -s res://addons/gdUnit4/bin/GdUnitCopyLog.gd "${test_args[@]}" >/dev/null 2>&1 || true
+    # Copy logs silently (skip for sharded runs — each shard writes its own)
+    if [[ $jobs -le 1 ]]; then
+        "$godot" --headless --path . --quiet -s res://addons/gdUnit4/bin/GdUnitCopyLog.gd "${test_args[@]}" >/dev/null 2>&1 || true
+    fi
 
     echo ""
     if [[ $exit_code -eq 0 ]]; then
@@ -600,12 +830,14 @@ ${BOLD}USAGE${RESET}
   ror <command> [options]
 
 ${BOLD}COMMANDS${RESET}
-  test [path...] [--live]
+  test [path...] [--live] [--changed] [--jobs=N]
                       Run GdUnit4 tests
                         ror test                    — run all tests
                         ror test tests/autoloads/   — run a subset
                         ror test --live             — stream output in real time
                         ror test tests/ui/ --live   — live subset run
+                        ror test --changed          — only test changed files
+                        ror test --jobs=4           — run tests in 4 parallel shards
   lint [--fix] [path] Run gdlint + gdformat check
                         ror lint                    — check scripts/ tests/
                         ror lint --fix              — auto-format then lint
