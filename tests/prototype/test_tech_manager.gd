@@ -24,6 +24,7 @@ func after_test() -> void:
 	GameManager.game_speed = 1.0
 	GameManager.game_time = _original_game_time
 	ResourceManager._stockpiles = _original_stockpiles
+	GameUtils.clear_autoload_cache()
 
 
 func _create_tech_manager() -> Node:
