@@ -24,6 +24,16 @@ func _create_ai_economy(
 	pop_mgr: Node = null,
 	difficulty: String = "normal",
 ) -> Node:
+	return _create_ai_economy_with_mocks(scene_root, pop_mgr, difficulty, null, null)
+
+
+func _create_ai_economy_with_mocks(
+	scene_root: Node = null,
+	pop_mgr: Node = null,
+	difficulty: String = "normal",
+	map_node: Node = null,
+	pathfinder: Node = null,
+) -> Node:
 	if scene_root == null:
 		scene_root = self
 	var ai := Node.new()
@@ -33,7 +43,7 @@ func _create_ai_economy(
 	add_child(ai)
 	if pop_mgr == null:
 		pop_mgr = _create_pop_manager()
-	ai.setup(scene_root, pop_mgr, null, null, null)
+	ai.setup(scene_root, pop_mgr, pathfinder, map_node, null)
 	return auto_free(ai)
 
 
@@ -147,11 +157,14 @@ func test_difficulty_selects_correct_build_order() -> void:
 	# Easy has different step count than hard
 	assert_bool(ai_easy._build_order.size() > 0).is_true()
 	assert_bool(ai_hard._build_order.size() > 0).is_true()
-	# Easy first train step count is 4, hard is 5
+	# Easy first step is train villager count=4
 	var easy_step: Dictionary = ai_easy._build_order[0]
-	var hard_step: Dictionary = ai_hard._build_order[0]
 	assert_int(int(easy_step.get("count", 0))).is_equal(4)
-	assert_int(int(hard_step.get("count", 0))).is_equal(5)
+	# Hard first step is build town_center (nomadic), second is train count=5
+	var hard_step: Dictionary = ai_hard._build_order[0]
+	assert_str(str(hard_step.get("action", ""))).is_equal("build")
+	var hard_train: Dictionary = ai_hard._build_order[1]
+	assert_int(int(hard_train.get("count", 0))).is_equal(5)
 
 
 # --- Target allocation ---
@@ -469,6 +482,118 @@ func test_load_state_restores_trained_count() -> void:
 	assert_int(ai2._build_order_index).is_equal(2)
 	assert_int(int(ai2._trained_count.get("0", 0))).is_equal(3)
 	assert_int(int(ai2._trained_count.get("1", 0))).is_equal(2)
+
+
+# --- Nomadic start (hard/expert) ---
+
+
+func test_hard_build_order_starts_with_tc() -> void:
+	var ai := _create_ai_economy(null, null, "hard")
+	assert_bool(ai._build_order.size() > 0).is_true()
+	var first_step: Dictionary = ai._build_order[0]
+	assert_str(str(first_step.get("action", ""))).is_equal("build")
+	assert_str(str(first_step.get("building", ""))).is_equal("town_center")
+
+
+func test_expert_build_order_starts_with_tc() -> void:
+	var ai := _create_ai_economy(null, null, "expert")
+	var first_step: Dictionary = ai._build_order[0]
+	assert_str(str(first_step.get("action", ""))).is_equal("build")
+	assert_str(str(first_step.get("building", ""))).is_equal("town_center")
+
+
+func test_nomadic_tick_skips_house_check_when_no_tc() -> void:
+	_init_ai_resources(1000, 1000, 1000, 1000)
+	var pop_mgr := _create_pop_manager(0)
+	var map_mock := _MockMap.new()
+	add_child(map_mock)
+	auto_free(map_mock)
+	var pf_mock := _MockPathfinder.new()
+	add_child(pf_mock)
+	auto_free(pf_mock)
+	var ai := _create_ai_economy_with_mocks(self, pop_mgr, "hard", map_mock, pf_mock)
+	ai._build_planner.spawn_position = Vector2i(10, 10)
+	# Register a couple units near cap (which would trigger house build normally)
+	for i in 3:
+		var dummy := Node2D.new()
+		add_child(dummy)
+		auto_free(dummy)
+		pop_mgr.register_unit(dummy, 1)
+	# Tick — should NOT build a house (no TC), should build TC instead
+	ai._tick_timer = 2.0
+	ai._process(2.0)
+	# Build order index should advance (TC placed)
+	assert_int(ai._build_order_index).is_greater(0)
+
+
+func test_find_valid_placement_uses_spawn_position_for_initial_tc() -> void:
+	var pop_mgr := _create_pop_manager()
+	var map_mock := _MockMap.new()
+	add_child(map_mock)
+	auto_free(map_mock)
+	var pf_mock := _MockPathfinder.new()
+	add_child(pf_mock)
+	auto_free(pf_mock)
+	var ai := _create_ai_economy_with_mocks(self, pop_mgr, "hard", map_mock, pf_mock)
+	ai._build_planner.spawn_position = Vector2i(20, 20)
+	# No TC — find placement for town_center should use spawn_position
+	var pos: Vector2i = ai._build_planner._find_valid_placement(Vector2i(3, 3), "town_center", null)
+	assert_bool(pos != Vector2i(-1, -1)).is_true()
+	# Should be near spawn position
+	var dist: int = absi(pos.x - 20) + absi(pos.y - 20)
+	assert_int(dist).is_less(20)
+
+
+func test_find_valid_placement_returns_invalid_without_spawn() -> void:
+	var pop_mgr := _create_pop_manager()
+	var map_mock := _MockMap.new()
+	add_child(map_mock)
+	auto_free(map_mock)
+	var pf_mock := _MockPathfinder.new()
+	add_child(pf_mock)
+	auto_free(pf_mock)
+	var ai := _create_ai_economy_with_mocks(self, pop_mgr, "hard", map_mock, pf_mock)
+	# No spawn_position set, no TC — should fail
+	var pos: Vector2i = ai._build_planner._find_valid_placement(Vector2i(3, 3), "town_center", null)
+	assert_bool(pos == Vector2i(-1, -1)).is_true()
+
+
+func test_initial_tc_build_assigns_all_villagers() -> void:
+	_init_ai_resources(1000, 1000, 1000, 1000)
+	var pop_mgr := _create_pop_manager()
+	var map_mock := _MockMap.new()
+	add_child(map_mock)
+	auto_free(map_mock)
+	var pf_mock := _MockPathfinder.new()
+	add_child(pf_mock)
+	auto_free(pf_mock)
+	var ai := _create_ai_economy_with_mocks(self, pop_mgr, "hard", map_mock, pf_mock)
+	ai._build_planner.spawn_position = Vector2i(10, 10)
+	# Create villagers
+	var v1 := _create_villager(1, IsoUtils.grid_to_screen(Vector2(10, 10)))
+	var v2 := _create_villager(1, IsoUtils.grid_to_screen(Vector2(11, 10)))
+	ai._refresh_entity_lists()
+	# Process build order — should place TC and assign all villagers
+	ai._process_build_order()
+	# Both villagers should be building (not idle)
+	assert_bool(v1.is_idle()).is_false()
+	assert_bool(v2.is_idle()).is_false()
+
+
+func test_save_load_preserves_spawn_position() -> void:
+	_init_ai_resources()
+	var ai := _create_ai_economy(null, null, "hard")
+	ai._build_planner.spawn_position = Vector2i(25, 30)
+	var state: Dictionary = ai.save_state()
+	assert_bool(state.has("spawn_position")).is_true()
+	var sp: Array = state["spawn_position"]
+	assert_int(int(sp[0])).is_equal(25)
+	assert_int(int(sp[1])).is_equal(30)
+	# Load into fresh instance
+	var ai2 := _create_ai_economy(null, null, "hard")
+	ai2.load_state(state)
+	assert_int(ai2._build_planner.spawn_position.x).is_equal(25)
+	assert_int(ai2._build_planner.spawn_position.y).is_equal(30)
 
 
 # --- Mock helpers ---

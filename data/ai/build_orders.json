@@ -32,6 +32,7 @@
   },
   "hard": {
     "steps": [
+      { "action": "build", "building": "town_center" },
       { "action": "train", "unit": "villager", "count": 5 },
       { "action": "build", "building": "house" },
       { "action": "train", "unit": "villager", "count": 5 },
@@ -48,6 +49,7 @@
   },
   "expert": {
     "steps": [
+      { "action": "build", "building": "town_center" },
       { "action": "train", "unit": "villager", "count": 6 },
       { "action": "build", "building": "house" },
       { "action": "train", "unit": "villager", "count": 6 },

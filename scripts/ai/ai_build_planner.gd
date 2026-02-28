@@ -23,6 +23,7 @@ var build_order_index: int = 0
 var trained_count: Dictionary = {}
 var destroyed_tc_positions: Array[Vector2i] = []
 var tr_config: Dictionary = {}
+var spawn_position: Vector2i = Vector2i(-1, -1)
 
 var _scene_root: Node = null
 var _population_manager: Node = null
@@ -213,10 +214,14 @@ func _process_build_step(step: Dictionary, town_center: Node2D) -> bool:
 	if building_name == "":
 		build_order_index += 1
 		return false
-	if building_name == "town_center" and not _should_build_forward_tc(town_center):
+	# Skip forward-TC gate when placing initial TC (nomadic start — no TC yet)
+	var is_initial_tc: bool = building_name == "town_center" and town_center == null
+	if building_name == "town_center" and not is_initial_tc and not _should_build_forward_tc(town_center):
 		return false
 	var building := place_building(building_name, town_center)
 	if building != null:
+		if is_initial_tc:
+			_assign_all_villagers_to_build(building)
 		build_order_index += 1
 		return true
 	return false
@@ -304,9 +309,14 @@ func _find_valid_placement(
 	building_name: String,
 	town_center: Node2D,
 ) -> Vector2i:
+	var tc_pos: Vector2i
 	if town_center == null:
-		return Vector2i(-1, -1)
-	var tc_pos: Vector2i = town_center.grid_pos
+		if building_name == "town_center" and spawn_position != Vector2i(-1, -1):
+			tc_pos = spawn_position
+		else:
+			return Vector2i(-1, -1)
+	else:
+		tc_pos = town_center.grid_pos
 	var radius: int = int(config.get("building_search_radius", 15))
 	var avoid_radius: int = 0
 	if building_name == "town_center":
@@ -357,6 +367,12 @@ func _try_attach_production_queue(building: Node2D) -> void:
 	building.add_child(pq)
 	pq.setup(building, player_id, _population_manager)
 	pq.unit_produced.connect(on_unit_produced)
+
+
+func _assign_all_villagers_to_build(building: Node2D) -> void:
+	for villager in _own_villagers:
+		if villager.has_method("assign_build_target"):
+			villager.assign_build_target(building)
 
 
 func _find_nearest_idle_villager(target_pos: Vector2) -> Node2D:
