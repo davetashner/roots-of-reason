@@ -113,6 +113,7 @@ func _start_game() -> void:
 	_entity_registry = EntityRegistryScript.new()
 	_bootstrapper.setup_civilizations()
 	_bootstrapper.setup_units()
+	_center_camera_on_start()
 	_bootstrapper.setup_demo_entities()
 	_bootstrapper.setup_fauna()
 	_bootstrapper.setup_tech()
@@ -264,6 +265,11 @@ func _setup_camera() -> void:
 		max_pos.y = maxf(max_pos.y, corner.y)
 	var bounds := Rect2(min_pos, max_pos - min_pos)
 	_camera.setup(bounds)
+
+
+func _center_camera_on_start() -> void:
+	var start_pos: Vector2i = _bootstrapper.get_start_position(0)
+	_camera.position = IsoUtils.grid_to_screen(Vector2(start_pos))
 
 
 func _setup_pathfinding() -> void:
