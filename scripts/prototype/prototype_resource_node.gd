@@ -8,6 +8,10 @@ signal regen_started(node: Node2D)
 const SIZE: float = 10.0
 
 var entity_category: String = "resource_node"
+## Logical grid cell where this resource was placed (before visual cluster offset).
+## Used for pathfinding so villagers navigate to the walkable tile, not the
+## offset screen position which may map to an adjacent impassable tile.
+var grid_position: Vector2i = Vector2i.ZERO
 var resource_name: String = ""
 var resource_type: String = ""
 var total_yield: int = 0
@@ -204,6 +208,8 @@ func save_state() -> Dictionary:
 		"regen_delay_timer": _regen_delay_timer,
 		"regen_accum": _regen_accum,
 		"variant_index": variant_index,
+		"grid_position_x": grid_position.x,
+		"grid_position_y": grid_position.y,
 	}
 
 
@@ -220,6 +226,10 @@ func load_state(data: Dictionary) -> void:
 	_regen_delay_timer = float(data.get("regen_delay_timer", 0.0))
 	_regen_accum = float(data.get("regen_accum", 0.0))
 	variant_index = int(data.get("variant_index", 0))
+	grid_position = Vector2i(
+		int(data.get("grid_position_x", 0)),
+		int(data.get("grid_position_y", 0)),
+	)
 	# Reload config for color and regen properties
 	var cfg: Dictionary = _load_resource_config(resource_name)
 	if not cfg.is_empty():
