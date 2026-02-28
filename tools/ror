@@ -151,9 +151,9 @@ _run_godot_tests() {
     shift 2
     local test_args=("$@")
 
-    local godot_flags=("-s" "-d")
+    local godot_flags=("-s")
     if $live; then
-        godot_flags+=("--verbose")
+        godot_flags+=("-d" "--verbose")
         printf "${BOLD}Running GdUnit4 tests (live) …${RESET}\n"
         info "Godot window will display test scenes — output streams in real time"
         if command -v stdbuf &>/dev/null; then
@@ -162,6 +162,7 @@ _run_godot_tests() {
             "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
         fi
     else
+        godot_flags+=("--headless")
         "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
     fi
     return $?
