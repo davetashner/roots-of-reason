@@ -4,6 +4,47 @@ extends GdUnitTestSuite
 const DebugServerScript := preload("res://scripts/debug/debug_server.gd")
 
 
+class MockUnit:
+	extends Node2D
+	var entity_category: String = "own_unit"
+	var owner_id: int = 0
+	var unit_category: String = "villager"
+	var unit_type: String = "land"
+	var hp: int = 50
+	var max_hp: int = 50
+	var selected: bool = false
+	var _gather_state: int = 0
+	var _gather_type: String = ""
+	var _carried_amount: int = 0
+	var _carry_capacity: int = 10
+	var _combat_state: int = 0
+	var _moving: bool = false
+
+
+class MockResource:
+	extends Node2D
+	var entity_category: String = "resource_node"
+	var resource_name: String = "forest"
+	var resource_type: String = "wood"
+	var current_yield: int = 150
+	var total_yield: int = 200
+	var grid_position: Vector2i = Vector2i(5, 10)
+
+
+class MockBuilding:
+	extends Node2D
+	var entity_category: String = "own_building"
+	var owner_id: int = 0
+	var building_name: String = "barracks"
+	var hp: int = 800
+	var max_hp: int = 1000
+	var is_drop_off: bool = false
+	var drop_off_types: Array[String] = []
+	var grid_pos: Vector2i = Vector2i(3, 7)
+	var under_construction: bool = true
+	var selected: bool = false
+
+
 func test_should_activate_returns_false_without_flag() -> void:
 	# _should_activate is static so we can call it directly.
 	# In the test runner, --debug-server is not passed.
@@ -162,3 +203,143 @@ func test_parse_command_body_non_dict_json() -> void:
 func test_parse_command_body_array_json() -> void:
 	var result := DebugServerScript.parse_command_body("[1, 2, 3]")
 	assert_str(result.get("error", "")).is_equal("invalid JSON")
+
+
+# -- parse_query_string tests --
+
+
+func test_parse_query_string_empty() -> void:
+	var result := DebugServerScript.parse_query_string("")
+	assert_dict(result).is_empty()
+
+
+func test_parse_query_string_single_param() -> void:
+	var result := DebugServerScript.parse_query_string("category=unit")
+	assert_str(result.get("category", "")).is_equal("unit")
+
+
+func test_parse_query_string_multiple_params() -> void:
+	var result := DebugServerScript.parse_query_string("category=unit&owner=0&type=villager")
+	assert_str(result.get("category", "")).is_equal("unit")
+	assert_str(result.get("owner", "")).is_equal("0")
+	assert_str(result.get("type", "")).is_equal("villager")
+
+
+func test_parse_query_string_no_value_skipped() -> void:
+	var result := DebugServerScript.parse_query_string("novalue")
+	assert_dict(result).is_empty()
+
+
+# -- serialize_entity tests --
+
+
+func test_serialize_entity_unit() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.name = "TestUnit"
+	var result := DebugServerScript.serialize_entity(unit)
+	assert_str(result.get("name", "")).is_equal("TestUnit")
+	assert_str(result.get("unit_category", "")).is_equal("villager")
+	assert_int(int(result.get("owner_id", -1))).is_equal(0)
+	assert_int(int(result.get("hp", -1))).is_equal(50)
+	assert_str(result.get("action", "")).is_equal("idle")
+
+
+func test_serialize_entity_resource() -> void:
+	var res := MockResource.new()
+	auto_free(res)
+	res.name = "TreeNode"
+	var result := DebugServerScript.serialize_entity(res)
+	assert_str(result.get("entity_category", "")).is_equal("resource_node")
+	assert_str(result.get("resource_name", "")).is_equal("forest")
+	assert_str(result.get("resource_type", "")).is_equal("wood")
+	assert_int(int(result.get("current_yield", 0))).is_equal(150)
+	assert_int(int(result.get("total_yield", 0))).is_equal(200)
+	var grid: Dictionary = result.get("grid_position", {})
+	assert_int(int(grid.get("x", 0))).is_equal(5)
+	assert_int(int(grid.get("y", 0))).is_equal(10)
+
+
+func test_serialize_entity_building() -> void:
+	var bldg := MockBuilding.new()
+	auto_free(bldg)
+	bldg.name = "Barracks"
+	var result := DebugServerScript.serialize_entity(bldg)
+	assert_str(result.get("building_name", "")).is_equal("barracks")
+	assert_int(int(result.get("hp", 0))).is_equal(800)
+	assert_bool(result.get("under_construction", false)).is_true()
+
+
+func test_serialize_entity_empty_category() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = ""
+	var result := DebugServerScript.serialize_entity(unit)
+	assert_dict(result).is_empty()
+
+
+func test_get_unit_action_idle() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	assert_str(DebugServerScript._get_unit_action(unit)).is_equal("idle")
+
+
+func test_get_unit_action_gathering() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit._gather_state = 2
+	assert_str(DebugServerScript._get_unit_action(unit)).is_equal("gathering")
+
+
+func test_get_unit_action_attacking() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit._combat_state = 2
+	assert_str(DebugServerScript._get_unit_action(unit)).is_equal("attacking")
+
+
+func test_get_unit_action_moving() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit._moving = true
+	assert_str(DebugServerScript._get_unit_action(unit)).is_equal("moving")
+
+
+func test_matches_filters_no_filters() -> void:
+	var data := {"entity_category": "unit", "owner_id": 0}
+	assert_bool(DebugServerScript._matches_filters(data, {})).is_true()
+
+
+func test_matches_filters_category_match() -> void:
+	var data := {"entity_category": "resource_node"}
+	assert_bool(DebugServerScript._matches_filters(data, {"category": "resource_node"})).is_true()
+
+
+func test_matches_filters_category_mismatch() -> void:
+	var data := {"entity_category": "own_building"}
+	assert_bool(DebugServerScript._matches_filters(data, {"category": "resource_node"})).is_false()
+
+
+func test_matches_filters_owner_match() -> void:
+	var data := {"entity_category": "unit", "owner_id": 1}
+	assert_bool(DebugServerScript._matches_filters(data, {"owner": "1"})).is_true()
+
+
+func test_matches_filters_owner_mismatch() -> void:
+	var data := {"entity_category": "unit", "owner_id": 0}
+	assert_bool(DebugServerScript._matches_filters(data, {"owner": "1"})).is_false()
+
+
+func test_matches_filters_type_unit_category() -> void:
+	var data := {"entity_category": "own_unit", "unit_category": "villager"}
+	assert_bool(DebugServerScript._matches_filters(data, {"type": "villager"})).is_true()
+
+
+func test_matches_filters_type_resource_type() -> void:
+	var data := {"entity_category": "resource_node", "resource_type": "wood"}
+	assert_bool(DebugServerScript._matches_filters(data, {"type": "wood"})).is_true()
+
+
+func test_matches_filters_type_mismatch() -> void:
+	var data := {"entity_category": "own_unit", "unit_category": "archer"}
+	assert_bool(DebugServerScript._matches_filters(data, {"type": "villager"})).is_false()
