@@ -260,3 +260,34 @@ func test_sprite_state_defaults() -> void:
 	var n := _create_node("food", 100)
 	assert_float(n._half_threshold).is_equal(0.5)
 	assert_float(n._sprite_offset_y).is_equal(0.0)
+
+
+func test_variant_index_defaults_to_zero() -> void:
+	var n := _create_node("food", 100)
+	assert_int(n.variant_index).is_equal(0)
+
+
+func test_variant_index_saved_and_loaded() -> void:
+	var n := _create_node("wood", 200)
+	n.resource_name = "tree"
+	n.variant_index = 3
+	var state: Dictionary = n.save_state()
+	assert_int(int(state["variant_index"])).is_equal(3)
+	var n2 := _create_node()
+	n2.load_state(state)
+	assert_int(n2.variant_index).is_equal(3)
+
+
+func test_variant_index_backward_compat() -> void:
+	# Old save data without variant_index should default to 0
+	var state := {
+		"resource_name": "berry_bush",
+		"resource_type": "food",
+		"total_yield": 100,
+		"current_yield": 50,
+		"position_x": 10.0,
+		"position_y": 20.0,
+	}
+	var n := _create_node()
+	n.load_state(state)
+	assert_int(n.variant_index).is_equal(0)

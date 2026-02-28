@@ -15,6 +15,7 @@ var current_yield: int = 0
 var regenerates: bool = false
 var regen_rate: float = 0.0
 var regen_delay: float = 0.0
+var variant_index: int = 0
 var _regen_accum: float = 0.0
 var _regen_delay_timer: float = 0.0
 var _is_regrowing: bool = false
@@ -50,9 +51,17 @@ func _setup_sprite(cfg: Dictionary) -> void:
 	var states: Dictionary = sprite_cfg.get("states", {})
 	if base_path.is_empty() or states.is_empty():
 		return
-	# Try loading each state texture
+	# Load textures — each state value is either a single filename or an array
 	for state_name: String in states:
-		var file_name: String = str(states[state_name])
+		var value = states[state_name]
+		var file_name: String = ""
+		if value is Array:
+			var files: Array = value
+			if files.is_empty():
+				continue
+			file_name = str(files[variant_index % files.size()])
+		else:
+			file_name = str(value)
 		var full_path: String = base_path + "/" + file_name
 		if ResourceLoader.exists(full_path):
 			_sprite_textures[state_name] = load(full_path)
@@ -194,6 +203,7 @@ func save_state() -> Dictionary:
 		"is_regrowing": _is_regrowing,
 		"regen_delay_timer": _regen_delay_timer,
 		"regen_accum": _regen_accum,
+		"variant_index": variant_index,
 	}
 
 
@@ -209,6 +219,7 @@ func load_state(data: Dictionary) -> void:
 	_is_regrowing = bool(data.get("is_regrowing", false))
 	_regen_delay_timer = float(data.get("regen_delay_timer", 0.0))
 	_regen_accum = float(data.get("regen_accum", 0.0))
+	variant_index = int(data.get("variant_index", 0))
 	# Reload config for color and regen properties
 	var cfg: Dictionary = _load_resource_config(resource_name)
 	if not cfg.is_empty():
