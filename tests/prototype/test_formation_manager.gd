@@ -157,15 +157,15 @@ func test_formation_speed_returns_minimum() -> void:
 	var fm: RefCounted = _create_fm()
 	var u1: Node2D = _create_unit()
 	var u2: Node2D = _create_unit()
-	# Default MOVE_SPEED is 150.0 for both since stats have no speed entry
+	# Default MOVE_SPEED is 105.0 for both since stats have no speed entry
 	var speed: float = fm.get_formation_speed([u1, u2])
-	assert_float(speed).is_equal_approx(150.0, 0.01)
+	assert_float(speed).is_equal_approx(105.0, 0.01)
 
 
 func test_formation_speed_empty_returns_default() -> void:
 	var fm: RefCounted = _create_fm()
 	var speed: float = fm.get_formation_speed([])
-	assert_float(speed).is_equal_approx(150.0, 0.01)
+	assert_float(speed).is_equal_approx(105.0, 0.01)
 
 
 # -- Unit speed override --
@@ -173,8 +173,8 @@ func test_formation_speed_empty_returns_default() -> void:
 
 func test_set_formation_speed_caps_movement() -> void:
 	var u: Node2D = _create_unit()
-	# Default speed is 150
-	assert_float(u.get_move_speed()).is_equal_approx(150.0, 0.01)
+	# Default speed is 105
+	assert_float(u.get_move_speed()).is_equal_approx(105.0, 0.01)
 	u.set_formation_speed(100.0)
 	assert_float(u.get_move_speed()).is_equal_approx(100.0, 0.01)
 
@@ -183,7 +183,7 @@ func test_clear_formation_speed_restores() -> void:
 	var u: Node2D = _create_unit()
 	u.set_formation_speed(100.0)
 	u.clear_formation_speed()
-	assert_float(u.get_move_speed()).is_equal_approx(150.0, 0.01)
+	assert_float(u.get_move_speed()).is_equal_approx(105.0, 0.01)
 
 
 func test_formation_speed_override_saved() -> void:

@@ -17,7 +17,7 @@ const GathererComponentScript := preload("res://scripts/prototype/gatherer_compo
 const CombatantComponentScript := preload("res://scripts/prototype/combatant_component.gd")
 const UnitSpriteHandlerScript := preload("res://scripts/prototype/unit_sprite_handler.gd")
 const RADIUS: float = 12.0
-const MOVE_SPEED: float = 150.0
+const MOVE_SPEED: float = 105.0
 const SELECTION_RING_RADIUS: float = 16.0
 const TILE_SIZE: float = 64.0
 
