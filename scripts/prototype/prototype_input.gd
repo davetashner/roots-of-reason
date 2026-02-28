@@ -344,8 +344,6 @@ func _move_selected(world_pos: Vector2) -> void:
 			var path: Array[Vector2] = _pathfinder.find_path_world(unit_pos, dest)
 			if path.size() > 0 and selected[i].has_method("follow_path"):
 				selected[i].follow_path(path)
-			elif selected[i].has_method("move_to"):
-				selected[i].move_to(dest)
 		return
 	# Fallback: direct movement
 	for i in selected.size():

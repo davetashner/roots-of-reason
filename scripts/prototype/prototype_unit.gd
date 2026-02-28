@@ -703,6 +703,11 @@ func _draw() -> void:
 
 
 func move_to(world_pos: Vector2) -> void:
+	# Reject moves to impassable terrain (mountain, canyon, deep water, etc.)
+	var grid_pos := Vector2i(IsoUtils.screen_to_grid(world_pos))
+	var pf: Node = get_node_or_null("/root/PrototypeMain/PathfindingGrid")
+	if pf and pf.has_method("is_cell_solid") and pf.is_cell_solid(grid_pos):
+		return
 	_path.clear()
 	_path_index = 0
 	_target_pos = world_pos
