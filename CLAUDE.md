@@ -47,6 +47,38 @@ Use `/gdtest` skill to generate test suites for new scripts.
 - **After creating a new GDScript file**, run `/gdtest <path>` to generate its test suite
 - **Available skills:** `/gdtest` (test generation), `/hud` (HUD elements), `/ui-theme` (Godot themes)
 
+## Asset Processing Pipeline
+
+Source sprites (AI-generated, high-res) live at `assets/sprites/buildings/{name}_01.png`.
+Game-ready sprites are processed versions at `assets/sprites/buildings/placeholder/{name}.png`.
+
+### Processing a building source sprite
+
+1. Ensure `data/buildings/{name}.json` exists with correct `footprint` field
+2. Run: `./tools/ror process-sprite assets/sprites/buildings/{name}_01.png`
+3. Validate: `./tools/ror validate-assets -v`
+
+The tool auto-detects the building name, looks up the footprint, downscales to the
+correct canvas size, and preserves magenta (#FF00FF) player color mask pixels.
+
+### Canvas sizes by footprint
+
+| Footprint | Canvas | Example |
+|-----------|--------|---------|
+| 1x1 | 128x128 | Farm |
+| 2x2 | 256x192 | House, Lumber Camp |
+| 3x3 | 384x256 | Town Center, Barracks |
+| 4x4 | 512x320 | Castle |
+| 5x5 | 640x384 | Wonder |
+
+### Checklist for new building art
+
+- [ ] Source sprite saved as `assets/sprites/buildings/{name}_NN.png`
+- [ ] `data/buildings/{name}.json` exists with `footprint` field
+- [ ] `./tools/ror process-sprite` run to generate game-ready asset
+- [ ] `./tools/ror validate-assets` passes
+- [ ] Magenta mask visible in processed sprite (for player color shader)
+
 ### Common Test Failure Causes
 
 When tests fail, check these first before debugging from scratch:

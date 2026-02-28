@@ -801,6 +801,12 @@ cmd_scene_tree() {
     python3 "$SCRIPT_DIR/scene_tree.py" "$@"
 }
 
+# ==================== process-sprite ====================
+cmd_process_sprite() {
+    cd "$PROJECT_ROOT"
+    python3 "$SCRIPT_DIR/process_sprite.py" "$@"
+}
+
 # ==================== validate-assets ====================
 cmd_validate_assets() {
     cd "$PROJECT_ROOT"
@@ -865,6 +871,11 @@ ${BOLD}COMMANDS${RESET}
   data-check [opts]   Validate JSON data files against schemas
                         ror data-check              — check all data files
                         ror data-check --verbose    — show per-file detail
+  process-sprite <source.png> [opts]
+                      Process a source building sprite to game-ready asset
+                        ror process-sprite assets/sprites/buildings/lumber_camp_01.png
+                        ror process-sprite source.png --canvas 256x192 --output out.png
+                        ror process-sprite source.png --building barracks --dry-run
   split-sprites <input.png> [opts]
                       Split a spritesheet into individual tiles
                         ror split-sprites assets/raw/terrain/grass_quad.png --tile-size 128x64
@@ -886,6 +897,7 @@ case "${1:-help}" in
     gen-sprites)        shift; cmd_gen_sprites "$@" ;;
     scene-tree)         shift; cmd_scene_tree "$@" ;;
     validate-assets|va) shift; cmd_validate_assets "$@" ;;
+    process-sprite)     shift; cmd_process_sprite "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
     split-sprites)      shift; cmd_split_sprites "$@" ;;
     help|--help|-h) cmd_help ;;
