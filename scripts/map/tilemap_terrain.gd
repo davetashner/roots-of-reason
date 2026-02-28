@@ -14,6 +14,15 @@ const StartingLocationGenerator := preload("res://scripts/map/starting_location_
 const FaunaGenerator := preload("res://scripts/map/fauna_generator.gd")
 const TerrainMapperScript := preload("res://scripts/map/terrain_mapper.gd")
 
+## Maps water direction (grid offset) to alternative tile ID for shore sprites.
+## Default sprite has waves at top-right (NE), so (0,-1) needs no transform.
+const _SHORE_DIR_TO_ALT := {
+	Vector2i(0, -1): 0,  # NE (default)
+	Vector2i(-1, 0): 1,  # NW (flip_h)
+	Vector2i(1, 0): 2,  # SE (flip_v)
+	Vector2i(0, 1): 3,  # SW (flip_h + flip_v)
+}
+
 var _terrain_config: Dictionary = {}
 var _map_gen_config: Dictionary = {}
 var _tile_grid: Dictionary = {}  # Vector2i -> terrain name
@@ -41,6 +50,9 @@ var _starting_positions: Array = []  # Array[Vector2i]
 
 # Fauna positions
 var _fauna_positions: Dictionary = {}  # fauna_name -> Array[Dictionary]
+
+# Shore orientation data
+var _shore_orientations: Dictionary = {}  # Vector2i -> Vector2i (pos -> water direction)
 
 
 func _ready() -> void:
@@ -217,6 +229,8 @@ func _build_tileset() -> void:
 			evtile.set_custom_data("movement_cost", extra_cost)
 			evtile.set_custom_data("buildable", extra_props.get("buildable", false))
 			evtile.set_custom_data("blocks_los", extra_props.get("blocks_los", false))
+			if extra_name == "shore":
+				_create_shore_alternatives(evsource, evtile)
 			extra_variants.append(source_id)
 			source_id += 1
 			extra_vidx += 1
@@ -242,11 +256,41 @@ func _build_tileset() -> void:
 		extra_tile_data.set_custom_data("movement_cost", extra_cost)
 		extra_tile_data.set_custom_data("buildable", extra_props.get("buildable", false))
 		extra_tile_data.set_custom_data("blocks_los", extra_props.get("blocks_los", false))
+		if extra_name == "shore":
+			_create_shore_alternatives(extra_source, extra_tile_data)
 
 		_source_ids[extra_name] = source_id
 		source_id += 1
 
 	tile_set = ts
+
+
+func _create_shore_alternatives(source: TileSetAtlasSource, base_tile: TileData) -> void:
+	## Create 3 alternative tiles for shore orientation (NW, SE, SW).
+	## Alt 0 is the base tile (NE / default). Copies custom data to each alt.
+	# Alt 1: flip_h (water from NW)
+	source.create_alternative_tile(Vector2i.ZERO)
+	var alt1: TileData = source.get_tile_data(Vector2i.ZERO, 1)
+	alt1.flip_h = true
+	_copy_custom_data(base_tile, alt1)
+	# Alt 2: flip_v (water from SE)
+	source.create_alternative_tile(Vector2i.ZERO)
+	var alt2: TileData = source.get_tile_data(Vector2i.ZERO, 2)
+	alt2.flip_v = true
+	_copy_custom_data(base_tile, alt2)
+	# Alt 3: flip_h + flip_v (water from SW)
+	source.create_alternative_tile(Vector2i.ZERO)
+	var alt3: TileData = source.get_tile_data(Vector2i.ZERO, 3)
+	alt3.flip_h = true
+	alt3.flip_v = true
+	_copy_custom_data(base_tile, alt3)
+
+
+func _copy_custom_data(from: TileData, to: TileData) -> void:
+	to.set_custom_data("terrain_type", from.get_custom_data("terrain_type"))
+	to.set_custom_data("movement_cost", from.get_custom_data("movement_cost"))
+	to.set_custom_data("buildable", from.get_custom_data("buildable"))
+	to.set_custom_data("blocks_los", from.get_custom_data("blocks_los"))
 
 
 func _pick_variant_sid(terrain: String, pos: Vector2i) -> int:
@@ -290,14 +334,19 @@ func _generate_map() -> void:
 	coast_gen.configure(_map_gen_config.get("coastline_generation", {}))
 	var coast_result: Dictionary = coast_gen.generate(_tile_grid, _map_width, _map_height)
 	var coast_changes: Dictionary = coast_result.get("changes", {})
+	_shore_orientations = coast_result.get("shore_orientations", {})
 	for pos: Vector2i in coast_changes:
 		_tile_grid[pos] = coast_changes[pos]
 
 	# 4b. Render all tiles (after coastline reclassification)
 	for pos: Vector2i in _tile_grid:
-		var sid: int = _pick_variant_sid(_tile_grid[pos], pos)
+		var terrain: String = _tile_grid[pos]
+		var sid: int = _pick_variant_sid(terrain, pos)
 		if sid >= 0:
-			set_cell(pos, sid, Vector2i.ZERO)
+			var alt_id := 0
+			if terrain == "shore" and _shore_orientations.has(pos):
+				alt_id = _SHORE_DIR_TO_ALT.get(_shore_orientations[pos], 0)
+			set_cell(pos, sid, Vector2i.ZERO, alt_id)
 
 	# 5. Generate rivers (existing system, unchanged)
 	var river_gen := RiverGenerator.new()
@@ -503,6 +552,13 @@ func save_state() -> Dictionary:
 			)
 		fauna_data[fauna_name] = packs
 
+	# Serialize shore orientations
+	var shore_orient_data: Dictionary = {}
+	for pos: Vector2i in _shore_orientations:
+		var key := "%d,%d" % [pos.x, pos.y]
+		var dir: Vector2i = _shore_orientations[pos]
+		shore_orient_data[key] = "%d,%d" % [dir.x, dir.y]
+
 	return {
 		"map_width": _map_width,
 		"map_height": _map_height,
@@ -512,6 +568,7 @@ func save_state() -> Dictionary:
 		"resource_positions": res_data,
 		"starting_positions": start_pos_data,
 		"fauna_positions": fauna_data,
+		"shore_orientations": shore_orient_data,
 	}
 
 
@@ -530,6 +587,16 @@ func load_state(state: Dictionary) -> void:
 	_resource_positions.clear()
 	_starting_positions.clear()
 	_fauna_positions.clear()
+	_shore_orientations.clear()
+
+	# Deserialize shore orientations first (needed for tile placement)
+	var shore_orient_data: Dictionary = state.get("shore_orientations", {})
+	for key: String in shore_orient_data:
+		var parts := key.split(",")
+		var dir_parts: PackedStringArray = str(shore_orient_data[key]).split(",")
+		if parts.size() == 2 and dir_parts.size() == 2:
+			var pos := Vector2i(int(parts[0]), int(parts[1]))
+			_shore_orientations[pos] = Vector2i(int(dir_parts[0]), int(dir_parts[1]))
 
 	var grid_data: Dictionary = state.get("tile_grid", {})
 	for key: String in grid_data:
@@ -541,7 +608,10 @@ func load_state(state: Dictionary) -> void:
 		_tile_grid[pos] = terrain
 		var sid: int = _pick_variant_sid(terrain, pos)
 		if sid >= 0:
-			set_cell(pos, sid, Vector2i.ZERO)
+			var alt_id := 0
+			if terrain == "shore" and _shore_orientations.has(pos):
+				alt_id = _SHORE_DIR_TO_ALT.get(_shore_orientations[pos], 0)
+			set_cell(pos, sid, Vector2i.ZERO, alt_id)
 
 	# Deserialize river data (backward-compatible — missing key = no rivers)
 	var river_data: Dictionary = state.get("river_data", {})
