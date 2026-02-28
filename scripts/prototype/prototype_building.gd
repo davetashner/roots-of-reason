@@ -5,6 +5,9 @@ extends Node2D
 signal construction_complete(building: Node2D)
 signal building_destroyed(building: Node2D)
 
+const _SPRITE_BASE_PATH := "res://assets/sprites/buildings/placeholder/"
+const _SHADER_PATH := "res://assets/shaders/player_color.gdshader"
+
 @export var owner_id: int = 0
 var entity_category: String = "own_building"
 var building_name: String = ""
@@ -47,12 +50,16 @@ var _bar_width: float = 40.0
 var _bar_height: float = 5.0
 var _bar_offset_y: float = -30.0
 
+var _sprite: Sprite2D = null
+var _has_sprite: bool = false
+
 
 func _ready() -> void:
 	_load_building_stats()
 	_load_construction_config()
 	_load_combat_config()
 	_load_destruction_config()
+	_try_load_sprite()
 
 
 func _load_building_stats() -> void:
@@ -116,6 +123,45 @@ func _load_destruction_config() -> void:
 
 func _arr_to_color(arr: Array) -> Color:
 	return Color(float(arr[0]), float(arr[1]), float(arr[2]), float(arr[3]))
+
+
+func _try_load_sprite() -> void:
+	if building_name == "":
+		return
+	var path := _SPRITE_BASE_PATH + building_name + ".png"
+	if not ResourceLoader.exists(path):
+		return
+	var tex: Texture2D = load(path)
+	if tex == null:
+		return
+	_sprite = Sprite2D.new()
+	_sprite.texture = tex
+	_sprite.centered = true
+	# Anchor sprite so its bottom center aligns with the footprint center.
+	# The footprint center in screen coords is the midpoint of the NxN grid.
+	var fp_center := _footprint_screen_center()
+	# Offset: sprite center is at (0,0) of the texture when centered.
+	# We want the bottom of the sprite to sit at the footprint center's y.
+	var half_h := tex.get_height() / 2.0
+	_sprite.offset = Vector2(fp_center.x, fp_center.y - half_h)
+	# Apply player color shader for magenta mask recoloring
+	var shader: Shader = load(_SHADER_PATH) as Shader
+	if shader != null:
+		var mat := ShaderMaterial.new()
+		mat.shader = shader
+		var player_color := Color(0.2, 0.4, 0.9) if owner_id == 0 else Color(0.8, 0.2, 0.2)
+		mat.set_shader_parameter("player_color", player_color)
+		_sprite.material = mat
+	add_child(_sprite)
+	_has_sprite = true
+	_update_sprite_appearance()
+
+
+func _footprint_screen_center() -> Vector2:
+	## Return the screen-space center of the building's isometric footprint.
+	var cx := (footprint.x - 1) / 2.0
+	var cy := (footprint.y - 1) / 2.0
+	return IsoUtils.grid_to_screen(Vector2(cx, cy))
 
 
 func take_damage(amount: int, _attacker: Node2D) -> void:
@@ -224,37 +270,57 @@ func is_point_inside(point: Vector2) -> bool:
 	return false
 
 
+func _update_sprite_appearance() -> void:
+	if not _has_sprite or _sprite == null:
+		return
+	if _is_ruins:
+		_sprite.visible = false
+		return
+	_sprite.visible = true
+	if under_construction:
+		_sprite.modulate.a = _construction_alpha
+	else:
+		var damage_state := get_damage_state()
+		if damage_state == "critical":
+			_sprite.modulate = Color(0.6, 0.6, 0.6, 0.7)
+		elif damage_state == "damaged":
+			_sprite.modulate = Color(0.8, 0.8, 0.8, 1.0)
+		else:
+			_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+
 func _draw() -> void:
+	_update_sprite_appearance()
 	if _is_ruins:
 		_draw_ruins()
 		return
-	var color: Color
-	if owner_id == 0:
-		color = Color(0.2, 0.5, 1.0)
-	else:
-		color = Color(0.8, 0.2, 0.2)
-	var damage_state := ""
-	if under_construction:
-		color.a = _construction_alpha
-	else:
-		damage_state = get_damage_state()
-		if damage_state == "damaged":
-			color = color.darkened(0.2)
-		elif damage_state == "critical":
-			color = color.darkened(0.4)
-			color.a = 0.7
-	# Draw isometric diamonds for each footprint cell
-	for x in footprint.x:
-		for y in footprint.y:
-			var offset := IsoUtils.grid_to_screen(Vector2(x, y))
-			_draw_iso_cell(offset, color)
-	# Draw crack overlay on damaged/critical cells
-	if damage_state == "damaged" or damage_state == "critical":
+	if not _has_sprite:
+		# Procedural fallback for buildings without sprite art
+		var color: Color
+		if owner_id == 0:
+			color = Color(0.2, 0.5, 1.0)
+		else:
+			color = Color(0.8, 0.2, 0.2)
+		var damage_state := ""
+		if under_construction:
+			color.a = _construction_alpha
+		else:
+			damage_state = get_damage_state()
+			if damage_state == "damaged":
+				color = color.darkened(0.2)
+			elif damage_state == "critical":
+				color = color.darkened(0.4)
+				color.a = 0.7
 		for x in footprint.x:
 			for y in footprint.y:
 				var offset := IsoUtils.grid_to_screen(Vector2(x, y))
-				_draw_crack_overlay(offset, damage_state)
-	# Selection highlight
+				_draw_iso_cell(offset, color)
+		if damage_state == "damaged" or damage_state == "critical":
+			for x in footprint.x:
+				for y in footprint.y:
+					var offset := IsoUtils.grid_to_screen(Vector2(x, y))
+					_draw_crack_overlay(offset, damage_state)
+	# Selection highlight (drawn over sprite or procedural)
 	if selected:
 		_draw_selection_outline()
 	# Progress bar during construction
