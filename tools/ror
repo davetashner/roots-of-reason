@@ -886,6 +886,27 @@ cmd_game_cmd() {
     echo ""
 }
 
+# ==================== entities ====================
+cmd_entities() {
+    local query=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --category) query="${query:+$query&}category=$2"; shift 2 ;;
+            --type)     query="${query:+$query&}type=$2"; shift 2 ;;
+            --owner)    query="${query:+$query&}owner=$2"; shift 2 ;;
+            *)          err "Unknown entities option: $1"; exit 1 ;;
+        esac
+    done
+
+    local url="http://127.0.0.1:9222/entities"
+    if [[ -n "$query" ]]; then
+        url="${url}?${query}"
+    fi
+
+    curl -s "$url" | python3 -m json.tool
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -942,6 +963,11 @@ ${BOLD}COMMANDS${RESET}
                         ror screenshot                          — save timestamped PNG
                         ror screenshot --name my_shot           — save as my_shot.png
                         ror screenshot --output /tmp/shot.png   — save to custom path
+  entities [options]  List all game entities from the debug server
+                        ror entities                    — all entities (JSON)
+                        ror entities --category unit    — only units
+                        ror entities --type villager    — filter by type
+                        ror entities --owner 0          — player 0 only
   game-status         Query game state from the debug server (pretty-printed JSON)
   game-cmd <action> [key=value ...]
                       Send a command to the debug server
@@ -969,6 +995,7 @@ case "${1:-help}" in
     data-check)         shift; cmd_data_check "$@" ;;
     split-sprites)      shift; cmd_split_sprites "$@" ;;
     screenshot)         shift; cmd_screenshot "$@" ;;
+    entities)           shift; cmd_entities "$@" ;;
     game-status)        shift; cmd_game_status "$@" ;;
     game-cmd)           shift; cmd_game_cmd "$@" ;;
     help|--help|-h) cmd_help ;;
