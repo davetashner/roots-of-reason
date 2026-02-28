@@ -2,7 +2,7 @@ extends RefCounted
 ## GathererComponent — handles resource gathering, drop-off, and replacement logic.
 ## Extracted from prototype_unit.gd to reduce coordinator size.
 
-enum GatherState { NONE, MOVING_TO_RESOURCE, GATHERING, MOVING_TO_DROP_OFF, DEPOSITING }
+enum GatherState { NONE, MOVING_TO_RESOURCE, GATHERING, MOVING_TO_DROP_OFF, DEPOSITING, WAITING_FOR_DROP_OFF }
 
 var gather_target: Node2D = null
 var gather_state: GatherState = GatherState.NONE
@@ -47,6 +47,8 @@ func tick(game_delta: float) -> void:
 			_tick_moving_to_drop_off()
 		GatherState.DEPOSITING:
 			_tick_depositing()
+		GatherState.WAITING_FOR_DROP_OFF:
+			_tick_waiting_for_drop_off()
 
 
 func _tick_moving_to_resource() -> void:
@@ -92,7 +94,7 @@ func _tick_moving_to_drop_off() -> void:
 	if drop_off_target == null or not is_instance_valid(drop_off_target):
 		drop_off_target = _find_nearest_drop_off(gather_type)
 		if drop_off_target == null:
-			cancel()
+			gather_state = GatherState.WAITING_FOR_DROP_OFF
 			return
 		_unit.move_to(drop_off_target.global_position)
 		return
@@ -118,10 +120,17 @@ func _tick_depositing() -> void:
 func _start_drop_off_trip() -> void:
 	drop_off_target = _find_nearest_drop_off(gather_type)
 	if drop_off_target == null:
-		cancel()
+		gather_state = GatherState.WAITING_FOR_DROP_OFF
 		return
 	gather_state = GatherState.MOVING_TO_DROP_OFF
 	_unit.move_to(drop_off_target.global_position)
+
+
+func _tick_waiting_for_drop_off() -> void:
+	drop_off_target = _find_nearest_drop_off(gather_type)
+	if drop_off_target != null:
+		gather_state = GatherState.MOVING_TO_DROP_OFF
+		_unit.move_to(drop_off_target.global_position)
 
 
 func _find_nearest_drop_off(res_type: String) -> Node2D:
