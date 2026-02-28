@@ -144,7 +144,7 @@ jobs:
 
       - name: Publish test report
         if: always()
-        uses: mikepenz/action-junit-report@cf701569b05ccdd861a76b8e67e23b901b76e01a # v5.5.1
+        uses: mikepenz/action-junit-report@3585e9575db828022551b4231f165eb59a0e74e3 # v5
         with:
           report_paths: reports/merged/*.xml
           check_name: test-report.xml
