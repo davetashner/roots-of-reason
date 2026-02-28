@@ -21,5 +21,6 @@
   "attack_speed": 2.0,
   "attack_type": "melee",
   "unit_category": "civilian",
-  "default_stance": "defensive"
+  "default_stance": "defensive",
+  "sprite_config": "villager"
 }

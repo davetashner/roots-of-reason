@@ -15,6 +15,7 @@ enum Stance { AGGRESSIVE, DEFENSIVE, STAND_GROUND }
 const TransportHandlerScript := preload("res://scripts/prototype/transport_handler.gd")
 const GathererComponentScript := preload("res://scripts/prototype/gatherer_component.gd")
 const CombatantComponentScript := preload("res://scripts/prototype/combatant_component.gd")
+const UnitSpriteHandlerScript := preload("res://scripts/prototype/unit_sprite_handler.gd")
 const RADIUS: float = 12.0
 const MOVE_SPEED: float = 150.0
 const SELECTION_RING_RADIUS: float = 16.0
@@ -69,6 +70,8 @@ var _transport_capacity: int = 0
 # Components
 var _gatherer: RefCounted = null  # GathererComponent
 var _combatant: RefCounted = null  # CombatantComponent
+var _sprite_handler: RefCounted = null  # UnitSpriteHandler
+var _sprite_variant: String = ""
 
 # -- Forwarding properties for backward compatibility --
 # Gather forwarding
@@ -335,6 +338,34 @@ func _init_transport() -> void:
 		_transport.config = GameUtils.dl_settings("transport")
 
 
+func _init_sprite() -> void:
+	if _sprite_variant == "":
+		var config_path := "res://data/units/sprites/villager.json"
+		var file := FileAccess.open(config_path, FileAccess.READ)
+		if file == null:
+			return
+		var parsed: Variant = JSON.parse_string(file.get_as_text())
+		if parsed == null or not (parsed is Dictionary):
+			return
+		var variants: Array = parsed.get("variants", [])
+		if variants.is_empty():
+			return
+		_sprite_variant = variants[randi() % variants.size()]
+	_sprite_handler = UnitSpriteHandlerScript.new(self, _sprite_variant, unit_color)
+
+
+func _get_visual_state() -> String:
+	if _is_dead:
+		return "death"
+	if _build_target != null and not _moving:
+		return "build"
+	if _gatherer != null and _gatherer.gather_state == GathererComponentScript.GatherState.GATHERING:
+		return "gather"
+	if _moving:
+		return "walk"
+	return "idle"
+
+
 func mark_visual_dirty() -> void:
 	_visual_dirty = true
 
@@ -370,6 +401,11 @@ func _process(delta: float) -> void:
 	_tick_heal(game_delta)
 	if _transport != null:
 		_transport.tick(game_delta, _moving)
+	# Lazy-init sprite handler for villagers (after load_state may have set _sprite_variant)
+	if _sprite_handler == null and unit_type == "villager":
+		_init_sprite()
+	if _sprite_handler != null:
+		_sprite_handler.update(_get_visual_state(), _facing, game_delta)
 	if _visual_dirty:
 		_visual_dirty = false
 		queue_redraw()
@@ -670,22 +706,24 @@ func resolve_embarked(scene_root: Node) -> void:
 func _draw() -> void:
 	if selected:
 		draw_arc(Vector2.ZERO, SELECTION_RING_RADIUS, 0, TAU, 32, Color(0, 1, 0, 0.8), 2.0)
-	var draw_radius := RADIUS
-	if entity_category == "dog":
-		draw_radius = RADIUS * 0.8
-		draw_circle(Vector2.ZERO, draw_radius, unit_color)
-		var collar_color := Color(0.2, 0.4, 0.9) if owner_id == 0 else Color(0.9, 0.2, 0.2)
-		draw_arc(Vector2.ZERO, draw_radius + 1.0, 0.0, PI, 16, collar_color, 2.5)
-	else:
-		draw_circle(Vector2.ZERO, RADIUS, unit_color)
-	var tip := _facing * (draw_radius + 4.0)
-	var left := _facing.rotated(2.5) * draw_radius * 0.5
-	var right := _facing.rotated(-2.5) * draw_radius * 0.5
-	draw_colored_polygon(PackedVector2Array([tip, left, right]), Color(1, 1, 1, 0.9))
-	if _moving:
-		var lt := _target_pos - position
-		draw_circle(lt, 3.0, Color(1, 1, 0, 0.6))
-		draw_arc(lt, 6.0, 0, TAU, 16, Color(1, 1, 0, 0.4), 1.0)
+	# Skip circle + arrow when sprite handler is active
+	if _sprite_handler == null:
+		var draw_radius := RADIUS
+		if entity_category == "dog":
+			draw_radius = RADIUS * 0.8
+			draw_circle(Vector2.ZERO, draw_radius, unit_color)
+			var collar_color := Color(0.2, 0.4, 0.9) if owner_id == 0 else Color(0.9, 0.2, 0.2)
+			draw_arc(Vector2.ZERO, draw_radius + 1.0, 0.0, PI, 16, collar_color, 2.5)
+		else:
+			draw_circle(Vector2.ZERO, RADIUS, unit_color)
+		var tip := _facing * (draw_radius + 4.0)
+		var left := _facing.rotated(2.5) * draw_radius * 0.5
+		var right := _facing.rotated(-2.5) * draw_radius * 0.5
+		draw_colored_polygon(PackedVector2Array([tip, left, right]), Color(1, 1, 1, 0.9))
+		if _moving:
+			var lt := _target_pos - position
+			draw_circle(lt, 3.0, Color(1, 1, 0, 0.6))
+			draw_arc(lt, 6.0, 0, TAU, 16, Color(1, 1, 0, 0.4), 1.0)
 	if _gatherer.carried_amount > 0:
 		var cr := float(_gatherer.carried_amount) / float(_gatherer.carry_capacity)
 		draw_arc(Vector2.ZERO, RADIUS + 2.0, 0, TAU * cr, 16, Color(0.9, 0.8, 0.1, 0.8), 2.0)
@@ -767,6 +805,8 @@ func save_state() -> Dictionary:
 		"kill_count": kill_count,
 		"heal_accumulator": _heal_accumulator,
 	}
+	if _sprite_variant != "":
+		state["sprite_variant"] = _sprite_variant
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
 	if _feed_target != null and is_instance_valid(_feed_target):
@@ -797,6 +837,7 @@ func load_state(data: Dictionary) -> void:
 	_formation_speed_override = float(data.get("formation_speed_override", 0.0))
 	kill_count = int(data.get("kill_count", 0))
 	_heal_accumulator = float(data.get("heal_accumulator", 0.0))
+	_sprite_variant = str(data.get("sprite_variant", ""))
 	if data.has("stats"):
 		if stats == null:
 			stats = UnitStats.new()
