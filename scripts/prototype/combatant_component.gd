@@ -329,6 +329,13 @@ func _try_retaliate(attacker: Node2D) -> void:
 		_unit.move_to(attacker.global_position)
 
 
+func engage_target(target: Node2D) -> void:
+	combat_target = target
+	leash_origin = _unit.position
+	combat_state = CombatState.PURSUING
+	_unit.move_to(target.global_position)
+
+
 func attack_move_to(world_pos: Vector2) -> void:
 	combat_state = CombatState.ATTACK_MOVING
 	attack_move_destination = world_pos

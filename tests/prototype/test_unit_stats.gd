@@ -17,7 +17,7 @@ func test_from_data_loads_villager_stats() -> void:
 	var s := UnitStats.from_data("villager")
 	assert_str(s.unit_id).is_equal("villager")
 	assert_float(s.get_base_stat("hp")).is_equal(25.0)
-	assert_float(s.get_base_stat("attack")).is_equal(3.0)
+	assert_float(s.get_base_stat("attack")).is_equal(5.0)
 	assert_float(s.get_base_stat("defense")).is_equal(0.0)
 	assert_float(s.get_base_stat("speed")).is_equal(1.5)
 	assert_float(s.get_base_stat("los")).is_equal(4.0)

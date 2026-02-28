@@ -10,6 +10,7 @@ const GatherCmdHandler := preload("res://scripts/prototype/gather_command_handle
 const GarrisonCmdHandler := preload("res://scripts/prototype/garrison_command_handler.gd")
 const EmbarkCmdHandler := preload("res://scripts/prototype/embark_command_handler.gd")
 const DisembarkCmdHandler := preload("res://scripts/prototype/disembark_command_handler.gd")
+const AttackCmdHandler := preload("res://scripts/prototype/attack_command_handler.gd")
 
 var _units: Array[Node] = []
 var _box_selecting: bool = false
@@ -77,6 +78,7 @@ func _load_formation_config() -> void:
 
 func _init_command_handlers() -> void:
 	_command_handlers = [
+		AttackCmdHandler.new(),
 		FeedCmdHandler.new(),
 		BuildCmdHandler.new(),
 		GatherCmdHandler.new(),
