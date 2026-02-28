@@ -142,14 +142,27 @@ class TestClassifyAsset:
     def test_units(self) -> None:
         assert validate_assets.classify_asset("sprites/units/villager.png") == "units"
 
-    def test_buildings_default(self) -> None:
-        assert validate_assets.classify_asset("sprites/buildings/house.png") == "buildings_1x1"
+    def test_buildings_default_unknown(self) -> None:
+        # Unknown building name falls back to 1x1
+        assert validate_assets.classify_asset("sprites/buildings/unknown_shack.png") == "buildings_1x1"
 
-    def test_buildings_2x2(self) -> None:
+    def test_buildings_data_lookup_2x2(self) -> None:
+        # house.json has footprint [2, 2] — classifier reads from data/
+        assert validate_assets.classify_asset("sprites/buildings/house.png") == "buildings_2x2"
+
+    def test_buildings_data_lookup_3x3(self) -> None:
+        # town_center.json has footprint [3, 3]
+        assert validate_assets.classify_asset("sprites/buildings/town_center.png") == "buildings_3x3"
+
+    def test_buildings_subdir_2x2(self) -> None:
         assert validate_assets.classify_asset("sprites/buildings/2x2/barracks.png") == "buildings_2x2"
 
-    def test_buildings_3x3(self) -> None:
+    def test_buildings_subdir_3x3(self) -> None:
         assert validate_assets.classify_asset("sprites/buildings/3x3/castle.png") == "buildings_3x3"
+
+    def test_buildings_placeholder_subdir(self) -> None:
+        # placeholder/town_center.png should resolve via data lookup
+        assert validate_assets.classify_asset("sprites/buildings/placeholder/town_center.png") == "buildings_3x3"
 
     def test_tiles(self) -> None:
         assert validate_assets.classify_asset("tiles/terrain/grass.png") == "tiles"
