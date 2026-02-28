@@ -89,7 +89,7 @@ func tick(game_delta: float) -> void:
 
 
 func _tick_combat_none() -> void:
-	if _get_stance_config().get("auto_scan", false):
+	if _get_stance_config().get("auto_scan", false) and _unit.is_idle():
 		_try_scan_and_pursue()
 
 
