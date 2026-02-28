@@ -142,27 +142,40 @@ class TestClassifyAsset:
     def test_units(self) -> None:
         assert validate_assets.classify_asset("sprites/units/villager.png") == "units"
 
-    def test_buildings_default_unknown(self) -> None:
-        # Unknown building name falls back to 1x1
-        assert validate_assets.classify_asset("sprites/buildings/unknown_shack.png") == "buildings_1x1"
+    def test_buildings_source_direct(self) -> None:
+        # Files directly under sprites/buildings/ are hi-res source images
+        assert validate_assets.classify_asset("sprites/buildings/town_center_02.png") == "buildings_source"
+        assert validate_assets.classify_asset("sprites/buildings/house.png") == "buildings_source"
 
-    def test_buildings_data_lookup_2x2(self) -> None:
+    def test_buildings_placeholder_unknown(self) -> None:
+        # Unknown building name in a subdirectory falls back to 1x1
+        assert validate_assets.classify_asset("sprites/buildings/placeholder/unknown_shack.png") == "buildings_1x1"
+
+    def test_buildings_placeholder_data_lookup_2x2(self) -> None:
         # house.json has footprint [2, 2] — classifier reads from data/
-        assert validate_assets.classify_asset("sprites/buildings/house.png") == "buildings_2x2"
+        assert validate_assets.classify_asset("sprites/buildings/placeholder/house.png") == "buildings_2x2"
 
-    def test_buildings_data_lookup_3x3(self) -> None:
+    def test_buildings_placeholder_data_lookup_3x3(self) -> None:
         # town_center.json has footprint [3, 3]
-        assert validate_assets.classify_asset("sprites/buildings/town_center.png") == "buildings_3x3"
+        assert validate_assets.classify_asset("sprites/buildings/placeholder/town_center.png") == "buildings_3x3"
+
+    def test_buildings_placeholder_numeric_suffix(self) -> None:
+        # town_center_02.png in a subdirectory strips suffix for data lookup
+        assert validate_assets.classify_asset("sprites/buildings/placeholder/town_center_02.png") == "buildings_3x3"
+
+    def test_buildings_placeholder_4x4(self) -> None:
+        # castle.json has footprint [4, 4]
+        assert validate_assets.classify_asset("sprites/buildings/placeholder/castle.png") == "buildings_4x4"
+
+    def test_buildings_placeholder_5x5(self) -> None:
+        # wonder.json has footprint [5, 5]
+        assert validate_assets.classify_asset("sprites/buildings/placeholder/wonder.png") == "buildings_5x5"
 
     def test_buildings_subdir_2x2(self) -> None:
         assert validate_assets.classify_asset("sprites/buildings/2x2/barracks.png") == "buildings_2x2"
 
     def test_buildings_subdir_3x3(self) -> None:
         assert validate_assets.classify_asset("sprites/buildings/3x3/castle.png") == "buildings_3x3"
-
-    def test_buildings_placeholder_subdir(self) -> None:
-        # placeholder/town_center.png should resolve via data lookup
-        assert validate_assets.classify_asset("sprites/buildings/placeholder/town_center.png") == "buildings_3x3"
 
     def test_tiles(self) -> None:
         assert validate_assets.classify_asset("tiles/terrain/grass.png") == "tiles"
@@ -217,8 +230,8 @@ class TestValidateAssets:
         assets = tmp_path / "assets"
         tiles_dir = assets / "tiles" / "terrain"
         tiles_dir.mkdir(parents=True)
-        _make_png(tiles_dir, 128, 128, "grass.png")
-        _make_png(tiles_dir, 128, 128, "desert.png")
+        _make_png(tiles_dir, 128, 64, "grass.png")
+        _make_png(tiles_dir, 128, 64, "desert.png")
         return assets
 
     def _default_config(self) -> dict:
@@ -233,7 +246,7 @@ class TestValidateAssets:
     def test_bad_naming_reported(self, tmp_path: Path) -> None:
         assets = self._make_assets_dir(tmp_path)
         tiles_dir = assets / "tiles" / "terrain"
-        _make_png(tiles_dir, 128, 128, "BadName.png")
+        _make_png(tiles_dir, 128, 64, "BadName.png")
         config = self._default_config()
         errors = validate_assets.validate_assets(assets, config)
         assert any("Naming violation" in e for e in errors)
@@ -241,7 +254,7 @@ class TestValidateAssets:
     def test_oversized_tile_reported(self, tmp_path: Path) -> None:
         assets = self._make_assets_dir(tmp_path)
         tiles_dir = assets / "tiles" / "terrain"
-        _make_png(tiles_dir, 512, 512, "huge.png")
+        _make_png(tiles_dir, 256, 128, "huge.png")
         config = self._default_config()
         errors = validate_assets.validate_assets(assets, config)
         assert any("Dimension violation" in e for e in errors)
@@ -266,7 +279,7 @@ class TestMainExitCodes:
         assets = tmp_path / "assets"
         tiles_dir = assets / "tiles" / "terrain"
         tiles_dir.mkdir(parents=True)
-        _make_png(tiles_dir, 128, 128, "grass.png")
+        _make_png(tiles_dir, 128, 64, "grass.png")
         return assets
 
     def test_exit_0_on_pass(self, tmp_path: Path) -> None:
@@ -281,7 +294,7 @@ class TestMainExitCodes:
     def test_exit_1_on_failure(self, tmp_path: Path) -> None:
         assets = self._make_assets_dir(tmp_path)
         tiles_dir = assets / "tiles" / "terrain"
-        _make_png(tiles_dir, 512, 512, "huge.png")
+        _make_png(tiles_dir, 256, 128, "huge.png")
         config_path = validate_assets.DEFAULT_CONFIG
         exit_code = validate_assets.main([
             "--assets-dir", str(assets),
