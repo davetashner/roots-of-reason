@@ -160,7 +160,7 @@ jobs:
         id: coverage
         run: |
           set +e
-          output=$(tools/ror coverage --json --threshold 18)
+          output=$(tools/ror coverage --json --threshold 74)
           exit_code=$?
           set -e
           echo "$output"
@@ -194,9 +194,9 @@ jobs:
               echo ""
             fi
             if [ "$pass_val" = "true" ]; then
-              echo ":white_check_mark: Coverage gate **passed** (threshold: 18%)"
+              echo ":white_check_mark: Coverage gate **passed** (threshold: 74%)"
             else
-              echo ":x: Coverage gate **failed** (threshold: 18%)"
+              echo ":x: Coverage gate **failed** (threshold: 74%)"
             fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
