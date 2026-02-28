@@ -3,6 +3,7 @@
   "defeat_delay": 5.0,
   "allow_continue_after_victory": true,
   "singularity_age": 6,
+  "nomadic_grace_duration": 300,
   "victory_conditions": {
     "military": { "enabled": true, "label": "Military Conquest" },
     "singularity": { "enabled": true, "label": "Singularity Achieved" },

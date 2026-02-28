@@ -14,6 +14,7 @@ var _wonder_countdown_duration: float = 600.0
 var _defeat_delay: float = 5.0
 var _allow_continue: bool = true
 var _singularity_age: int = 6
+var _nomadic_grace_duration: float = 300.0
 var _condition_labels: Dictionary = {
 	"military": "Military Conquest",
 	"singularity": "Singularity Achieved",
@@ -40,6 +41,9 @@ var _building_placer: Node = null
 # Defeat delay timers: player_id -> float remaining
 var _defeat_timers: Dictionary = {}
 
+# Nomadic grace: player_id -> float remaining seconds (players who start without a TC)
+var _nomadic_players: Dictionary = {}
+
 
 func _ready() -> void:
 	_load_config()
@@ -51,6 +55,7 @@ func _load_config() -> void:
 	_defeat_delay = float(cfg.get("defeat_delay", _defeat_delay))
 	_allow_continue = bool(cfg.get("allow_continue_after_victory", _allow_continue))
 	_singularity_age = int(cfg.get("singularity_age", _singularity_age))
+	_nomadic_grace_duration = float(cfg.get("nomadic_grace_duration", _nomadic_grace_duration))
 	var conditions: Dictionary = cfg.get("victory_conditions", {})
 	for key: String in conditions:
 		var cond: Dictionary = conditions[key]
@@ -93,6 +98,7 @@ func _process(delta: float) -> void:
 		return
 	_tick_wonder_countdowns(game_delta)
 	_tick_defeat_timers(game_delta)
+	_tick_nomadic_grace(game_delta)
 
 
 func _tick_wonder_countdowns(game_delta: float) -> void:
@@ -118,12 +124,34 @@ func _tick_defeat_timers(game_delta: float) -> void:
 		_confirm_defeat(pid)
 
 
+func register_nomadic_player(player_id: int) -> void:
+	_nomadic_players[player_id] = _nomadic_grace_duration
+
+
+func _tick_nomadic_grace(game_delta: float) -> void:
+	var expired: Array = []
+	for player_id: int in _nomadic_players:
+		_nomadic_players[player_id] = float(_nomadic_players[player_id]) - game_delta
+		if float(_nomadic_players[player_id]) <= 0.0:
+			expired.append(player_id)
+	for pid: int in expired:
+		_nomadic_players.erase(pid)
+		# Grace expired — if still no TC, start defeat
+		if check_defeat(pid):
+			if _defeat_delay <= 0.0:
+				_confirm_defeat(pid)
+			elif not _defeat_timers.has(pid):
+				_defeat_timers[pid] = _defeat_delay
+
+
 func register_town_center(player_id: int, building: Node2D) -> void:
 	if not _town_centers.has(player_id):
 		_town_centers[player_id] = []
 	var tc_list: Array = _town_centers[player_id]
 	if building not in tc_list:
 		tc_list.append(building)
+	# Building a TC ends nomadic grace
+	_nomadic_players.erase(player_id)
 
 
 func unregister_town_center(player_id: int, building: Node2D) -> void:
@@ -136,6 +164,8 @@ func unregister_town_center(player_id: int, building: Node2D) -> void:
 func check_defeat(player_id: int) -> bool:
 	if _defeated_players.has(player_id):
 		return true
+	if _nomadic_players.has(player_id):
+		return false
 	if not _town_centers.has(player_id):
 		return true
 	var tc_list: Array = _town_centers[player_id]
@@ -351,6 +381,7 @@ func save_state() -> Dictionary:
 		"town_centers": tc_out,
 		"wonder_countdowns": wonder_out,
 		"defeat_timers": _serialize_defeat_timers(),
+		"nomadic_players": _serialize_nomadic_players(),
 	}
 
 
@@ -382,10 +413,21 @@ func load_state(data: Dictionary) -> void:
 	_defeat_timers.clear()
 	for pid_str: String in timer_data:
 		_defeat_timers[int(pid_str)] = float(timer_data[pid_str])
+	var nomadic_data: Dictionary = data.get("nomadic_players", {})
+	_nomadic_players.clear()
+	for pid_str: String in nomadic_data:
+		_nomadic_players[int(pid_str)] = float(nomadic_data[pid_str])
 
 
 func _serialize_defeat_timers() -> Dictionary:
 	var out: Dictionary = {}
 	for pid: int in _defeat_timers:
 		out[str(pid)] = float(_defeat_timers[pid])
+	return out
+
+
+func _serialize_nomadic_players() -> Dictionary:
+	var out: Dictionary = {}
+	for pid: int in _nomadic_players:
+		out[str(pid)] = float(_nomadic_players[pid])
 	return out

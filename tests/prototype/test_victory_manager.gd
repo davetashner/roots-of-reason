@@ -367,3 +367,63 @@ func test_agi_core_built_signal_not_emitted_when_defeated() -> void:
 	mgr.agi_core_built.connect(func(pid: int) -> void: agi_built_ids.append(pid))
 	placer.building_placed.emit(agi)
 	assert_int(agi_built_ids.size()).is_equal(0)
+
+
+# --- Nomadic grace period tests ---
+
+
+func test_nomadic_player_not_defeated_during_grace() -> void:
+	var mgr := _create_manager()
+	mgr._nomadic_grace_duration = 60.0
+	mgr.register_nomadic_player(0)
+	assert_bool(mgr.check_defeat(0)).is_false()
+
+
+func test_nomadic_grace_expires_triggers_defeat() -> void:
+	var mgr := _create_manager()
+	mgr._nomadic_grace_duration = 1.0
+	mgr._defeat_delay = 0.0
+	mgr.register_nomadic_player(0)
+	# Also register a TC for player 1 so the manager tracks them
+	var tc1 := _create_tc(1)
+	mgr.register_town_center(1, tc1)
+	# Simulate time passing beyond grace
+	mgr._tick_nomadic_grace(1.1)
+	assert_bool(mgr._nomadic_players.has(0)).is_false()
+	assert_bool(mgr._defeated_players.has(0)).is_true()
+
+
+func test_building_tc_ends_nomadic_grace() -> void:
+	var mgr := _create_manager()
+	mgr._nomadic_grace_duration = 60.0
+	mgr.register_nomadic_player(0)
+	var tc := _create_tc(0)
+	mgr.register_town_center(0, tc)
+	assert_bool(mgr._nomadic_players.has(0)).is_false()
+	assert_bool(mgr.check_defeat(0)).is_false()
+
+
+func test_nomadic_grace_not_defeated_after_tc_built() -> void:
+	var mgr := _create_manager()
+	mgr._nomadic_grace_duration = 1.0
+	mgr._defeat_delay = 0.0
+	mgr.register_nomadic_player(0)
+	var tc := _create_tc(0)
+	mgr.register_town_center(0, tc)
+	# Grace expired, but TC exists — should not defeat
+	mgr._tick_nomadic_grace(2.0)
+	assert_bool(mgr._defeated_players.has(0)).is_false()
+
+
+func test_nomadic_grace_save_load_roundtrip() -> void:
+	var mgr := _create_manager()
+	mgr._nomadic_grace_duration = 120.0
+	mgr.register_nomadic_player(0)
+	# Tick some time off
+	mgr._tick_nomadic_grace(30.0)
+	var state: Dictionary = mgr.save_state()
+	# Create fresh manager and load
+	var mgr2 := _create_manager()
+	mgr2.load_state(state)
+	assert_bool(mgr2._nomadic_players.has(0)).is_true()
+	assert_float(float(mgr2._nomadic_players[0])).is_equal_approx(90.0, 1.0)
