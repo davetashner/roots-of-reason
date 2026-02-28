@@ -65,13 +65,22 @@ func _handle_connection(peer: StreamPeerTCP) -> void:
 	var body_text := ""
 	if method == "POST":
 		body_text = _read_body(peer, request_data, headers, start_tick)
-	if method == "GET" and path == "/ping":
+	# Split path from query string
+	var query_string := ""
+	var base_path := path
+	var qmark := path.find("?")
+	if qmark >= 0:
+		base_path = path.substr(0, qmark)
+		query_string = path.substr(qmark + 1)
+	if method == "GET" and base_path == "/ping":
 		_send_json(peer, 200, {"status": "ok"})
-	elif method == "GET" and path == "/screenshot":
+	elif method == "GET" and base_path == "/screenshot":
 		_handle_screenshot(peer)
-	elif method == "GET" and path == "/status":
+	elif method == "GET" and base_path == "/status":
 		_handle_status(peer)
-	elif method == "POST" and path == "/command":
+	elif method == "GET" and base_path == "/entities":
+		_handle_entities(peer, query_string)
+	elif method == "POST" and base_path == "/command":
 		_handle_command(peer, body_text)
 	else:
 		_send_json(peer, 404, {"error": "not found", "path": path})
@@ -427,6 +436,153 @@ static func _send_json(peer: StreamPeerTCP, status_code: int, data: Dictionary) 
 	header += "\r\n"
 	peer.put_data(header.to_utf8_buffer())
 	peer.put_data(body.to_utf8_buffer())
+
+
+func _handle_entities(peer: StreamPeerTCP, query_string: String) -> void:
+	var params := parse_query_string(query_string)
+	var entities: Array[Dictionary] = []
+	var root := get_tree().current_scene
+	if root != null:
+		for child: Node in root.get_children():
+			if not (child is Node2D):
+				continue
+			if "entity_category" not in child:
+				continue
+			var data := serialize_entity(child as Node2D)
+			if data.is_empty():
+				continue
+			if not _matches_filters(data, params):
+				continue
+			entities.append(data)
+	_send_json(peer, 200, {"entities": entities, "count": entities.size()})
+
+
+static func _matches_filters(data: Dictionary, params: Dictionary) -> bool:
+	if params.has("category"):
+		var cat: String = params["category"]
+		if str(data.get("entity_category", "")) != cat:
+			return false
+	if params.has("type"):
+		var t: String = params["type"]
+		# Match against resource_type, unit_category, or building_name
+		var match_found := false
+		if str(data.get("resource_type", "")) == t:
+			match_found = true
+		elif str(data.get("unit_category", "")) == t:
+			match_found = true
+		elif str(data.get("building_name", "")) == t:
+			match_found = true
+		if not match_found:
+			return false
+	if params.has("owner"):
+		var owner_val: int = int(params["owner"])
+		if not data.has("owner_id"):
+			return false
+		if int(data["owner_id"]) != owner_val:
+			return false
+	return true
+
+
+static func serialize_entity(entity: Node2D) -> Dictionary:
+	var cat: String = str(entity.get("entity_category")) if "entity_category" in entity else ""
+	if cat == "":
+		return {}
+	var result: Dictionary = {
+		"name": entity.name,
+		"entity_category": cat,
+		"position":
+		{
+			"x": entity.global_position.x,
+			"y": entity.global_position.y,
+		},
+	}
+	if "owner_id" in entity:
+		result["owner_id"] = int(entity.owner_id)
+	# Unit-specific fields
+	if "unit_category" in entity and str(entity.unit_category) != "":
+		result["unit_category"] = str(entity.unit_category)
+		result["unit_type"] = str(entity.get("unit_type")) if "unit_type" in entity else "land"
+		result["hp"] = int(entity.hp) if "hp" in entity else 0
+		result["max_hp"] = int(entity.max_hp) if "max_hp" in entity else 0
+		result["selected"] = bool(entity.selected) if "selected" in entity else false
+		# Gather state
+		result["gather_state"] = int(entity._gather_state) if "_gather_state" in entity else 0
+		result["gather_type"] = str(entity._gather_type) if "_gather_type" in entity else ""
+		result["carried_amount"] = int(entity._carried_amount) if "_carried_amount" in entity else 0
+		result["carry_capacity"] = int(entity._carry_capacity) if "_carry_capacity" in entity else 0
+		# Combat state
+		result["combat_state"] = int(entity._combat_state) if "_combat_state" in entity else 0
+		# Current action summary
+		result["action"] = _get_unit_action(entity)
+	# Building-specific fields
+	if "building_name" in entity and str(entity.building_name) != "":
+		result["building_name"] = str(entity.building_name)
+		result["hp"] = int(entity.hp) if "hp" in entity else 0
+		result["max_hp"] = int(entity.max_hp) if "max_hp" in entity else 0
+		result["is_drop_off"] = bool(entity.is_drop_off) if "is_drop_off" in entity else false
+		if "drop_off_types" in entity:
+			var types: Array[String] = []
+			for t: Variant in entity.drop_off_types:
+				types.append(str(t))
+			result["drop_off_types"] = types
+		if "grid_pos" in entity:
+			result["grid_position"] = {"x": entity.grid_pos.x, "y": entity.grid_pos.y}
+		result["under_construction"] = bool(entity.under_construction) if "under_construction" in entity else false
+		result["selected"] = bool(entity.selected) if "selected" in entity else false
+	# Resource node-specific fields
+	if cat == "resource_node":
+		result["resource_type"] = str(entity.resource_type) if "resource_type" in entity else ""
+		result["resource_name"] = str(entity.resource_name) if "resource_name" in entity else ""
+		result["current_yield"] = int(entity.current_yield) if "current_yield" in entity else 0
+		result["total_yield"] = int(entity.total_yield) if "total_yield" in entity else 0
+		if "grid_position" in entity:
+			result["grid_position"] = {"x": entity.grid_position.x, "y": entity.grid_position.y}
+	return result
+
+
+static func _get_unit_action(entity: Node2D) -> String:
+	# Determine high-level action from state
+	var combat_state: int = int(entity._combat_state) if "_combat_state" in entity else 0
+	if combat_state != 0:
+		match combat_state:
+			1:
+				return "pursuing"
+			2:
+				return "attacking"
+			3:
+				return "attack_moving"
+			4:
+				return "patrolling"
+	var gather_state: int = int(entity._gather_state) if "_gather_state" in entity else 0
+	if gather_state != 0:
+		match gather_state:
+			1:
+				return "moving_to_resource"
+			2:
+				return "gathering"
+			3:
+				return "moving_to_drop_off"
+			4:
+				return "depositing"
+	if "_moving" in entity and entity._moving:
+		return "moving"
+	return "idle"
+
+
+static func parse_query_string(qs: String) -> Dictionary:
+	var result: Dictionary = {}
+	if qs.is_empty():
+		return result
+	var pairs := qs.split("&")
+	for pair: String in pairs:
+		var eq := pair.find("=")
+		if eq < 0:
+			continue
+		var key := pair.substr(0, eq).strip_edges()
+		var value := pair.substr(eq + 1).strip_edges()
+		if not key.is_empty():
+			result[key] = value
+	return result
 
 
 func _exit_tree() -> void:
