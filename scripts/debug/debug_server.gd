@@ -201,6 +201,8 @@ func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
 			_cmd_pause(peer)
 		"unpause":
 			_cmd_unpause(peer)
+		"gather":
+			_cmd_gather(peer, body)
 		_:
 			_send_json(peer, 400, {"error": "unknown action", "action": action})
 
@@ -278,6 +280,51 @@ func _cmd_unpause(peer: StreamPeerTCP) -> void:
 	if gm != null and gm.has_method("resume"):
 		gm.resume()
 	_send_json(peer, 200, {"action": "unpause"})
+
+
+func _cmd_gather(peer: StreamPeerTCP, body: Dictionary) -> void:
+	if not body.has("grid_x") or not body.has("grid_y"):
+		_send_json(peer, 400, {"error": "gather requires grid_x and grid_y"})
+		return
+	var grid_x: float = float(body["grid_x"])
+	var grid_y: float = float(body["grid_y"])
+	var world_pos := IsoUtils.grid_to_screen(Vector2(grid_x, grid_y))
+	var target: Node2D = _find_nearest_resource(world_pos)
+	if target == null:
+		_send_json(peer, 200, {"action": "gather", "error": "no resource node found near position"})
+		return
+	var units := _get_player_units(0)
+	var count := 0
+	for unit: Node2D in units:
+		if "selected" in unit and unit.selected and unit.has_method("assign_gather_target"):
+			unit.assign_gather_target(target)
+			count += 1
+	_send_json(
+		peer,
+		200,
+		{"action": "gather", "target": str(target.name), "gathering": count},
+	)
+
+
+func _find_nearest_resource(world_pos: Vector2) -> Node2D:
+	var root := get_tree().current_scene
+	if root == null:
+		return null
+	var best: Node2D = null
+	var best_dist := INF
+	for child: Node in root.get_children():
+		if "entity_category" not in child:
+			continue
+		if str(child.entity_category) != "resource_node":
+			continue
+		if "current_yield" in child and int(child.current_yield) <= 0:
+			continue
+		if child is Node2D:
+			var dist: float = world_pos.distance_to(child.global_position)
+			if dist < best_dist:
+				best_dist = dist
+				best = child as Node2D
+	return best
 
 
 static func _get_player_resources(rm: Node) -> Dictionary:
