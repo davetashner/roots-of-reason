@@ -69,21 +69,33 @@ def check_naming(filename: str, pattern: re.Pattern) -> str | None:
 # Dimension validation
 # ---------------------------------------------------------------------------
 
+def _strip_numeric_suffix(name: str) -> str:
+    """Strip trailing _01, _02, etc. from a building name for data lookup."""
+    return re.sub(r"_\d+$", "", name)
+
+
 def _building_footprint_category(building_name: str) -> str:
     """Look up a building's footprint from data/buildings/ and return a category."""
-    data_path = SCRIPT_DIR.parent / "data" / "buildings" / f"{building_name}.json"
-    if data_path.is_file():
-        try:
-            with open(data_path) as f:
-                data = json.load(f)
-            fp = data.get("footprint", [1, 1])
-            size = max(int(fp[0]), int(fp[1]))
-            if size >= 3:
-                return "buildings_3x3"
-            if size >= 2:
-                return "buildings_2x2"
-        except (json.JSONDecodeError, IndexError, TypeError):
-            pass
+    # Try exact name first, then stripped (e.g., town_center_02 -> town_center)
+    for name in [building_name, _strip_numeric_suffix(building_name)]:
+        data_path = SCRIPT_DIR.parent / "data" / "buildings" / f"{name}.json"
+        if data_path.is_file():
+            try:
+                with open(data_path) as f:
+                    data = json.load(f)
+                fp = data.get("footprint", [1, 1])
+                size = max(int(fp[0]), int(fp[1]))
+                if size >= 5:
+                    return "buildings_5x5"
+                if size >= 4:
+                    return "buildings_4x4"
+                if size >= 3:
+                    return "buildings_3x3"
+                if size >= 2:
+                    return "buildings_2x2"
+                return "buildings_1x1"
+            except (json.JSONDecodeError, IndexError, TypeError):
+                pass
     return "buildings_1x1"
 
 
@@ -94,8 +106,11 @@ def classify_asset(rel_path: str) -> str | None:
     """
     parts = Path(rel_path).parts
 
-    # sprites/units/ -> units
+    # sprites/units/ -> units or units_source
     if len(parts) >= 2 and parts[0] == "sprites" and parts[1] == "units":
+        # placeholder/ contains spritesheets and mixed-size source files
+        if len(parts) >= 3 and parts[2] == "placeholder":
+            return "units_source"
         return "units"
 
     # sprites/buildings/ -> try to infer footprint from subdirectory or data JSON
@@ -106,12 +121,21 @@ def classify_asset(rel_path: str) -> str | None:
                 return "buildings_2x2"
             if part == "3x3":
                 return "buildings_3x3"
+        # Files directly under sprites/buildings/ (not in a subdirectory) are
+        # hi-res source images — use relaxed limits
+        if len(parts) == 3:
+            return "buildings_source"
         # Infer from building data JSON using the filename (without extension)
         filename = Path(parts[-1]).stem
         return _building_footprint_category(filename)
 
-    # tiles/ -> tiles
+    # tiles/ -> tiles, tiles_sheet, or tiles_source
     if len(parts) >= 1 and parts[0] == "tiles":
+        filename = Path(parts[-1]).stem
+        if "quad" in filename or "sixteen" in filename or "twelve" in filename:
+            return "tiles_sheet"
+        if filename.startswith("raw_") or "source" in filename:
+            return "tiles_source"
         return "tiles"
 
     # resources/ -> resources

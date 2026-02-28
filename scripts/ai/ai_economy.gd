@@ -165,6 +165,11 @@ func _tick() -> void:
 	_build_planner.build_order_index = _build_order_index
 	_build_planner.trained_count = _trained_count
 	_build_planner.destroyed_tc_positions = _destroyed_tc_positions
+	# Nomadic mode: no TC yet — only execute build order (place TC first)
+	if _town_center == null and difficulty in ["hard", "expert"]:
+		_build_planner.process_build_order(_own_villagers, _town_center)
+		_sync_planner_state()
+		return
 	# Priority 1: build house if near pop cap
 	if _build_planner.check_house_needed(_own_buildings, _own_villagers, _town_center):
 		_sync_planner_state()
@@ -314,6 +319,8 @@ func save_state() -> Dictionary:
 	}
 	if personality != null:
 		state["personality_id"] = personality.personality_id
+	if _build_planner != null and _build_planner.spawn_position != Vector2i(-1, -1):
+		state["spawn_position"] = [_build_planner.spawn_position.x, _build_planner.spawn_position.y]
 	return state
 
 
@@ -334,7 +341,10 @@ func load_state(data: Dictionary) -> void:
 	for entry in dtc:
 		if entry is Array and entry.size() == 2:
 			_destroyed_tc_positions.append(Vector2i(int(entry[0]), int(entry[1])))
+	var sp: Array = data.get("spawn_position", [])
 	_load_config()
 	_load_build_order()
 	_load_tr_config()
 	_setup_components()
+	if sp.size() == 2:
+		_build_planner.spawn_position = Vector2i(int(sp[0]), int(sp[1]))
