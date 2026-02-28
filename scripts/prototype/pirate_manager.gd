@@ -113,6 +113,8 @@ func _spawn_pirate() -> void:
 	unit.unit_color = Color(0.1, 0.1, 0.1)  # Dark / black
 	_scene_root.add_child(unit)
 	unit._scene_root = _scene_root
+	if "_pathfinder" in _scene_root:
+		unit._pathfinder = _scene_root._pathfinder
 	# Apply stats from config (not from unit JSON)
 	var pirate_stats: Dictionary = _config.get("stats", {})
 	unit.hp = int(pirate_stats.get("hp", 80))

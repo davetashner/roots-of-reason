@@ -78,6 +78,7 @@ func setup_units() -> void:
 		unit.unit_type = "villager"
 		_root.add_child(unit)
 		unit._scene_root = _root
+		unit._pathfinder = _root._pathfinder
 		if _root._visibility_manager != null:
 			unit._visibility_manager = _root._visibility_manager
 		if _root._war_survival != null:
@@ -166,6 +167,7 @@ func setup_fauna() -> void:
 				unit.unit_color = Color(0.5, 0.5, 0.5)
 				_root.add_child(unit)
 				unit._scene_root = _root
+				unit._pathfinder = _root._pathfinder
 				if _root._war_survival != null:
 					unit._war_survival = _root._war_survival
 				if _root._target_detector != null:
@@ -633,6 +635,7 @@ func _create_ai_starting_villagers(tc: Node2D, count: int) -> void:
 		unit.position = IsoUtils.grid_to_screen(Vector2(spawn_pos))
 		_root.add_child(unit)
 		unit._scene_root = _root
+		unit._pathfinder = _root._pathfinder
 		if _root._war_survival != null:
 			unit._war_survival = _root._war_survival
 		if _root._target_detector != null:
