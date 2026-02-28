@@ -259,6 +259,12 @@ func setup_victory() -> void:
 	_root._victory_manager.wonder_countdown_started.connect(_root._on_wonder_countdown_started)
 	_root._victory_manager.wonder_countdown_cancelled.connect(_root._on_wonder_countdown_cancelled)
 	GameManager.age_advanced.connect(_root._victory_manager.on_age_advanced)
+	var player_start_cfg: Dictionary = _load_start_config(GameManager.player_difficulty)
+	if not player_start_cfg.get("pre_built_tc", true):
+		_root._victory_manager.register_nomadic_player(0)
+	var ai_start_cfg: Dictionary = _load_start_config(GameManager.ai_difficulty)
+	if not ai_start_cfg.get("pre_built_tc", true):
+		_root._victory_manager.register_nomadic_player(1)
 
 
 func setup_river_transport() -> void:
