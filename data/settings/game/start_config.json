@@ -1,0 +1,6 @@
+{
+  "easy":   { "pre_built_tc": true,  "starting_houses": 2 },
+  "normal": { "pre_built_tc": true,  "starting_houses": 0 },
+  "hard":   { "pre_built_tc": false, "starting_houses": 0 },
+  "expert": { "pre_built_tc": false, "starting_houses": 0 }
+}
