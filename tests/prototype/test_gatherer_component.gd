@@ -287,15 +287,16 @@ func test_arrival_at_drop_off_transitions_to_depositing() -> void:
 	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.DEPOSITING)
 
 
-func test_no_drop_off_target_cancels() -> void:
+func test_no_drop_off_target_enters_waiting() -> void:
 	var gc := _make_component()
 	gc.gather_state = GathererComponentScript.GatherState.MOVING_TO_DROP_OFF
 	gc.gather_type = "food"
 	gc.drop_off_target = null
 	gc.carried_amount = 5
-	# No drop-off in scene → cancel
+	# No drop-off in scene → wait (preserves carried resources)
 	gc.tick(0.0)
-	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.NONE)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.WAITING_FOR_DROP_OFF)
+	assert_int(gc.carried_amount).is_equal(5)
 
 
 # ---------------------------------------------------------------------------
@@ -577,3 +578,62 @@ func test_tick_in_none_state_does_nothing() -> void:
 	gc.tick(1.0)
 	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.NONE)
 	assert_bool(_unit._moving).is_false()
+
+
+# ---------------------------------------------------------------------------
+# WAITING_FOR_DROP_OFF — resilience when no drop-off exists
+# ---------------------------------------------------------------------------
+
+
+func test_no_drop_off_enters_waiting_state() -> void:
+	var gc := _make_component()
+	var res := _make_resource()
+	gc.assign_target(res)
+	gc.carried_amount = 10
+	# No drop-off exists — should enter waiting, not cancel
+	gc._start_drop_off_trip()
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.WAITING_FOR_DROP_OFF)
+	assert_int(gc.carried_amount).is_equal(10)
+
+
+func test_waiting_transitions_when_drop_off_appears() -> void:
+	var gc := _make_component()
+	var res := _make_resource()
+	gc.assign_target(res)
+	gc.carried_amount = 10
+	gc._start_drop_off_trip()
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.WAITING_FOR_DROP_OFF)
+	# Now add a drop-off
+	var drop := _make_drop_off()
+	gc.tick(0.016)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_DROP_OFF)
+
+
+func test_waiting_preserves_carried_resources() -> void:
+	var gc := _make_component()
+	var res := _make_resource()
+	gc.assign_target(res)
+	gc.carried_amount = 7
+	gc.gather_type = "food"
+	gc._start_drop_off_trip()
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.WAITING_FOR_DROP_OFF)
+	# Tick several times with no drop-off
+	gc.tick(1.0)
+	gc.tick(1.0)
+	gc.tick(1.0)
+	assert_int(gc.carried_amount).is_equal(7)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.WAITING_FOR_DROP_OFF)
+
+
+func test_moving_to_drop_off_enters_waiting_on_invalid_target() -> void:
+	var gc := _make_component()
+	var res := _make_resource()
+	gc.assign_target(res)
+	gc.carried_amount = 5
+	gc.gather_type = "food"
+	gc.gather_state = GathererComponentScript.GatherState.MOVING_TO_DROP_OFF
+	gc.drop_off_target = null
+	# No drop-off exists — tick should go to waiting
+	gc.tick(0.016)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.WAITING_FOR_DROP_OFF)
+	assert_int(gc.carried_amount).is_equal(5)
