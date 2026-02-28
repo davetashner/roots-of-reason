@@ -10,6 +10,7 @@
       "idle": ["idle"],
       "walk": ["walk"],
       "gather": ["gather"],
+      "attack": ["gather"],
       "build": ["build_a", "build_b"],
       "death": ["death"]
     },
@@ -17,6 +18,7 @@
       "idle": ["idle"],
       "walk": ["walk_a", "walk_b"],
       "gather": ["gather"],
+      "attack": ["gather"],
       "build": ["build"],
       "death": []
     }
