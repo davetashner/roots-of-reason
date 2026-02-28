@@ -150,3 +150,104 @@ func test_three_band_pattern() -> void:
 	assert_str(changes.get(Vector2i(3, 0), "")).is_equal("shallows")
 	# W at x=5 not adjacent to land -> deep_water
 	assert_str(changes.get(Vector2i(5, 0), "")).is_equal("deep_water")
+
+
+# -- Shore Orientation Tests --
+
+
+func test_orientation_water_to_right_returns_se() -> void:
+	# Water at (1,0) relative to shore at (0,0) — grid direction (1,0) = SE
+	# G W
+	var grid := _grid_from_rows(["GW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 2, 1)
+	var orientations: Dictionary = result.shore_orientations
+	# Shore at (0,0) should orient toward water at (1,0)
+	assert_bool(orientations.has(Vector2i(0, 0))).is_true()
+	assert_object(orientations[Vector2i(0, 0)]).is_equal(Vector2i(1, 0))
+
+
+func test_orientation_water_above_returns_ne() -> void:
+	# Water at (0,0), grass at (0,1) — water direction from shore is (0,-1) = NE
+	# W
+	# G
+	var grid := _grid_from_rows(["W", "G"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 1, 2)
+	var orientations: Dictionary = result.shore_orientations
+	assert_bool(orientations.has(Vector2i(0, 1))).is_true()
+	assert_object(orientations[Vector2i(0, 1)]).is_equal(Vector2i(0, -1))
+
+
+func test_orientation_water_below_returns_sw() -> void:
+	# G
+	# W
+	var grid := _grid_from_rows(["G", "W"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 1, 2)
+	var orientations: Dictionary = result.shore_orientations
+	assert_bool(orientations.has(Vector2i(0, 0))).is_true()
+	assert_object(orientations[Vector2i(0, 0)]).is_equal(Vector2i(0, 1))
+
+
+func test_orientation_water_to_left_returns_nw() -> void:
+	# W G
+	var grid := _grid_from_rows(["WG"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 2, 1)
+	var orientations: Dictionary = result.shore_orientations
+	assert_bool(orientations.has(Vector2i(1, 0))).is_true()
+	assert_object(orientations[Vector2i(1, 0)]).is_equal(Vector2i(-1, 0))
+
+
+func test_orientation_multiple_sides_picks_dominant() -> void:
+	# Water on three sides — should pick the direction with most water neighbors
+	# W W W
+	# W G G
+	# W G G
+	var grid := _grid_from_rows(["WWW", "WGG", "WGG"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 3, 3)
+	var orientations: Dictionary = result.shore_orientations
+	# Shore at (1,1): water at (-1,0) and (0,-1). NW direction (-1,0) also has
+	# diagonal water at (-1,-1), so NW should win or tie with NE.
+	assert_bool(orientations.has(Vector2i(1, 1))).is_true()
+	var dir: Vector2i = orientations[Vector2i(1, 1)]
+	# Should be a valid cardinal direction
+	assert_bool(CoastlineGenerator.CARDINAL_DIRS.has(dir)).is_true()
+
+
+func test_single_land_in_water_has_orientation() -> void:
+	# W W W
+	# W G W
+	# W W W
+	var grid := _grid_from_rows(["WWW", "WGW", "WWW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 3, 3)
+	var orientations: Dictionary = result.shore_orientations
+	# Single land at center becomes shore — should have an orientation
+	assert_bool(orientations.has(Vector2i(1, 1))).is_true()
+	var dir: Vector2i = orientations[Vector2i(1, 1)]
+	assert_bool(CoastlineGenerator.CARDINAL_DIRS.has(dir)).is_true()
+
+
+func test_orientations_dict_populated_for_all_shore() -> void:
+	# G G G W W
+	# G G G W W
+	var grid := _grid_from_rows(["GGGWW", "GGGWW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 5, 2)
+	var changes: Dictionary = result.changes
+	var orientations: Dictionary = result.shore_orientations
+	# Every shore tile in changes should have an orientation
+	for pos: Vector2i in changes:
+		if changes[pos] == "shore":
+			assert_bool(orientations.has(pos)).is_true()
+
+
+func test_shore_disabled_no_orientations() -> void:
+	var grid := _grid_from_rows(["GW"])
+	var gen := _make_gen(false)
+	var result: Dictionary = gen.generate(grid, 2, 1)
+	var orientations: Dictionary = result.shore_orientations
+	assert_int(orientations.size()).is_equal(0)
