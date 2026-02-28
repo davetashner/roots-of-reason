@@ -321,6 +321,7 @@ func setup_ai() -> void:
 			_root._entity_registry,
 		)
 	)
+	_root._ai_economy._build_planner.spawn_position = get_start_position(1)
 	_root._ai_military = Node.new()
 	_root._ai_military.name = "AIMilitary"
 	_root._ai_military.set_script(AIMilitaryScript)
