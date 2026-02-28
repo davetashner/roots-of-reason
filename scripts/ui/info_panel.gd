@@ -166,6 +166,9 @@ func show_unit(unit: Node2D) -> void:
 		var cargo_cap: int = unit.get_transport_capacity()
 		if cargo_cap > 0:
 			stats_text += "  Cargo: %d/%d" % [cargo_count, cargo_cap]
+	var carry_text := _get_carry_text(unit)
+	if carry_text != "":
+		stats_text += "\n" + carry_text
 	_stats_label.text = stats_text
 	_update_unit_hp(unit, stats)
 
@@ -458,8 +461,28 @@ func _update() -> void:
 		elif _tracked_entity.has_method("get_damage_state"):
 			_stats_label.text = _tracked_entity.get_damage_state().capitalize()
 	else:
-		var stats := _get_unit_stats(_tracked_entity as Node2D)
-		_update_unit_hp(_tracked_entity as Node2D, stats)
+		var unit: Node2D = _tracked_entity as Node2D
+		var stats := _get_unit_stats(unit)
+		_update_unit_hp(unit, stats)
+		_update_unit_carry(unit, stats)
+
+
+func _update_unit_carry(unit: Node2D, stats: Dictionary) -> void:
+	var atk: int = int(stats.get("attack", 0))
+	var def: int = int(stats.get("defense", 0))
+	var spd: float = float(stats.get("speed", 0.0))
+	var stats_text: String = "ATK: %d  DEF: %d  SPD: %.1f" % [atk, def, spd]
+	if unit.has_meta("bounty_gold"):
+		stats_text += "  Bounty: %d Gold" % int(unit.get_meta("bounty_gold"))
+	if unit.has_method("get_embarked_count") and unit.has_method("get_transport_capacity"):
+		var cargo_count: int = unit.get_embarked_count()
+		var cargo_cap: int = unit.get_transport_capacity()
+		if cargo_cap > 0:
+			stats_text += "  Cargo: %d/%d" % [cargo_count, cargo_cap]
+	var carry_text := _get_carry_text(unit)
+	if carry_text != "":
+		stats_text += "\n" + carry_text
+	_stats_label.text = stats_text
 
 
 func _update_unit_hp(unit: Node2D, stats: Dictionary) -> void:
@@ -552,6 +575,26 @@ func _get_building_display_name(building: Node2D) -> String:
 	if bname != "":
 		return bname.replace("_", " ").capitalize()
 	return "Building"
+
+
+func _get_carry_text(unit: Node2D) -> String:
+	if "_carried_amount" not in unit or "_carry_capacity" not in unit:
+		return ""
+	var amount: int = int(unit._carried_amount)
+	var capacity: int = int(unit._carry_capacity)
+	if capacity <= 0:
+		return ""
+	var res_type: String = ""
+	if "_gather_type" in unit:
+		res_type = str(unit._gather_type)
+	if amount <= 0 and res_type == "":
+		return ""
+	var type_label: String = res_type.capitalize() if res_type != "" else ""
+	if amount > 0 and type_label != "":
+		return "Carrying: %d/%d %s" % [amount, capacity, type_label]
+	if type_label != "":
+		return "Gathering: %s  (0/%d)" % [type_label, capacity]
+	return ""
 
 
 func _is_building(entity: Node) -> bool:
