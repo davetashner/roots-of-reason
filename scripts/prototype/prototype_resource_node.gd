@@ -19,6 +19,10 @@ var _regen_accum: float = 0.0
 var _regen_delay_timer: float = 0.0
 var _is_regrowing: bool = false
 var _node_color: Color = Color(0.2, 0.8, 0.2)
+var _sprite: Sprite2D = null
+var _sprite_textures: Dictionary = {}  # state_name -> Texture2D
+var _half_threshold: float = 0.5
+var _sprite_offset_y: float = 0.0
 
 
 func setup(res_name: String) -> void:
@@ -34,7 +38,47 @@ func setup(res_name: String) -> void:
 	regenerates = bool(cfg.get("regenerates", false))
 	regen_rate = float(cfg.get("regen_rate", 0.0))
 	regen_delay = float(cfg.get("regen_delay", 0.0))
+	_setup_sprite(cfg)
 	queue_redraw()
+
+
+func _setup_sprite(cfg: Dictionary) -> void:
+	var sprite_cfg: Dictionary = cfg.get("sprite", {})
+	if sprite_cfg.is_empty():
+		return
+	var base_path: String = str(sprite_cfg.get("base_path", ""))
+	var states: Dictionary = sprite_cfg.get("states", {})
+	if base_path.is_empty() or states.is_empty():
+		return
+	# Try loading each state texture
+	for state_name: String in states:
+		var file_name: String = str(states[state_name])
+		var full_path: String = base_path + "/" + file_name
+		if ResourceLoader.exists(full_path):
+			_sprite_textures[state_name] = load(full_path)
+	if _sprite_textures.is_empty():
+		return
+	_half_threshold = float(sprite_cfg.get("half_threshold", 0.5))
+	_sprite_offset_y = float(sprite_cfg.get("offset_y", 0.0))
+	_sprite = Sprite2D.new()
+	_sprite.name = "Sprite"
+	_sprite.position.y = _sprite_offset_y
+	add_child(_sprite)
+	_update_sprite()
+
+
+func _update_sprite() -> void:
+	if _sprite == null:
+		return
+	var state: String = "full"
+	if current_yield <= 0:
+		state = "stump"
+	elif total_yield > 0 and float(current_yield) / float(total_yield) <= _half_threshold:
+		state = "half"
+	if _sprite_textures.has(state):
+		_sprite.texture = _sprite_textures[state]
+	elif _sprite_textures.has("full"):
+		_sprite.texture = _sprite_textures["full"]
 
 
 func _load_resource_config(res_name: String) -> Dictionary:
@@ -52,6 +96,7 @@ func apply_gather_work(amount: float) -> int:
 		return 0
 	var gathered := mini(int(amount), current_yield)
 	current_yield -= gathered
+	_update_sprite()
 	queue_redraw()
 	if current_yield <= 0:
 		if regenerates:
@@ -93,6 +138,7 @@ func _process(delta: float) -> void:
 		current_yield = mini(current_yield + restore, total_yield)
 		if current_yield > 0 and _is_regrowing:
 			_is_regrowing = false
+		_update_sprite()
 		queue_redraw()
 
 
@@ -105,6 +151,8 @@ func is_point_inside(point: Vector2) -> bool:
 
 
 func _draw() -> void:
+	if _sprite != null:
+		return
 	var color := _node_color
 	if _is_regrowing and current_yield <= 0:
 		# Stump visual — faded outline only
@@ -169,4 +217,5 @@ func load_state(data: Dictionary) -> void:
 		regenerates = bool(cfg.get("regenerates", false))
 		regen_rate = float(cfg.get("regen_rate", 0.0))
 		regen_delay = float(cfg.get("regen_delay", 0.0))
+		_setup_sprite(cfg)
 	queue_redraw()

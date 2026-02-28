@@ -1,8 +1,18 @@
 {
   "resource_type": "wood",
-  "total_yield": 200,
+  "total_yield": 50,
   "color": [0.2, 0.6, 0.1],
   "regenerates": true,
   "regen_rate": 0.5,
-  "regen_delay": 60.0
+  "regen_delay": 60.0,
+  "sprite": {
+    "base_path": "res://assets/sprites/resources/tree",
+    "states": {
+      "full": "tree_full.png",
+      "half": "tree_half.png",
+      "stump": "tree_stump.png"
+    },
+    "half_threshold": 0.5,
+    "offset_y": -20.0
+  }
 }

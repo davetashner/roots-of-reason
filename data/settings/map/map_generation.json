@@ -113,7 +113,10 @@
         "forbidden_terrain": ["water", "river", "mountain", "shallows", "deep_water", "shore", "canyon"],
         "min_spacing": 2,
         "noise_weight": 0.5,
-        "noise_seed_offset": 4300
+        "noise_seed_offset": 4300,
+        "cluster_size_min": 3,
+        "cluster_size_max": 4,
+        "cluster_seed_offset": 4350
       },
       "fish": {
         "density_per_1000_tiles": 4,
