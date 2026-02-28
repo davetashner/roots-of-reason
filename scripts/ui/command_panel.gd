@@ -46,7 +46,17 @@ func _setup_layout() -> void:
 	var panel_width: int = columns * (btn_size + margin) + margin
 	var panel_height: int = rows * (btn_size + margin) + margin
 	custom_minimum_size = Vector2(panel_width, panel_height)
-	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	size = Vector2(panel_width, panel_height)
+	anchor_left = 1.0
+	anchor_right = 1.0
+	anchor_top = 1.0
+	anchor_bottom = 1.0
+	offset_left = -panel_width
+	offset_right = 0.0
+	offset_top = -panel_height
+	offset_bottom = 0.0
+	grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	grow_vertical = Control.GROW_DIRECTION_BEGIN
 	# Add a StyleBoxFlat with transparent background
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.1, 0.1, 0.6)
