@@ -1,0 +1,16 @@
+{
+  "name": "Siege Workshop",
+  "placeholder": true,
+  "description": "A specialized workshop for constructing siege weapons. Required to train catapults and other siege engines. [PLACEHOLDER]",
+  "hp": 1500,
+  "footprint": [3, 3],
+  "build_time": 60,
+  "build_cost": { "wood": 200, "stone": 100 },
+  "population_bonus": 0,
+  "garrison_capacity": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": ["catapult"],
+  "age_required": 2,
+  "placement_constraint": ""
+}

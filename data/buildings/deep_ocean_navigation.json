@@ -1,0 +1,17 @@
+{
+  "name": "Deep Ocean Navigation",
+  "placeholder": true,
+  "description": "A navigational institute housing charts and instruments for open-ocean voyaging. Extends naval line of sight and enables long-range trade routes. [PLACEHOLDER]",
+  "hp": 1200,
+  "footprint": [3, 3],
+  "build_time": 70,
+  "build_cost": { "wood": 200, "gold": 150 },
+  "population_bonus": 0,
+  "garrison_capacity": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 3,
+  "placement_constraint": "adjacent_to_water",
+  "naval_los_bonus": 5
+}
