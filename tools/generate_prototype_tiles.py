@@ -57,7 +57,7 @@ def generate_fog_tile(name: str, alpha: int, out_dir: Path) -> None:
     print(f"  Created {path}")
 
 
-# Building definitions: name -> (fill_color, border_color)
+# Standard 1x1 building definitions: name -> (fill_color, border_color)
 BUILDINGS = {
     "river_dock": ("#6B8E9B", "#5A7E8B"),
     "farm": ("#8B9B4A", "#7B8B3A"),
@@ -67,6 +67,8 @@ BUILDINGS = {
     "library": ("#6A5ACD", "#5A4ABD"),
     "wonder": ("#DAA520", "#CA9510"),
     "factory": ("#5A5A5A", "#4A4A4A"),
+    "house": ("#A0764A", "#90663A"),
+    "lumber_camp": ("#6B5B3A", "#5B4B2A"),
 }
 
 # Diamond vertices for a 128x128 building tile
@@ -77,17 +79,69 @@ BUILDING_DIAMOND = [
     (0, BUILDING_SIZE // 2),
 ]
 
+# Magenta player color mask
+PLAYER_COLOR_MASK = "#FF00FF"
+
+
+def _diamond_for_size(w: int, h: int) -> list[tuple[int, int]]:
+    """Return diamond vertices for an arbitrary bounding box."""
+    return [
+        (w // 2, 0),
+        (w - 1, h // 2),
+        (w // 2, h - 1),
+        (0, h // 2),
+    ]
+
 
 def generate_building_tile(name: str, fill: str, border: str, out_dir: Path) -> None:
     img = Image.new("RGBA", (BUILDING_SIZE, BUILDING_SIZE), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     draw.polygon(BUILDING_DIAMOND, fill=fill, outline=border, width=2)
-    # Dock plank detail lines (horizontal)
     cx, cy = BUILDING_SIZE // 2, BUILDING_SIZE // 2
+    # Detail lines (horizontal planks)
     for offset in (-12, 0, 12):
         y = cy + offset
         draw.line([(cx - 20, y), (cx + 20, y)], fill=border, width=1)
+    # Player color mask — small banner at top
+    banner_pts = [(cx - 8, 10), (cx + 8, 10), (cx + 8, 22), (cx, 26), (cx - 8, 22)]
+    draw.polygon(banner_pts, fill=PLAYER_COLOR_MASK)
     path = out_dir / f"{name}.png"
+    img.save(path)
+    print(f"  Created {path}")
+
+
+def generate_town_center(out_dir: Path) -> None:
+    """Generate the Town Center sprite — 3x3 footprint, 384x256px."""
+    w, h = 384, 256
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    fill, border = "#3A6B9B", "#2A5B8B"
+    diamond = _diamond_for_size(w, h)
+    draw.polygon(diamond, fill=fill, outline=border, width=3)
+    cx, cy = w // 2, h // 2
+    # Inner structure lines — stone foundation look
+    inset = 30
+    inner = _diamond_for_size(w - inset * 2, h - inset * 2)
+    inner = [(x + inset, y + inset) for x, y in inner]
+    draw.polygon(inner, fill=None, outline=border, width=2)
+    # Horizontal detail lines (floor planks)
+    for offset in (-30, -15, 0, 15, 30):
+        y = cy + offset
+        draw.line([(cx - 60, y), (cx + 60, y)], fill=border, width=1)
+    # Player color mask — large banner at top
+    banner_pts = [
+        (cx - 16, 20), (cx + 16, 20),
+        (cx + 16, 50), (cx, 58), (cx - 16, 50),
+    ]
+    draw.polygon(banner_pts, fill=PLAYER_COLOR_MASK)
+    # Flag pole from banner
+    draw.line([(cx, 10), (cx, 20)], fill=border, width=2)
+    # "TC" label centered
+    bbox = draw.textbbox((0, 0), "TC")
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    draw.text((cx - tw // 2, cy - th // 2 - 1), "TC", fill="white")
+    path = out_dir / "town_center.png"
     img.save(path)
     print(f"  Created {path}")
 
@@ -148,6 +202,7 @@ def main() -> None:
     print("Generating prototype building sprites...")
     for name, (fill, border) in BUILDINGS.items():
         generate_building_tile(name, fill, border, building_dir)
+    generate_town_center(building_dir)
     # Generate unit placeholder sprites
     unit_dir = project_root / "assets" / "sprites" / "units" / "placeholder"
     unit_dir.mkdir(parents=True, exist_ok=True)
