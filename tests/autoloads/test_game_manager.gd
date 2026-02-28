@@ -12,6 +12,12 @@ func before_test() -> void:
 		"current_age": GameManager.current_age,
 		"speed_index": GameManager._speed_index,
 	}
+	# Reset to clean defaults so tests don't depend on execution order
+	GameManager.is_paused = false
+	GameManager.game_speed = 1.0
+	GameManager.game_time = 0.0
+	GameManager.current_age = 0
+	GameManager._speed_index = 1
 
 
 func after_test() -> void:
