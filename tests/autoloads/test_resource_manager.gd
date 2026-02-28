@@ -259,3 +259,22 @@ func test_corruption_minimum_yield_is_one() -> void:
 	# 1 * (1 - 0.99) = 0.01 -> maxi(0, 1) = 1
 	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.FOOD)).is_equal(1)
 	ResourceManager.set_corruption_rate(99, 0.0)
+
+
+# --- Difficulty starting resources ---
+
+
+func test_hard_starting_resources_cover_tc_cost() -> void:
+	ResourceManager.init_player(99, null, "hard")
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.FOOD)).is_equal(150)
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.WOOD)).is_equal(400)
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.STONE)).is_equal(175)
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.GOLD)).is_equal(50)
+
+
+func test_expert_starting_resources_cover_tc_cost() -> void:
+	ResourceManager.init_player(99, null, "expert")
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.FOOD)).is_equal(100)
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.WOOD)).is_equal(375)
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.STONE)).is_equal(150)
+	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.GOLD)).is_equal(50)

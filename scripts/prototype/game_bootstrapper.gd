@@ -120,29 +120,8 @@ func setup_demo_entities() -> void:
 			res_node.depleted.connect(_root._on_resource_depleted)
 			_root._target_detector.register_entity(res_node)
 			res_index += 1
-	var building := Node2D.new()
-	building.name = "Building_0"
-	building.set_script(BuildingScript)
 	var bld_pos := get_start_position(0)
-	building.position = IsoUtils.grid_to_screen(Vector2(bld_pos))
-	building.owner_id = 0
-	building.building_name = "town_center"
-	building.footprint = Vector2i(3, 3)
-	building.grid_pos = bld_pos
-	building.hp = 2400
-	building.max_hp = 2400
-	building.under_construction = false
-	building.build_progress = 1.0
-	_root.add_child(building)
-	_root._target_detector.register_entity(building)
-	if _root._population_manager != null:
-		_root._population_manager.register_building(building, building.owner_id)
-	_root._entity_registry.register(building)
-	building.building_destroyed.connect(_root._on_building_destroyed)
-	try_attach_production_queue(building)
-	var cells := BuildingValidator.get_footprint_cells(bld_pos, Vector2i(3, 3))
-	for cell in cells:
-		_root._pathfinder.set_cell_solid(cell, true)
+	_create_town_center(0, bld_pos, "")
 
 
 func setup_fauna() -> void:
@@ -593,21 +572,24 @@ func _load_ai_tier_config(difficulty: String) -> Dictionary:
 	return tiers.get(default_tier, {})
 
 
-func _create_ai_town_center() -> Node2D:
-	var tc_pos := get_start_position(1)
+func _create_town_center(player_id: int, grid_pos: Vector2i, category: String) -> Node2D:
+	var stats: Dictionary = DataLoader.get_building_stats("town_center")
+	var max_hp: int = int(stats.get("hp", 2400))
+	var footprint := Vector2i(int(stats.get("footprint", [3, 3])[0]), int(stats.get("footprint", [3, 3])[1]))
 	var building := Node2D.new()
-	building.name = "AI_TownCenter"
+	building.name = "Building_TC_%d" % player_id
 	building.set_script(BuildingScript)
-	building.position = IsoUtils.grid_to_screen(Vector2(tc_pos))
-	building.owner_id = 1
+	building.position = IsoUtils.grid_to_screen(Vector2(grid_pos))
+	building.owner_id = player_id
 	building.building_name = "town_center"
-	building.footprint = Vector2i(3, 3)
-	building.grid_pos = tc_pos
-	building.hp = 2400
-	building.max_hp = 2400
+	building.footprint = footprint
+	building.grid_pos = grid_pos
+	building.hp = max_hp
+	building.max_hp = max_hp
 	building.under_construction = false
 	building.build_progress = 1.0
-	building.entity_category = "enemy_building"
+	if category != "":
+		building.entity_category = category
 	_root.add_child(building)
 	_root._target_detector.register_entity(building)
 	if _root._population_manager != null:
@@ -615,10 +597,15 @@ func _create_ai_town_center() -> Node2D:
 	_root._entity_registry.register(building)
 	building.building_destroyed.connect(_root._on_building_destroyed)
 	try_attach_production_queue(building)
-	var cells := BuildingValidator.get_footprint_cells(tc_pos, Vector2i(3, 3))
+	var cells := BuildingValidator.get_footprint_cells(grid_pos, footprint)
 	for cell in cells:
 		_root._pathfinder.set_cell_solid(cell, true)
 	return building
+
+
+func _create_ai_town_center() -> Node2D:
+	var tc_pos := get_start_position(1)
+	return _create_town_center(1, tc_pos, "enemy_building")
 
 
 func _create_ai_starting_villagers(tc: Node2D, count: int) -> void:

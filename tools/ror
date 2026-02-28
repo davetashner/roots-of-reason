@@ -163,7 +163,7 @@ _run_godot_tests() {
         fi
     else
         godot_flags+=("--headless")
-        "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd "${test_args[@]}"
+        "$godot" --path . "${godot_flags[@]}" res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode "${test_args[@]}"
     fi
     return $?
 }
