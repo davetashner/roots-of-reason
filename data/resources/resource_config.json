@@ -10,19 +10,19 @@
       "display_name": "Wood",
       "icon_path": "",
       "color": [0.55, 0.35, 0.15],
-      "starting_amount": { "easy": 300, "normal": 200, "hard": 150, "expert": 100 }
+      "starting_amount": { "easy": 300, "normal": 200, "hard": 400, "expert": 375 }
     },
     "stone": {
       "display_name": "Stone",
       "icon_path": "",
       "color": [0.6, 0.6, 0.6],
-      "starting_amount": { "easy": 200, "normal": 100, "hard": 75, "expert": 50 }
+      "starting_amount": { "easy": 200, "normal": 100, "hard": 175, "expert": 150 }
     },
     "gold": {
       "display_name": "Gold",
       "icon_path": "",
       "color": [0.9, 0.8, 0.1],
-      "starting_amount": { "easy": 200, "normal": 100, "hard": 75, "expert": 50 }
+      "starting_amount": { "easy": 200, "normal": 100, "hard": 50, "expert": 50 }
     },
     "knowledge": {
       "display_name": "Knowledge",

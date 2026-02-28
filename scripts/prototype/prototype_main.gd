@@ -108,7 +108,7 @@ func _on_civ_selected(player_civ: String, ai_civ: String) -> void:
 
 
 func _start_game() -> void:
-	ResourceManager.init_player(0)  # Must precede setup_civilizations()
+	ResourceManager.init_player(0, null, GameManager.player_difficulty)  # Must precede setup_civilizations()
 	ResourceManager.init_player(1, null, GameManager.ai_difficulty)
 	_entity_registry = EntityRegistryScript.new()
 	_bootstrapper.setup_civilizations()

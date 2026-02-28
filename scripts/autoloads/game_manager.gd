@@ -16,6 +16,7 @@ var game_speed: float = 1.0
 var game_time: float = 0.0
 var current_age: int = 0  # 0=Stone, 1=Bronze, ..., 6=Singularity
 var ai_difficulty: String = "normal"
+var player_difficulty: String = "normal"
 
 ## {player_id: String} — civilization ID per player (e.g. "mesopotamia")
 var player_civilizations: Dictionary = {}
@@ -157,6 +158,7 @@ func reset_game_state() -> void:
 	current_age = 0
 	player_civilizations.clear()
 	ai_difficulty = "normal"
+	player_difficulty = "normal"
 
 
 func save_state() -> Dictionary:
@@ -167,6 +169,7 @@ func save_state() -> Dictionary:
 		"is_paused": is_paused,
 		"current_age": current_age,
 		"ai_difficulty": ai_difficulty,
+		"player_difficulty": player_difficulty,
 		"player_civilizations": player_civilizations.duplicate(),
 	}
 
@@ -182,6 +185,7 @@ func load_state(data: Dictionary) -> void:
 		age = 0
 	current_age = age
 	ai_difficulty = str(data.get("ai_difficulty", "normal"))
+	player_difficulty = str(data.get("player_difficulty", "normal"))
 	# Restore player civilizations (JSON round-trip gives string keys)
 	player_civilizations = {}
 	var raw_civs: Dictionary = data.get("player_civilizations", {})

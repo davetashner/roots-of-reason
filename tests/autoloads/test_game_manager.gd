@@ -11,6 +11,7 @@ func before_test() -> void:
 		"game_time": GameManager.game_time,
 		"current_age": GameManager.current_age,
 		"speed_index": GameManager._speed_index,
+		"player_difficulty": GameManager.player_difficulty,
 	}
 	# Reset to clean defaults so tests don't depend on execution order
 	GameManager.is_paused = false
@@ -18,6 +19,7 @@ func before_test() -> void:
 	GameManager.game_time = 0.0
 	GameManager.current_age = 0
 	GameManager._speed_index = 1
+	GameManager.player_difficulty = "normal"
 
 
 func after_test() -> void:
@@ -26,6 +28,7 @@ func after_test() -> void:
 	GameManager.game_time = _original_state["game_time"]
 	GameManager.current_age = _original_state["current_age"]
 	GameManager._speed_index = _original_state["speed_index"]
+	GameManager.player_difficulty = _original_state["player_difficulty"]
 
 
 # --- Age tests ---
@@ -213,3 +216,42 @@ func test_save_state_keys() -> void:
 	assert_bool(state.has("speed_index")).is_true()
 	assert_bool(state.has("is_paused")).is_true()
 	assert_bool(state.has("current_age")).is_true()
+	assert_bool(state.has("player_difficulty")).is_true()
+
+
+# --- player_difficulty tests ---
+
+
+func test_player_difficulty_defaults_to_normal() -> void:
+	GameManager.reset_game_state()
+	assert_str(GameManager.player_difficulty).is_equal("normal")
+
+
+func test_player_difficulty_save_load_roundtrip() -> void:
+	GameManager.player_difficulty = "hard"
+	var state := GameManager.save_state()
+	GameManager.player_difficulty = "normal"
+	GameManager.load_state(state)
+	assert_str(GameManager.player_difficulty).is_equal("hard")
+
+
+func test_player_difficulty_save_load_expert() -> void:
+	GameManager.player_difficulty = "expert"
+	var state := GameManager.save_state()
+	GameManager.player_difficulty = "easy"
+	GameManager.load_state(state)
+	assert_str(GameManager.player_difficulty).is_equal("expert")
+
+
+func test_reset_game_state_resets_player_difficulty() -> void:
+	GameManager.player_difficulty = "hard"
+	GameManager.reset_game_state()
+	assert_str(GameManager.player_difficulty).is_equal("normal")
+
+
+func test_load_state_defaults_player_difficulty_when_missing() -> void:
+	var state := GameManager.save_state()
+	state.erase("player_difficulty")
+	GameManager.player_difficulty = "expert"
+	GameManager.load_state(state)
+	assert_str(GameManager.player_difficulty).is_equal("normal")
