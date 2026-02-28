@@ -1026,6 +1026,177 @@ cmd_wait_until() {
     done
 }
 
+# ==================== scenario ====================
+# Execute a single scenario step. Returns 0 on success, 1 on failure.
+_run_scenario_step() {
+    local step="$1"
+
+    # Trim whitespace
+    step="$(echo "$step" | xargs)"
+    if [[ -z "$step" ]]; then
+        return 0
+    fi
+
+    # Parse command and arguments
+    local cmd args_str
+    cmd="${step%% *}"
+    if [[ "$step" == *" "* ]]; then
+        args_str="${step#* }"
+    else
+        args_str=""
+    fi
+
+    case "$cmd" in
+        select-all)
+            cmd_game_cmd "select-all"
+            ;;
+        gather)
+            local gx gy
+            read -r gx gy <<< "$args_str"
+            if [[ -z "$gx" || -z "$gy" ]]; then
+                err "gather requires X Y coordinates"
+                return 1
+            fi
+            cmd_game_cmd "gather" "grid_x=$gx" "grid_y=$gy"
+            ;;
+        right-click)
+            local rx ry
+            read -r rx ry <<< "$args_str"
+            if [[ -z "$rx" || -z "$ry" ]]; then
+                err "right-click requires X Y coordinates"
+                return 1
+            fi
+            cmd_game_cmd "right-click" "grid_x=$rx" "grid_y=$ry"
+            ;;
+        camera-to)
+            local cx cy
+            read -r cx cy <<< "$args_str"
+            if [[ -z "$cx" || -z "$cy" ]]; then
+                err "camera-to requires X Y coordinates"
+                return 1
+            fi
+            cmd_game_cmd "camera-to" "grid_x=$cx" "grid_y=$cy"
+            ;;
+        speed)
+            if [[ -z "$args_str" ]]; then
+                err "speed requires a value"
+                return 1
+            fi
+            cmd_game_cmd "speed" "value=$args_str"
+            ;;
+        pause)
+            cmd_game_cmd "pause"
+            ;;
+        unpause)
+            cmd_game_cmd "unpause"
+            ;;
+        screenshot)
+            if [[ -n "$args_str" ]]; then
+                cmd_screenshot --name "$args_str"
+            else
+                cmd_screenshot
+            fi
+            ;;
+        wait)
+            if [[ -z "$args_str" ]]; then
+                err "wait requires a condition (e.g. wait wood>250)"
+                return 1
+            fi
+            # Split args_str to allow --timeout/--interval after condition
+            local -a wait_args=()
+            read -ra wait_args <<< "$args_str"
+            cmd_wait_until "${wait_args[@]}"
+            ;;
+        sleep)
+            if [[ -z "$args_str" ]]; then
+                err "sleep requires a duration in seconds"
+                return 1
+            fi
+            info "Sleeping ${args_str}s ..."
+            sleep "$args_str"
+            ;;
+        status)
+            cmd_game_status
+            ;;
+        entities)
+            local -a ent_args=()
+            if [[ -n "$args_str" ]]; then
+                read -ra ent_args <<< "$args_str"
+            fi
+            cmd_entities "${ent_args[@]}"
+            ;;
+        *)
+            err "Unknown scenario command: $cmd"
+            echo "  Available: select-all, gather X Y, right-click X Y, camera-to X Y,"
+            echo "  speed N, pause, unpause, screenshot [NAME], wait CONDITION,"
+            echo "  sleep N, status, entities [--category X]"
+            return 1
+            ;;
+    esac
+}
+
+cmd_scenario() {
+    if [[ $# -lt 1 ]]; then
+        err "Usage: ror scenario <script> | ror scenario --file <path.scenario>"
+        echo "  Script: semicolon-separated commands"
+        echo "  Example: ror scenario 'select-all; gather 5 4; wait wood>250; screenshot done'"
+        exit 1
+    fi
+
+    local script=""
+
+    if [[ "$1" == "--file" ]]; then
+        if [[ -z "${2:-}" ]]; then
+            err "Missing file path after --file"
+            exit 1
+        fi
+        local file_path="$2"
+        if [[ ! -f "$file_path" ]]; then
+            err "Scenario file not found: $file_path"
+            exit 1
+        fi
+        # Read file, strip comments (#) and blank lines, join with semicolons
+        script=$(grep -v '^\s*#' "$file_path" | grep -v '^\s*$' | tr '\n' ';')
+    else
+        script="$1"
+    fi
+
+    # Split on semicolons
+    local -a steps=()
+    IFS=';' read -ra steps <<< "$script"
+
+    local total=${#steps[@]}
+    local step_num=0
+    local failed=0
+
+    printf "${BOLD}Running scenario (%d steps) …${RESET}\n" "$total"
+
+    for step in "${steps[@]}"; do
+        step="$(echo "$step" | xargs)"
+        if [[ -z "$step" ]]; then
+            continue
+        fi
+        step_num=$((step_num + 1))
+        printf "\n${CYAN}[%d/%d]${RESET} %s\n" "$step_num" "$total" "$step"
+
+        if _run_scenario_step "$step"; then
+            ok "Step $step_num complete"
+        else
+            err "Step $step_num failed: $step"
+            failed=$((failed + 1))
+            break
+        fi
+    done
+
+    echo ""
+    if [[ $failed -gt 0 ]]; then
+        err "Scenario failed at step $step_num/$total"
+        return 1
+    fi
+    ok "Scenario complete ($step_num steps)"
+    return 0
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -1094,6 +1265,13 @@ ${BOLD}COMMANDS${RESET}
                         ror wait-until time>120             — wait until game time > 120s
                         ror wait-until idle>3               — wait for 3+ idle player units
                         ror wait-until gold>500 --timeout 120 --interval 2
+  scenario <script> | --file <path>
+                      Execute a semicolon-separated sequence of debug commands
+                        ror scenario 'select-all; gather 5 4; wait wood>250'
+                        ror scenario --file tests/scenarios/gather_test.scenario
+                      Commands: select-all, gather X Y, right-click X Y,
+                        camera-to X Y, speed N, pause, unpause, screenshot [NAME],
+                        wait CONDITION, sleep N, status, entities
   game-status         Query game state from the debug server (pretty-printed JSON)
   game-cmd <action> [key=value ...]
                       Send a command to the debug server
@@ -1123,6 +1301,7 @@ case "${1:-help}" in
     screenshot)         shift; cmd_screenshot "$@" ;;
     entities)           shift; cmd_entities "$@" ;;
     wait-until)         shift; cmd_wait_until "$@" ;;
+    scenario)           shift; cmd_scenario "$@" ;;
     game-status)        shift; cmd_game_status "$@" ;;
     game-cmd)           shift; cmd_game_cmd "$@" ;;
     help|--help|-h) cmd_help ;;
