@@ -53,11 +53,11 @@ func get_formation_speed(units: Array) -> float:
 		elif "MOVE_SPEED" in unit:
 			spd = float(unit.MOVE_SPEED)
 		else:
-			spd = 150.0
+			spd = 105.0
 		if spd < min_speed:
 			min_speed = spd
 	if min_speed == INF:
-		return 150.0
+		return 105.0
 	return min_speed
 
 
