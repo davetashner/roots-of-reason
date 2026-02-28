@@ -24,6 +24,15 @@ func _init(unit: Node2D = null) -> void:
 	_unit = unit
 
 
+## Return the pathfinding position for a resource node. Uses grid_position
+## (the logical tile) rather than global_position (which includes visual
+## cluster offsets that may map to adjacent impassable tiles like water).
+static func _nav_position(node: Node2D) -> Vector2:
+	if "grid_position" in node and node.grid_position != Vector2i.ZERO:
+		return IsoUtils.grid_to_screen(Vector2(node.grid_position))
+	return node.global_position
+
+
 func load_config(unit_cfg: Dictionary, gather_cfg: Dictionary) -> void:
 	if not unit_cfg.is_empty():
 		carry_capacity = int(unit_cfg.get("carry_capacity", carry_capacity))
@@ -58,7 +67,7 @@ func _tick_moving_to_resource() -> void:
 	if gather_target.current_yield <= 0:
 		_try_find_replacement_resource()
 		return
-	var dist: float = _unit.position.distance_to(gather_target.global_position)
+	var dist: float = _unit.position.distance_to(_nav_position(gather_target))
 	if dist <= gather_reach and not _unit._moving:
 		gather_state = GatherState.GATHERING
 		gather_accumulator = 0.0
@@ -112,7 +121,7 @@ func _tick_depositing() -> void:
 	# Return to resource or find replacement
 	if gather_target != null and is_instance_valid(gather_target) and gather_target.current_yield > 0:
 		gather_state = GatherState.MOVING_TO_RESOURCE
-		_unit.move_to(gather_target.global_position)
+		_unit.move_to(_nav_position(gather_target))
 	else:
 		_try_find_replacement_resource()
 
@@ -171,7 +180,7 @@ func _try_find_replacement_resource() -> void:
 			continue
 		if "current_yield" in child and child.current_yield <= 0:
 			continue
-		var dist: float = _unit.position.distance_to(child.global_position)
+		var dist: float = _unit.position.distance_to(_nav_position(child))
 		if dist < best_dist:
 			best_dist = dist
 			best = child
@@ -179,7 +188,7 @@ func _try_find_replacement_resource() -> void:
 		gather_target = best
 		gather_state = GatherState.MOVING_TO_RESOURCE
 		gather_accumulator = 0.0
-		_unit.move_to(best.global_position)
+		_unit.move_to(_nav_position(best))
 	elif carried_amount > 0:
 		_start_drop_off_trip()
 	else:
@@ -201,7 +210,7 @@ func assign_target(node: Node2D) -> void:
 	gather_accumulator = 0.0
 	carried_amount = 0
 	drop_off_target = null
-	_unit.move_to(node.global_position)
+	_unit.move_to(_nav_position(node))
 
 
 func resolve_target(scene_root: Node) -> void:
