@@ -11,5 +11,7 @@ func execute(cmd: String, target: Node, selected: Array[Node], _world_pos: Vecto
 		return false
 	for unit in selected:
 		if unit is Node2D:
+			if unit.has_method("move_to"):
+				unit.move_to(target.global_position)
 			target.garrison_unit(unit)
 	return true

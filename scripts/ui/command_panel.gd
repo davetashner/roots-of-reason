@@ -148,6 +148,15 @@ func _get_commands_for_selection(units: Array) -> Array:
 			"action": "unload",
 		}
 		result.append(unload_cmd)
+	# Add "Ungarrison" button for buildings with garrisoned units
+	if _selection_has_garrisoned(units):
+		var ungarrison_cmd := {
+			"id": "ungarrison_all",
+			"label": "Ungarrison",
+			"tooltip": "Eject all garrisoned units",
+			"action": "ungarrison",
+		}
+		result.append(ungarrison_cmd)
 	return result
 
 
@@ -211,6 +220,8 @@ func _on_command_pressed(command: Dictionary) -> void:
 			_issue_hold()
 		"unload":
 			_issue_unload()
+		"ungarrison":
+			_issue_ungarrison()
 
 
 func _issue_stop() -> void:
@@ -247,6 +258,24 @@ func _selection_has_embarked(units: Array) -> bool:
 			if unit.get_embarked_count() > 0:
 				return true
 	return false
+
+
+func _selection_has_garrisoned(units: Array) -> bool:
+	for unit in units:
+		if is_instance_valid(unit) and unit.has_method("get_garrisoned_count"):
+			if unit.get_garrisoned_count() > 0:
+				return true
+	return false
+
+
+func _issue_ungarrison() -> void:
+	if _input_handler == null:
+		return
+	var selected: Array = _input_handler._get_selected_units()
+	for unit in selected:
+		if is_instance_valid(unit) and unit.has_method("ungarrison_all"):
+			if unit.has_method("get_garrisoned_count") and unit.get_garrisoned_count() > 0:
+				unit.ungarrison_all()
 
 
 func _execute_trade(command: Dictionary) -> void:

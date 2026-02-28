@@ -34,6 +34,8 @@
     "arrow_damage": 5,
     "arrow_range_tiles": 6,
     "arrow_interval": 2.0,
-    "ungarrison_radius_tiles": 2
+    "ungarrison_radius_tiles": 2,
+    "garrison_reach_tiles": 2,
+    "garrison_load_time": 0.5
   }
 }
