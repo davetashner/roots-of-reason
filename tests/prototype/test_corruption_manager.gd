@@ -19,6 +19,7 @@ func after_test() -> void:
 	GameManager.current_age = _original_age
 	ResourceManager.set_corruption_rate(0, _original_corruption_rate)
 	ResourceManager.set_corruption_rate(1, 0.0)
+	GameUtils.clear_autoload_cache()
 
 
 func _base_config(overrides: Dictionary = {}) -> Dictionary:
