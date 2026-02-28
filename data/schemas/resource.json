@@ -22,7 +22,10 @@
         "base_path": { "type": "string" },
         "states": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": ["string", "array"],
+            "items": { "type": "string" }
+          }
         },
         "half_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
         "offset_y": { "type": "number" }

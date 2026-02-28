@@ -8,9 +8,9 @@
   "sprite": {
     "base_path": "res://assets/sprites/resources/tree",
     "states": {
-      "full": "tree_full.png",
-      "half": "tree_half.png",
-      "stump": "tree_stump.png"
+      "full": ["tree_full_01.png", "tree_full_02.png", "tree_full_03.png", "tree_full_04.png"],
+      "half": ["tree_half_01.png", "tree_half_02.png", "tree_half_03.png", "tree_half_04.png"],
+      "stump": ["tree_stump_01.png", "tree_stump_02.png", "tree_stump_03.png", "tree_stump_04.png"]
     },
     "half_threshold": 0.5,
     "offset_y": -20.0
