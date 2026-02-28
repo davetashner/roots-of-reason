@@ -196,6 +196,37 @@ func _build_tileset() -> void:
 	for extra_name: String in extra_terrains:
 		if _source_ids.has(extra_name):
 			continue
+		var extra_cost: float = float(_terrain_costs.get(extra_name, 1.0))
+		var extra_props: Dictionary = _terrain_properties.get(extra_name, {})
+
+		# Scan for variant files first
+		var extra_variants: Array[int] = []
+		var extra_vidx := 1
+		while true:
+			var evpath := TEXTURE_BASE_PATH + extra_name + "_flat_%02d.png" % extra_vidx
+			var evtex: Texture2D = load(evpath)
+			if evtex == null:
+				break
+			var evsource := TileSetAtlasSource.new()
+			evsource.texture = evtex
+			evsource.texture_region_size = TILE_SIZE
+			ts.add_source(evsource, source_id)
+			evsource.create_tile(Vector2i.ZERO)
+			var evtile: TileData = evsource.get_tile_data(Vector2i.ZERO, 0)
+			evtile.set_custom_data("terrain_type", extra_name)
+			evtile.set_custom_data("movement_cost", extra_cost)
+			evtile.set_custom_data("buildable", extra_props.get("buildable", false))
+			evtile.set_custom_data("blocks_los", extra_props.get("blocks_los", false))
+			extra_variants.append(source_id)
+			source_id += 1
+			extra_vidx += 1
+
+		if not extra_variants.is_empty():
+			_source_ids[extra_name] = extra_variants[0]
+			_variant_ids[extra_name] = extra_variants
+			continue
+
+		# Fallback: single base texture
 		var extra_tex_path := TEXTURE_BASE_PATH + extra_name + ".png"
 		var extra_tex: Texture2D = load(extra_tex_path)
 		if extra_tex == null:
@@ -208,8 +239,7 @@ func _build_tileset() -> void:
 
 		var extra_tile_data: TileData = extra_source.get_tile_data(Vector2i.ZERO, 0)
 		extra_tile_data.set_custom_data("terrain_type", extra_name)
-		extra_tile_data.set_custom_data("movement_cost", float(_terrain_costs.get(extra_name, 1.0)))
-		var extra_props: Dictionary = _terrain_properties.get(extra_name, {})
+		extra_tile_data.set_custom_data("movement_cost", extra_cost)
 		extra_tile_data.set_custom_data("buildable", extra_props.get("buildable", false))
 		extra_tile_data.set_custom_data("blocks_los", extra_props.get("blocks_los", false))
 
