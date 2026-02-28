@@ -279,6 +279,7 @@ func _restore_units(units_data: Array) -> void:
 		)
 		_root.add_child(unit)
 		unit._scene_root = _root
+		unit._pathfinder = _pathfinder
 		if _visibility_manager != null:
 			unit._visibility_manager = _visibility_manager
 		if _war_survival != null:
@@ -328,6 +329,7 @@ func _restore_fauna(fauna_data: Array) -> void:
 			unit.entity_category = cat
 		_root.add_child(unit)
 		unit._scene_root = _root
+		unit._pathfinder = _pathfinder
 		if _war_survival != null:
 			unit._war_survival = _war_survival
 		unit.load_state(entry)

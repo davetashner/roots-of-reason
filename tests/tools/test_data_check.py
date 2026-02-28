@@ -353,6 +353,197 @@ def data_dir_with_buildings(data_dir: Path) -> Path:
     return data_dir
 
 
+COST_RESOURCE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "food": {"type": "number", "minimum": 0},
+        "wood": {"type": "number", "minimum": 0},
+        "stone": {"type": "number", "minimum": 0},
+        "gold": {"type": "number", "minimum": 0},
+        "knowledge": {"type": "number", "minimum": 0},
+    },
+    "additionalProperties": False,
+}
+
+BUILDING_COST_SCHEMA = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["name", "hp", "footprint", "build_time", "build_cost",
+                 "population_bonus", "garrison_capacity", "is_drop_off",
+                 "drop_off_types", "units_produced", "age_required",
+                 "placement_constraint"],
+    "properties": {
+        "name": {"type": "string"},
+        "hp": {"type": "number", "minimum": 1},
+        "footprint": {"type": "array", "items": {"type": "integer", "minimum": 1},
+                      "minItems": 2, "maxItems": 2},
+        "build_time": {"type": "number", "minimum": 0},
+        "build_cost": COST_RESOURCE_SCHEMA,
+        "population_bonus": {"type": "integer", "minimum": 0},
+        "garrison_capacity": {"type": "integer", "minimum": 0},
+        "is_drop_off": {"type": "boolean"},
+        "drop_off_types": {"type": "array", "items": {"type": "string"}},
+        "units_produced": {"type": "array", "items": {"type": "string"}},
+        "age_required": {"type": "integer", "minimum": 0},
+        "placement_constraint": {
+            "type": "string",
+            "enum": ["", "adjacent_to_river", "adjacent_to_water"],
+        },
+    },
+    "additionalProperties": True,
+}
+
+UNIT_TRAIN_COST_SCHEMA = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["name", "hp", "attack", "defense", "speed"],
+    "properties": {
+        "name": {"type": "string"},
+        "hp": {"type": "number", "minimum": 1},
+        "attack": {"type": "number", "minimum": 0},
+        "defense": {"type": "number", "minimum": 0},
+        "speed": {"type": "number", "minimum": 0},
+        "train_cost": COST_RESOURCE_SCHEMA,
+    },
+    "additionalProperties": True,
+}
+
+VALID_BUILDING = {
+    "name": "Barracks",
+    "hp": 1200,
+    "footprint": [3, 3],
+    "build_time": 50,
+    "build_cost": {"wood": 175},
+    "population_bonus": 0,
+    "garrison_capacity": 10,
+    "is_drop_off": False,
+    "drop_off_types": [],
+    "units_produced": ["infantry"],
+    "age_required": 1,
+    "placement_constraint": "",
+}
+
+VALID_UNIT_WITH_TRAIN_COST = {
+    "name": "Archer",
+    "hp": 30,
+    "attack": 5,
+    "defense": 0,
+    "speed": 1.3,
+    "train_cost": {"food": 30, "wood": 45, "gold": 10},
+}
+
+
+@pytest.fixture
+def data_dir_with_cost_schemas(tmp_path: Path) -> Path:
+    """Create a data directory using real cost-aware building and unit schemas."""
+    schemas = tmp_path / "schemas"
+    schemas.mkdir()
+    (schemas / "building.json").write_text(json.dumps(BUILDING_COST_SCHEMA))
+    (schemas / "unit.json").write_text(json.dumps(UNIT_TRAIN_COST_SCHEMA))
+
+    buildings = tmp_path / "buildings"
+    buildings.mkdir()
+    (buildings / "barracks.json").write_text(json.dumps(VALID_BUILDING))
+
+    units = tmp_path / "units"
+    units.mkdir()
+    (units / "archer.json").write_text(json.dumps(VALID_UNIT_WITH_TRAIN_COST))
+
+    return tmp_path
+
+
+class TestCostResourceKeyValidation:
+    """Cost objects must only use recognised resource keys."""
+
+    def test_valid_build_cost_passes(
+        self, data_dir_with_cost_schemas: Path
+    ) -> None:
+        """A building with a valid build_cost should produce no errors."""
+        _, error_count, errors, _warnings = data_check.run(
+            data_dir=data_dir_with_cost_schemas
+        )
+        assert error_count == 0
+        assert errors == []
+
+    def test_valid_train_cost_passes(
+        self, data_dir_with_cost_schemas: Path
+    ) -> None:
+        """A unit with a valid train_cost should produce no errors."""
+        _, error_count, errors, _warnings = data_check.run(
+            data_dir=data_dir_with_cost_schemas
+        )
+        assert error_count == 0
+        assert errors == []
+
+    def test_invalid_key_in_build_cost_is_rejected(
+        self, data_dir_with_cost_schemas: Path
+    ) -> None:
+        """An invalid resource key in build_cost (e.g. 'iron') should cause an error."""
+        bad_building = {**VALID_BUILDING, "build_cost": {"iron": 50}}
+        (data_dir_with_cost_schemas / "buildings" / "bad_building.json").write_text(
+            json.dumps(bad_building)
+        )
+
+        _, error_count, errors, _warnings = data_check.run(
+            data_dir=data_dir_with_cost_schemas
+        )
+        assert error_count > 0
+        matching = [e for e in errors if "iron" in e and "unexpected field" in e]
+        assert len(matching) == 1
+
+    def test_invalid_key_in_train_cost_is_rejected(
+        self, data_dir_with_cost_schemas: Path
+    ) -> None:
+        """An invalid resource key in train_cost (e.g. 'mana') should cause an error."""
+        bad_unit = {**VALID_UNIT_WITH_TRAIN_COST, "train_cost": {"mana": 100}}
+        (data_dir_with_cost_schemas / "units" / "bad_unit.json").write_text(
+            json.dumps(bad_unit)
+        )
+
+        _, error_count, errors, _warnings = data_check.run(
+            data_dir=data_dir_with_cost_schemas
+        )
+        assert error_count > 0
+        matching = [e for e in errors if "mana" in e and "unexpected field" in e]
+        assert len(matching) == 1
+
+    def test_all_valid_resource_keys_accepted_in_build_cost(
+        self, data_dir_with_cost_schemas: Path
+    ) -> None:
+        """All five canonical resource keys must be accepted in build_cost."""
+        all_resources_building = {
+            **VALID_BUILDING,
+            "build_cost": {"food": 10, "wood": 20, "stone": 30, "gold": 40, "knowledge": 50},
+        }
+        (data_dir_with_cost_schemas / "buildings" / "all_resources.json").write_text(
+            json.dumps(all_resources_building)
+        )
+
+        _, error_count, errors, _warnings = data_check.run(
+            data_dir=data_dir_with_cost_schemas
+        )
+        assert error_count == 0
+        assert errors == []
+
+    def test_all_valid_resource_keys_accepted_in_train_cost(
+        self, data_dir_with_cost_schemas: Path
+    ) -> None:
+        """All five canonical resource keys must be accepted in train_cost."""
+        all_resources_unit = {
+            **VALID_UNIT_WITH_TRAIN_COST,
+            "train_cost": {"food": 10, "wood": 20, "stone": 30, "gold": 40, "knowledge": 50},
+        }
+        (data_dir_with_cost_schemas / "units" / "all_resources_unit.json").write_text(
+            json.dumps(all_resources_unit)
+        )
+
+        _, error_count, errors, _warnings = data_check.run(
+            data_dir=data_dir_with_cost_schemas
+        )
+        assert error_count == 0
+        assert errors == []
+
+
 class TestUnlockBuildingsValidation:
     """unlock_buildings cross-reference checks emit warnings, not errors."""
 

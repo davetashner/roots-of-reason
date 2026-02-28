@@ -169,6 +169,7 @@ func on_unit_produced(unit_type: String, building: Node2D) -> void:
 	unit.position = IsoUtils.grid_to_screen(Vector2(spawn_grid))
 	_root.add_child(unit)
 	unit._scene_root = _root
+	unit._pathfinder = _root._pathfinder
 	if _root._visibility_manager != null:
 		unit._visibility_manager = _root._visibility_manager
 	if _root._war_survival != null:

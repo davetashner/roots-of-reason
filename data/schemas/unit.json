@@ -25,7 +25,17 @@
     "build_speed": { "type": "number", "minimum": 0 },
     "population_cost": { "type": "integer", "minimum": 0 },
     "train_time": { "type": "number", "minimum": 0 },
-    "train_cost": { "type": "object" },
+    "train_cost": {
+      "type": "object",
+      "properties": {
+        "food": { "type": "number", "minimum": 0 },
+        "wood": { "type": "number", "minimum": 0 },
+        "stone": { "type": "number", "minimum": 0 },
+        "gold": { "type": "number", "minimum": 0 },
+        "knowledge": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
     "bonus_vs": { "type": "object" },
     "armor_type": {
       "type": "string",

@@ -3,7 +3,8 @@ extends Node2D
 ## right-click-to-move. Villagers can build construction sites and gather resources.
 ## Military units have combat state machine with attack-move, patrol, and stances.
 ##
-## Delegates gathering to GathererComponent and combat to CombatantComponent.
+## Delegates gathering to GathererComponent, combat to CombatantComponent,
+## and heal/feed to HealFeedComponent.
 
 signal unit_died(unit: Node2D, killer: Node2D)
 
@@ -15,6 +16,7 @@ enum Stance { AGGRESSIVE, DEFENSIVE, STAND_GROUND }
 const TransportHandlerScript := preload("res://scripts/prototype/transport_handler.gd")
 const GathererComponentScript := preload("res://scripts/prototype/gatherer_component.gd")
 const CombatantComponentScript := preload("res://scripts/prototype/combatant_component.gd")
+const HealFeedComponentScript := preload("res://scripts/prototype/heal_feed_component.gd")
 const UnitSpriteHandlerScript := preload("res://scripts/prototype/unit_sprite_handler.gd")
 const RADIUS: float = 12.0
 const MOVE_SPEED: float = 105.0
@@ -44,19 +46,11 @@ var _build_reach: float = 80.0
 var _pending_build_target_name: String = ""
 
 var _scene_root: Node = null
-
-# Feed state
-var _feed_target: Node2D = null
-var _feed_timer: float = 0.0
-var _feed_duration: float = 5.0
-var _feed_reach: float = 128.0
-var _is_feeding: bool = false
-var _pending_feed_target_name: String = ""
+var _pathfinder: Node = null
 
 # Formation speed override — when > 0, caps get_move_speed()
 var _formation_speed_override: float = 0.0
 
-var _heal_accumulator: float = 0.0
 var _visual_dirty: bool = true  # Start dirty so initial draw happens
 
 var _is_dead: bool = false
@@ -70,6 +64,7 @@ var _transport_capacity: int = 0
 # Components
 var _gatherer: RefCounted = null  # GathererComponent
 var _combatant: RefCounted = null  # CombatantComponent
+var _heal_feed: RefCounted = null  # HealFeedComponent
 var _sprite_handler: RefCounted = null  # UnitSpriteHandler
 var _sprite_variant: String = ""
 
@@ -251,11 +246,48 @@ var _visibility_manager: Node:
 		if _combatant != null:
 			_combatant.visibility_manager = v
 
+# HealFeed forwarding
+var _feed_target: Node2D:
+	get:
+		return _heal_feed.feed_target if _heal_feed != null else null
+	set(v):
+		if _heal_feed != null:
+			_heal_feed.feed_target = v
+
+var _is_feeding: bool:
+	get:
+		return _heal_feed.is_feeding if _heal_feed != null else false
+	set(v):
+		if _heal_feed != null:
+			_heal_feed.is_feeding = v
+
+var _feed_timer: float:
+	get:
+		return _heal_feed.feed_timer if _heal_feed != null else 0.0
+	set(v):
+		if _heal_feed != null:
+			_heal_feed.feed_timer = v
+
+var _heal_accumulator: float:
+	get:
+		return _heal_feed.heal_accumulator if _heal_feed != null else 0.0
+	set(v):
+		if _heal_feed != null:
+			_heal_feed.heal_accumulator = v
+
+var _pending_feed_target_name: String:
+	get:
+		return _heal_feed.pending_feed_target_name if _heal_feed != null else ""
+	set(v):
+		if _heal_feed != null:
+			_heal_feed.pending_feed_target_name = v
+
 
 func _ready() -> void:
 	_target_pos = position
 	_gatherer = GathererComponentScript.new(self)
 	_combatant = CombatantComponentScript.new(self)
+	_heal_feed = HealFeedComponentScript.new(self)
 	_init_stats()
 	_load_build_config()
 	_load_gather_config()
@@ -398,9 +430,8 @@ func _process(delta: float) -> void:
 		_visual_dirty = true
 	_tick_build(game_delta)
 	_gatherer.tick(game_delta)
-	_tick_feed(game_delta)
 	_combatant.tick(game_delta)
-	_tick_heal(game_delta)
+	_heal_feed.tick(game_delta)
 	if _transport != null:
 		_transport.tick(game_delta, _moving)
 	# Lazy-init sprite handler for villagers (after load_state may have set _sprite_variant)
@@ -479,53 +510,11 @@ func resolve_gather_target(scene_root: Node) -> void:
 
 
 func _tick_feed(game_delta: float) -> void:
-	if _feed_target == null:
-		return
-	if not is_instance_valid(_feed_target):
-		_clear_feed_state()
-		return
-	var wolf_ai: Node = _feed_target.get_node_or_null("WolfAI")
-	if wolf_ai == null:
-		_clear_feed_state()
-		return
-	var dist: float = position.distance_to(_feed_target.global_position)
-	if dist > _feed_reach:
-		return
-	# In range — start feeding if not already
-	if not _is_feeding:
-		_moving = false
-		_path.clear()
-		_path_index = 0
-		if not wolf_ai.begin_feeding(self, owner_id):
-			_clear_feed_state()
-			return
-		_is_feeding = true
-		_feed_timer = 0.0
-	# Tick feed timer
-	_feed_timer += game_delta
-	if _feed_timer >= _feed_duration:
-		wolf_ai.complete_feeding()
-		_clear_feed_state()
+	_heal_feed._tick_feed(game_delta)
 
 
 func _cancel_feed() -> void:
-	if _feed_target == null:
-		return
-	if is_instance_valid(_feed_target):
-		var wolf_ai: Node = _feed_target.get_node_or_null("WolfAI")
-		if wolf_ai != null:
-			if _is_feeding:
-				wolf_ai.cancel_feeding()
-			else:
-				wolf_ai.unregister_pending_feeder(self)
-	_clear_feed_state()
-
-
-func _clear_feed_state() -> void:
-	_feed_target = null
-	_feed_timer = 0.0
-	_is_feeding = false
-	_pending_feed_target_name = ""
+	_heal_feed.cancel()
 
 
 func assign_feed_target(wolf: Node2D) -> void:
@@ -534,54 +523,15 @@ func assign_feed_target(wolf: Node2D) -> void:
 	_cancel_combat()
 	_build_target = null
 	_pending_build_target_name = ""
-	# Load feed config from fauna settings
-	var fauna_cfg: Dictionary = GameUtils.dl_settings("fauna")
-	var wolf_cfg: Dictionary = fauna_cfg.get("wolf", {})
-	_feed_duration = float(wolf_cfg.get("feed_duration", 5.0))
-	_feed_reach = float(wolf_cfg.get("feed_distance_tiles", 2)) * TILE_SIZE
-	# Check food cost
-	var cost: int = int(wolf_cfg.get("feed_cost", 25))
-	var costs: Dictionary = {ResourceManager.ResourceType.FOOD: cost}
-	if not ResourceManager.can_afford(owner_id, costs):
-		return
-	ResourceManager.spend(owner_id, costs)
-	_feed_target = wolf
-	_feed_timer = 0.0
-	_is_feeding = false
-	# Register as pending feeder for aggro suppression
-	var wolf_ai: Node = wolf.get_node_or_null("WolfAI")
-	if wolf_ai != null:
-		wolf_ai.register_pending_feeder(self)
-	move_to(wolf.global_position)
+	_heal_feed.assign_feed_target(wolf)
 
 
 func resolve_feed_target(scene_root: Node) -> void:
-	if _pending_feed_target_name == "":
-		return
-	var target := scene_root.get_node_or_null(_pending_feed_target_name)
-	if target is Node2D:
-		_feed_target = target
-	_pending_feed_target_name = ""
+	_heal_feed.resolve_target(scene_root)
 
 
 func _tick_heal(game_delta: float) -> void:
-	if hp <= 0 or hp >= max_hp:
-		return
-	if _combatant.combat_state != CombatantComponentScript.CombatState.NONE:
-		return
-	if stats == null:
-		return
-	var rate: float = 0.0
-	if stats._base_stats.has("self_heal_rate"):
-		rate = float(stats._base_stats["self_heal_rate"])
-	if rate <= 0.0:
-		return
-	_heal_accumulator += rate * game_delta
-	if _heal_accumulator >= 1.0:
-		var whole := int(_heal_accumulator)
-		hp = mini(hp + whole, max_hp)
-		_heal_accumulator -= float(whole)
-		_visual_dirty = true
+	_heal_feed._tick_heal(game_delta)
 
 
 # -- Combat delegation --
@@ -753,8 +703,7 @@ func _draw() -> void:
 func move_to(world_pos: Vector2) -> void:
 	# Reject moves to impassable terrain (mountain, canyon, deep water, etc.)
 	var grid_pos := Vector2i(IsoUtils.screen_to_grid(world_pos))
-	var pf: Node = get_node_or_null("/root/PrototypeMain/PathfindingGrid")
-	if pf and pf.has_method("is_cell_solid") and pf.is_cell_solid(grid_pos):
+	if _pathfinder and _pathfinder.has_method("is_cell_solid") and _pathfinder.is_cell_solid(grid_pos):
 		return
 	_path.clear()
 	_path_index = 0
@@ -809,23 +758,19 @@ func save_state() -> Dictionary:
 		"unit_type": unit_type,
 		"hp": hp,
 		"max_hp": max_hp,
-		"is_feeding": _is_feeding,
-		"feed_timer": _feed_timer,
 		"formation_speed_override": _formation_speed_override,
 		"kill_count": kill_count,
-		"heal_accumulator": _heal_accumulator,
 	}
 	if _sprite_variant != "":
 		state["sprite_variant"] = _sprite_variant
 	if _build_target != null and is_instance_valid(_build_target):
 		state["build_target_name"] = str(_build_target.name)
-	if _feed_target != null and is_instance_valid(_feed_target):
-		state["feed_target_name"] = str(_feed_target.name)
 	if stats != null:
 		state["stats"] = stats.save_state()
 	# Merge component states (flat dict — backward compatible)
 	state.merge(_gatherer.save_state())
 	state.merge(_combatant.save_state())
+	state.merge(_heal_feed.save_state())
 	if _transport != null:
 		state.merge(_transport.save_state())
 	return state
@@ -840,13 +785,8 @@ func load_state(data: Dictionary) -> void:
 	_pending_build_target_name = str(data.get("build_target_name", ""))
 	hp = int(data.get("hp", max_hp))
 	max_hp = int(data.get("max_hp", max_hp))
-	# Restore feed state
-	_pending_feed_target_name = str(data.get("feed_target_name", ""))
-	_is_feeding = bool(data.get("is_feeding", false))
-	_feed_timer = float(data.get("feed_timer", 0.0))
 	_formation_speed_override = float(data.get("formation_speed_override", 0.0))
 	kill_count = int(data.get("kill_count", 0))
-	_heal_accumulator = float(data.get("heal_accumulator", 0.0))
 	_sprite_variant = str(data.get("sprite_variant", ""))
 	if data.has("stats"):
 		if stats == null:
@@ -855,5 +795,6 @@ func load_state(data: Dictionary) -> void:
 	# Delegate to components
 	_gatherer.load_state(data)
 	_combatant.load_state(data)
+	_heal_feed.load_state(data)
 	if _transport != null and data.has("embarked_unit_names"):
 		_transport.load_state(data)
