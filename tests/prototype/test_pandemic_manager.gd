@@ -15,6 +15,7 @@ func before_test() -> void:
 
 func after_test() -> void:
 	GameManager.current_age = _original_age
+	GameUtils.clear_autoload_cache()
 
 
 func _base_config(overrides: Dictionary = {}) -> Dictionary:

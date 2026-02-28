@@ -4,6 +4,7 @@ extends RefCounted
 
 enum FormationType { LINE, BOX, STAGGERED }
 
+const PrototypeUnit := preload("res://scripts/prototype/prototype_unit.gd")
 const DEFAULT_SPACING: float = 40.0
 
 var spacing: float = DEFAULT_SPACING
@@ -53,11 +54,11 @@ func get_formation_speed(units: Array) -> float:
 		elif "MOVE_SPEED" in unit:
 			spd = float(unit.MOVE_SPEED)
 		else:
-			spd = 105.0
+			spd = PrototypeUnit.MOVE_SPEED
 		if spd < min_speed:
 			min_speed = spd
 	if min_speed == INF:
-		return 105.0
+		return PrototypeUnit.MOVE_SPEED
 	return min_speed
 
 

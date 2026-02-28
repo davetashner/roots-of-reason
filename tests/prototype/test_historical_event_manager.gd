@@ -29,6 +29,7 @@ func before_test() -> void:
 func after_test() -> void:
 	GameManager.current_age = _original_age
 	GameManager.game_time = _original_game_time
+	GameUtils.clear_autoload_cache()
 
 
 func _create_manager() -> Node:

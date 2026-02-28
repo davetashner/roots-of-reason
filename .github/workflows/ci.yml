@@ -103,7 +103,6 @@ jobs:
   test:
     name: GdUnit4 Tests
     runs-on: ubuntu-latest
-    needs: [lint, validate]
     env:
       GODOT_VERSION: "4.6"
     steps:

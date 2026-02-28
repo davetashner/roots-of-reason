@@ -303,3 +303,80 @@ func test_armor_effectiveness_stacks_with_bonus_vs() -> void:
 	var dmg := CombatResolver.calculate_damage(attacker, defender, _combat_config)
 	# (10 - 2) * 1.5 bonus * 0.75 armor = 9
 	assert_int(dmg).is_equal(9)
+
+
+# -- RPS triangle data-driven --
+
+
+## Verify the rock-paper-scissors combat triangle is correctly encoded in unit
+## JSON data. Loads real stats from infantry.json, archer.json, cavalry.json and
+## checks that each unit's bonus_vs multiplier produces a meaningful damage
+## advantage (ratio >= 1.2x) over a baseline without the bonus. The expected
+## triangle is: infantry > archer > cavalry > infantry.
+func test_rps_triangle_data_driven() -> void:
+	# Load real unit data from JSON files.
+	var infantry_json: Dictionary = _load_unit_json("res://data/units/infantry.json")
+	var archer_json: Dictionary = _load_unit_json("res://data/units/archer.json")
+	var cavalry_json: Dictionary = _load_unit_json("res://data/units/cavalry.json")
+
+	# Verify the bonus_vs targets are present in JSON (catches data regressions).
+	assert_bool(infantry_json["bonus_vs"].has("archer")).is_true()
+	assert_bool(archer_json["bonus_vs"].has("cavalry")).is_true()
+	assert_bool(cavalry_json["bonus_vs"].has("infantry")).is_true()
+
+	# Build stats dictionaries for calculate_damage.
+	var infantry_stats := _stats_from_json(infantry_json, "infantry")
+	var archer_stats := _stats_from_json(archer_json, "archer")
+	var cavalry_stats := _stats_from_json(cavalry_json, "cavalry")
+
+	# --- Infantry beats Archer ---
+	# Infantry has bonus_vs: {archer: 1.5}. Verify bonus produces >= 1.2x damage
+	# compared to the same matchup without the bonus applied.
+	var inf_dmg_vs_archer: int = CombatResolver.calculate_damage(infantry_stats, archer_stats, _combat_config)
+	var inf_no_bonus := infantry_stats.duplicate()
+	inf_no_bonus["bonus_vs"] = {}
+	var inf_base_dmg: int = CombatResolver.calculate_damage(inf_no_bonus, archer_stats, _combat_config)
+	assert_float(float(inf_dmg_vs_archer) / float(inf_base_dmg)).is_greater_equal(1.2)
+
+	# --- Archer beats Cavalry ---
+	# Archer has bonus_vs: {cavalry: 1.5}. Verify bonus produces >= 1.2x damage
+	# compared to the same matchup without the bonus applied.
+	var arc_dmg_vs_cavalry: int = CombatResolver.calculate_damage(archer_stats, cavalry_stats, _combat_config)
+	var arc_no_bonus := archer_stats.duplicate()
+	arc_no_bonus["bonus_vs"] = {}
+	var arc_base_dmg: int = CombatResolver.calculate_damage(arc_no_bonus, cavalry_stats, _combat_config)
+	assert_float(float(arc_dmg_vs_cavalry) / float(arc_base_dmg)).is_greater_equal(1.2)
+
+	# --- Cavalry beats Infantry ---
+	# Cavalry has bonus_vs: {infantry: 1.5}. Verify bonus produces >= 1.2x damage
+	# compared to the same matchup without the bonus applied.
+	var cav_dmg_vs_infantry: int = CombatResolver.calculate_damage(cavalry_stats, infantry_stats, _combat_config)
+	var cav_no_bonus := cavalry_stats.duplicate()
+	cav_no_bonus["bonus_vs"] = {}
+	var cav_base_dmg: int = CombatResolver.calculate_damage(cav_no_bonus, infantry_stats, _combat_config)
+	assert_float(float(cav_dmg_vs_infantry) / float(cav_base_dmg)).is_greater_equal(1.2)
+
+
+## Load and parse a unit JSON file. Returns empty dict on failure.
+func _load_unit_json(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	assert_object(file).is_not_null()
+	var data: Variant = JSON.parse_string(file.get_as_text())
+	assert_object(data).is_not_null()
+	return data as Dictionary
+
+
+## Build a stats dict for calculate_damage from a unit JSON object.
+## unit_type is provided explicitly since JSON stores the display name, not key.
+func _stats_from_json(json: Dictionary, unit_type: String) -> Dictionary:
+	return {
+		"attack": int(json.get("attack", 0)),
+		"defense": int(json.get("defense", 0)),
+		"range": int(json.get("range", 0)),
+		"min_range": int(json.get("min_range", 0)),
+		"bonus_vs": json.get("bonus_vs", {}),
+		"unit_category": str(json.get("unit_category", "military")),
+		"unit_type": unit_type,
+		"attack_type": str(json.get("attack_type", "melee")),
+		"armor_type": str(json.get("armor_type", "none")),
+	}
