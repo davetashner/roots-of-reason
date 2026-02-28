@@ -42,7 +42,7 @@ func _load_config() -> void:
 
 func _create_sprite(player_color: Color) -> void:
 	_sprite = Sprite2D.new()
-	_sprite.z_index = -1
+	_sprite.z_index = 0
 	_sprite.centered = true
 	var offset_y: float = float(_config.get("offset_y", -16.0))
 	_sprite.offset = Vector2(0.0, offset_y)
