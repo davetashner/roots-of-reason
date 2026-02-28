@@ -1,0 +1,24 @@
+{
+  "variants": ["villager", "villager_woman"],
+  "base_path": "res://assets/sprites/units",
+  "scale": 0.5,
+  "offset_y": -16.0,
+  "frame_duration": 0.3,
+  "directions": ["s", "se", "e", "ne", "n", "nw", "w", "sw"],
+  "animation_map": {
+    "villager": {
+      "idle": ["idle"],
+      "walk": ["walk"],
+      "gather": ["gather"],
+      "build": ["build_a", "build_b"],
+      "death": ["death"]
+    },
+    "villager_woman": {
+      "idle": ["idle"],
+      "walk": ["walk_a", "walk_b"],
+      "gather": ["gather"],
+      "build": ["build"],
+      "death": []
+    }
+  }
+}
