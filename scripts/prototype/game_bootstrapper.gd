@@ -36,6 +36,14 @@ const GameStatsTrackerScript := preload("res://scripts/prototype/game_stats_trac
 const PostGameStatsScreenScript := preload("res://scripts/ui/postgame_stats_screen.gd")
 const EntityRegistryScript := preload("res://scripts/prototype/entity_registry.gd")
 
+## Screen-space offsets for clustered resource nodes within a single tile.
+const CLUSTER_OFFSETS: Array[Vector2] = [
+	Vector2(0, -16),  # north
+	Vector2(32, 0),  # east
+	Vector2(-32, 0),  # west
+	Vector2(0, 16),  # south
+]
+
 ## Reference to the root scene node (prototype_main).
 var _root: Node2D = null
 
@@ -90,12 +98,21 @@ func setup_demo_entities() -> void:
 	var res_index := 0
 	for res_name: String in all_resource_positions:
 		var positions: Array = all_resource_positions[res_name]
+		# Track cluster index per grid position for sub-tile offsets
+		var cluster_counts: Dictionary = {}  # Vector2i -> int
 		for pos in positions:
 			var grid_pos: Vector2i = pos as Vector2i
+			var cluster_idx: int = cluster_counts.get(grid_pos, 0)
+			cluster_counts[grid_pos] = cluster_idx + 1
+			var base_screen: Vector2 = IsoUtils.grid_to_screen(Vector2(grid_pos))
+			var offset := Vector2.ZERO
+			if cluster_idx > 0 and cluster_idx < CLUSTER_OFFSETS.size():
+				offset = CLUSTER_OFFSETS[cluster_idx]
 			var res_node := Node2D.new()
 			res_node.name = "Resource_%s_%d" % [res_name, res_index]
 			res_node.set_script(ResourceNodeScript)
-			res_node.position = IsoUtils.grid_to_screen(Vector2(grid_pos))
+			res_node.position = base_screen + offset
+			res_node.z_index = int(res_node.position.y)
 			_root.add_child(res_node)
 			res_node.setup(res_name)
 			res_node.depleted.connect(_root._on_resource_depleted)

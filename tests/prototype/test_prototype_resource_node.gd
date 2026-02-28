@@ -230,3 +230,33 @@ func test_backward_compat_load_no_regen_fields() -> void:
 	assert_bool(n._is_regrowing).is_false()
 	assert_float(n._regen_delay_timer).is_equal(0.0)
 	assert_float(n._regen_accum).is_equal(0.0)
+
+
+# -- Sprite support --
+
+
+func test_no_sprite_by_default() -> void:
+	var n := _create_node("food", 100)
+	assert_object(n._sprite).is_null()
+	assert_int(n._sprite_textures.size()).is_equal(0)
+
+
+func test_sprite_null_when_no_config() -> void:
+	var n := _create_regen_node(50)
+	assert_object(n._sprite).is_null()
+
+
+func test_draw_skipped_when_sprite_exists() -> void:
+	# Create a node and manually set _sprite to verify _draw returns early
+	var n := _create_node("food", 100)
+	n._sprite = Sprite2D.new()
+	n.add_child(n._sprite)
+	# Calling queue_redraw should not crash — _draw returns early
+	n.queue_redraw()
+	# No assertion needed — we're just verifying no crash
+
+
+func test_sprite_state_defaults() -> void:
+	var n := _create_node("food", 100)
+	assert_float(n._half_threshold).is_equal(0.5)
+	assert_float(n._sprite_offset_y).is_equal(0.0)

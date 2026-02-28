@@ -70,6 +70,9 @@ func generate(
 			occupied,
 		)
 
+	# Expand clustered resources (e.g. trees: 1 grid pos -> 3-4 nodes)
+	_expand_clusters(resources_cfg, base_seed)
+
 	return _resource_positions
 
 
@@ -271,3 +274,23 @@ func _apply_starting_guarantees(
 				needed -= 1
 
 			_resource_positions[res_name] = typed_positions
+
+
+func _expand_clusters(resources_cfg: Dictionary, base_seed: int) -> void:
+	for res_name: String in _resource_positions:
+		var res_cfg: Dictionary = resources_cfg.get(res_name, {})
+		var cluster_min: int = int(res_cfg.get("cluster_size_min", 0))
+		var cluster_max: int = int(res_cfg.get("cluster_size_max", 0))
+		if cluster_min < 2 or cluster_max < cluster_min:
+			continue
+		var seed_offset: int = int(res_cfg.get("cluster_seed_offset", 0))
+		var rng := RandomNumberGenerator.new()
+		rng.seed = base_seed + seed_offset
+		var original: Array = _resource_positions[res_name]
+		var expanded: Array[Vector2i] = []
+		for pos in original:
+			var grid_pos: Vector2i = pos as Vector2i
+			var count: int = rng.randi_range(cluster_min, cluster_max)
+			for _i in count:
+				expanded.append(grid_pos)
+		_resource_positions[res_name] = expanded

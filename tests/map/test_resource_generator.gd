@@ -376,3 +376,90 @@ func test_forbidden_terrain_respected() -> void:
 	for pos in gold_positions:
 		var p: Vector2i = pos as Vector2i
 		assert_str(terrain[p]).is_not_equal("sand")
+
+
+# -- Cluster expansion --
+
+
+func _make_cluster_config() -> Dictionary:
+	var cfg := _make_config()
+	cfg["resources"]["tree"]["cluster_size_min"] = 3
+	cfg["resources"]["tree"]["cluster_size_max"] = 4
+	cfg["resources"]["tree"]["cluster_seed_offset"] = 4350
+	return cfg
+
+
+func test_cluster_expansion_multiplies_tree_count() -> void:
+	var gen := ResourceGenerator.new()
+	var cfg := _make_cluster_config()
+	gen.configure(cfg)
+	var terrain := _make_mixed_terrain_grid(MAP_W, MAP_H)
+	var result: Dictionary = gen.generate(terrain, MAP_W, MAP_H, 42)
+	var tree_positions: Array = result.get("tree", [])
+	# Without clusters, tree density 12 per 1000 on 32x32=1024 -> ~13 placements
+	# With clusters of 3-4, should be 39-52 total entries
+	assert_int(tree_positions.size()).is_greater_equal(13 * 3)
+
+
+func test_cluster_expansion_preserves_grid_positions() -> void:
+	var gen := ResourceGenerator.new()
+	var cfg := _make_cluster_config()
+	gen.configure(cfg)
+	var terrain := _make_mixed_terrain_grid(MAP_W, MAP_H)
+	var result: Dictionary = gen.generate(terrain, MAP_W, MAP_H, 42)
+	var tree_positions: Array = result.get("tree", [])
+	# All positions should still be valid grid positions (within map bounds)
+	for pos in tree_positions:
+		var p: Vector2i = pos as Vector2i
+		assert_bool(p.x >= 0 and p.x < MAP_W).is_true()
+		assert_bool(p.y >= 0 and p.y < MAP_H).is_true()
+
+
+func test_cluster_expansion_deterministic() -> void:
+	var terrain := _make_mixed_terrain_grid(MAP_W, MAP_H)
+	var gen1 := ResourceGenerator.new()
+	gen1.configure(_make_cluster_config())
+	var r1: Dictionary = gen1.generate(terrain, MAP_W, MAP_H, 42)
+	var gen2 := ResourceGenerator.new()
+	gen2.configure(_make_cluster_config())
+	var r2: Dictionary = gen2.generate(terrain, MAP_W, MAP_H, 42)
+	var t1: Array = r1.get("tree", [])
+	var t2: Array = r2.get("tree", [])
+	assert_int(t1.size()).is_equal(t2.size())
+	for i in t1.size():
+		assert_object(t1[i]).is_equal(t2[i])
+
+
+func test_cluster_positions_have_duplicates() -> void:
+	var gen := ResourceGenerator.new()
+	gen.configure(_make_cluster_config())
+	var terrain := _make_mixed_terrain_grid(MAP_W, MAP_H)
+	var result: Dictionary = gen.generate(terrain, MAP_W, MAP_H, 42)
+	var tree_positions: Array = result.get("tree", [])
+	# With clusters, some grid positions should appear multiple times
+	var counts: Dictionary = {}
+	for pos in tree_positions:
+		var p: Vector2i = pos as Vector2i
+		counts[p] = counts.get(p, 0) + 1
+	var has_cluster := false
+	for p: Vector2i in counts:
+		if counts[p] >= 3:
+			has_cluster = true
+			break
+	assert_bool(has_cluster).is_true()
+
+
+func test_non_cluster_resources_unchanged() -> void:
+	var gen := ResourceGenerator.new()
+	var cfg := _make_cluster_config()
+	gen.configure(cfg)
+	var terrain := _make_mixed_terrain_grid(MAP_W, MAP_H)
+	var result: Dictionary = gen.generate(terrain, MAP_W, MAP_H, 42)
+	# Gold should NOT be expanded (no cluster config)
+	var gold: Array = result.get("gold_mine", [])
+	var gold_counts: Dictionary = {}
+	for pos in gold:
+		var p: Vector2i = pos as Vector2i
+		gold_counts[p] = gold_counts.get(p, 0) + 1
+	for p: Vector2i in gold_counts:
+		assert_int(gold_counts[p]).is_equal(1)
