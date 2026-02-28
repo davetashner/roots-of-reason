@@ -257,7 +257,9 @@ func test_penalty_scaled_by_severity() -> void:
 	pm._pop_manager = _create_pop_manager()
 	_mark_researched(tech, "herbalism", 0)
 	var v := _create_mock_villager(0, 1.0)
-	pm._roll_pandemics()
+	# Call _start_outbreak directly — _roll_pandemics uses randf() which makes
+	# this test flaky because herbalism reduces probability from 1.0 to 0.85.
+	pm._start_outbreak(0)
 	# severity = 0.75, penalty = -0.30 * 0.75 = -0.225 -> multiplier = 0.775
 	assert_float(v._gather_rate_multiplier).is_equal_approx(0.775, 0.001)
 
