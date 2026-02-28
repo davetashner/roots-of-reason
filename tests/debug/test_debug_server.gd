@@ -343,3 +343,44 @@ func test_matches_filters_type_resource_type() -> void:
 func test_matches_filters_type_mismatch() -> void:
 	var data := {"entity_category": "own_unit", "unit_category": "archer"}
 	assert_bool(DebugServerScript._matches_filters(data, {"type": "villager"})).is_false()
+
+
+# -- parse_command_body spawn/teleport tests --
+
+
+func test_parse_command_body_spawn() -> void:
+	var result := DebugServerScript.parse_command_body(
+		'{"action": "spawn", "type": "villager", "grid_x": 5, "grid_y": 5, "owner": 0}'
+	)
+	assert_str(result.get("action", "")).is_equal("spawn")
+	var body: Dictionary = result.get("body", {})
+	assert_str(str(body.get("type", ""))).is_equal("villager")
+	assert_float(float(body.get("grid_x", 0))).is_equal(5.0)
+	assert_float(float(body.get("grid_y", 0))).is_equal(5.0)
+
+
+func test_parse_command_body_spawn_resource() -> void:
+	var result := DebugServerScript.parse_command_body('{"action": "spawn", "type": "tree", "grid_x": 8, "grid_y": 8}')
+	assert_str(result.get("action", "")).is_equal("spawn")
+	var body: Dictionary = result.get("body", {})
+	assert_str(str(body.get("type", ""))).is_equal("tree")
+
+
+func test_parse_command_body_teleport() -> void:
+	var result := DebugServerScript.parse_command_body('{"action": "teleport", "grid_x": 10, "grid_y": 15}')
+	assert_str(result.get("action", "")).is_equal("teleport")
+	var body: Dictionary = result.get("body", {})
+	assert_float(float(body.get("grid_x", 0))).is_equal(10.0)
+	assert_float(float(body.get("grid_y", 0))).is_equal(15.0)
+
+
+func test_resource_names_contains_tree() -> void:
+	assert_bool("tree" in DebugServerScript.RESOURCE_NAMES).is_true()
+
+
+func test_resource_names_contains_gold_mine() -> void:
+	assert_bool("gold_mine" in DebugServerScript.RESOURCE_NAMES).is_true()
+
+
+func test_resource_names_does_not_contain_villager() -> void:
+	assert_bool("villager" in DebugServerScript.RESOURCE_NAMES).is_false()

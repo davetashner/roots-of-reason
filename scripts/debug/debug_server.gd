@@ -6,6 +6,16 @@ extends Node
 const DEFAULT_PORT: int = 9222
 const BIND_HOST: String = "127.0.0.1"
 const MAX_REQUEST_SIZE: int = 4096
+const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
+const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
+## Known resource names that map to data/resources/*.json configs.
+const RESOURCE_NAMES: Array[String] = [
+	"tree",
+	"stone_mine",
+	"gold_mine",
+	"berry_bush",
+	"fish",
+]
 
 var _server: TCPServer = null
 var _active: bool = false
@@ -212,6 +222,10 @@ func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
 			_cmd_unpause(peer)
 		"gather":
 			_cmd_gather(peer, body)
+		"spawn":
+			_cmd_spawn(peer, body)
+		"teleport":
+			_cmd_teleport(peer, body)
 		_:
 			_send_json(peer, 400, {"error": "unknown action", "action": action})
 
@@ -583,6 +597,135 @@ static func parse_query_string(qs: String) -> Dictionary:
 		if not key.is_empty():
 			result[key] = value
 	return result
+
+
+func _cmd_spawn(peer: StreamPeerTCP, body: Dictionary) -> void:
+	if not body.has("type"):
+		_send_json(peer, 400, {"error": "spawn requires type field"})
+		return
+	if not body.has("grid_x") or not body.has("grid_y"):
+		_send_json(peer, 400, {"error": "spawn requires grid_x and grid_y"})
+		return
+	var spawn_type: String = str(body["type"])
+	var grid_x: float = float(body["grid_x"])
+	var grid_y: float = float(body["grid_y"])
+	var grid_pos := Vector2i(int(grid_x), int(grid_y))
+	var world_pos := IsoUtils.grid_to_screen(Vector2(grid_x, grid_y))
+	var root := get_tree().current_scene
+	if root == null:
+		_send_json(peer, 500, {"error": "no active scene"})
+		return
+	# Determine if this is a resource or a unit
+	if spawn_type in RESOURCE_NAMES:
+		var node := _spawn_resource(root, spawn_type, grid_pos, world_pos)
+		if node == null:
+			_send_json(peer, 500, {"error": "failed to spawn resource", "type": spawn_type})
+			return
+		_send_json(
+			peer,
+			200,
+			{
+				"action": "spawn",
+				"entity": "resource",
+				"type": spawn_type,
+				"name": node.name,
+				"grid_x": grid_x,
+				"grid_y": grid_y,
+			},
+		)
+	else:
+		var owner_id: int = int(body.get("owner", 0))
+		var node := _spawn_unit(root, spawn_type, owner_id, grid_pos, world_pos)
+		if node == null:
+			_send_json(peer, 500, {"error": "failed to spawn unit", "type": spawn_type})
+			return
+		_send_json(
+			peer,
+			200,
+			{
+				"action": "spawn",
+				"entity": "unit",
+				"type": spawn_type,
+				"name": node.name,
+				"owner": owner_id,
+				"grid_x": grid_x,
+				"grid_y": grid_y,
+			},
+		)
+
+
+func _spawn_unit(root: Node, unit_type: String, owner_id: int, _grid_pos: Vector2i, world_pos: Vector2) -> Node2D:
+	var unit := Node2D.new()
+	var count := root.get_child_count()
+	unit.name = "DebugUnit_%d" % count
+	unit.set_script(UnitScript)
+	unit.unit_type = unit_type
+	unit.owner_id = owner_id
+	unit.position = world_pos
+	if owner_id == 1:
+		unit.unit_color = Color(0.9, 0.2, 0.2)
+	root.add_child(unit)
+	unit._scene_root = root
+	if "_pathfinder" in root:
+		unit._pathfinder = root._pathfinder
+	if "_visibility_manager" in root and root._visibility_manager != null:
+		unit._visibility_manager = root._visibility_manager
+	if "_war_survival" in root and root._war_survival != null:
+		unit._war_survival = root._war_survival
+	if "_input_handler" in root and root._input_handler != null:
+		if root._input_handler.has_method("register_unit"):
+			root._input_handler.register_unit(unit)
+	if "_target_detector" in root and root._target_detector != null:
+		root._target_detector.register_entity(unit)
+	if "_population_manager" in root and root._population_manager != null:
+		root._population_manager.register_unit(unit, owner_id)
+	if "_entity_registry" in root:
+		root._entity_registry.register(unit)
+	if unit.has_signal("unit_died") and root.has_method("_on_unit_died"):
+		unit.unit_died.connect(root._on_unit_died)
+	return unit
+
+
+func _spawn_resource(root: Node, res_name: String, grid_pos: Vector2i, world_pos: Vector2) -> Node2D:
+	var res_node := Node2D.new()
+	var count := root.get_child_count()
+	res_node.name = "DebugResource_%s_%d" % [res_name, count]
+	res_node.set_script(ResourceNodeScript)
+	res_node.position = world_pos
+	res_node.grid_position = grid_pos
+	res_node.z_index = 2
+	root.add_child(res_node)
+	res_node.setup(res_name)
+	if res_node.has_signal("depleted") and root.has_method("_on_resource_depleted"):
+		res_node.depleted.connect(root._on_resource_depleted)
+	if "_target_detector" in root and root._target_detector != null:
+		root._target_detector.register_entity(res_node)
+	return res_node
+
+
+func _cmd_teleport(peer: StreamPeerTCP, body: Dictionary) -> void:
+	if not body.has("grid_x") or not body.has("grid_y"):
+		_send_json(peer, 400, {"error": "teleport requires grid_x and grid_y"})
+		return
+	var grid_x: float = float(body["grid_x"])
+	var grid_y: float = float(body["grid_y"])
+	var world_pos := IsoUtils.grid_to_screen(Vector2(grid_x, grid_y))
+	var units := _get_player_units(0)
+	var moved := 0
+	for unit: Node2D in units:
+		if "selected" in unit and unit.selected:
+			unit.global_position = world_pos
+			# Stop any current movement/pathfinding
+			if "_moving" in unit:
+				unit._moving = false
+			if "_path" in unit:
+				unit._path.clear()
+			moved += 1
+	_send_json(
+		peer,
+		200,
+		{"action": "teleport", "grid_x": grid_x, "grid_y": grid_y, "moved": moved},
+	)
 
 
 func _exit_tree() -> void:

@@ -1125,11 +1125,34 @@ _run_scenario_step() {
             fi
             cmd_entities "${ent_args[@]}"
             ;;
+        spawn)
+            # spawn TYPE X Y [OWNER]
+            local stype sx sy sowner
+            read -r stype sx sy sowner <<< "$args_str"
+            if [[ -z "$stype" || -z "$sx" || -z "$sy" ]]; then
+                err "spawn requires TYPE X Y [OWNER]"
+                return 1
+            fi
+            local spawn_args=("type=$stype" "grid_x=$sx" "grid_y=$sy")
+            if [[ -n "$sowner" ]]; then
+                spawn_args+=("owner=$sowner")
+            fi
+            cmd_game_cmd "spawn" "${spawn_args[@]}"
+            ;;
+        teleport)
+            local tx ty
+            read -r tx ty <<< "$args_str"
+            if [[ -z "$tx" || -z "$ty" ]]; then
+                err "teleport requires X Y coordinates"
+                return 1
+            fi
+            cmd_game_cmd "teleport" "grid_x=$tx" "grid_y=$ty"
+            ;;
         *)
             err "Unknown scenario command: $cmd"
             echo "  Available: select-all, gather X Y, right-click X Y, camera-to X Y,"
             echo "  speed N, pause, unpause, screenshot [NAME], wait CONDITION,"
-            echo "  sleep N, status, entities [--category X]"
+            echo "  sleep N, status, entities, spawn TYPE X Y [OWNER], teleport X Y"
             return 1
             ;;
     esac
