@@ -828,6 +828,64 @@ cmd_data_check() {
     python3 "$SCRIPT_DIR/data_check.py" "$@"
 }
 
+# ==================== screenshot ====================
+cmd_screenshot() {
+    local output=""
+    local name=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --output) output="$2"; shift 2 ;;
+            --name)   name="$2"; shift 2 ;;
+            *)        err "Unknown screenshot option: $1"; exit 1 ;;
+        esac
+    done
+
+    if [[ -z "$output" ]]; then
+        if [[ -z "$name" ]]; then
+            name="$(date +%Y%m%d_%H%M%S)"
+        fi
+        mkdir -p "$PROJECT_ROOT/tests/screenshots"
+        output="$PROJECT_ROOT/tests/screenshots/${name}.png"
+    fi
+
+    curl -s "http://127.0.0.1:9222/screenshot" -o "$output"
+    echo "$output"
+}
+
+# ==================== game-status ====================
+cmd_game_status() {
+    curl -s "http://127.0.0.1:9222/status" | python3 -m json.tool
+}
+
+# ==================== game-cmd ====================
+cmd_game_cmd() {
+    if [[ $# -lt 1 ]]; then
+        err "Usage: ror game-cmd <action> [key=value ...]"
+        exit 1
+    fi
+
+    local action="$1"
+    shift
+
+    # Build JSON: start with action field
+    local json="{\"action\": \"${action}\""
+    for arg in "$@"; do
+        local key="${arg%%=*}"
+        local val="${arg#*=}"
+        # Try to detect numeric values
+        if [[ "$val" =~ ^-?[0-9]+\.?[0-9]*$ ]]; then
+            json+=", \"${key}\": ${val}"
+        else
+            json+=", \"${key}\": \"${val}\""
+        fi
+    done
+    json+="}"
+
+    curl -s -X POST -H 'Content-Type: application/json' -d "$json" "http://127.0.0.1:9222/command"
+    echo ""
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -880,6 +938,16 @@ ${BOLD}COMMANDS${RESET}
                       Split a spritesheet into individual tiles
                         ror split-sprites assets/raw/terrain/grass_quad.png --tile-size 128x64
                         ror split-sprites input.png --output-dir out/ --prefix name
+  screenshot [opts]   Capture a screenshot from the running debug server
+                        ror screenshot                          — save timestamped PNG
+                        ror screenshot --name my_shot           — save as my_shot.png
+                        ror screenshot --output /tmp/shot.png   — save to custom path
+  game-status         Query game state from the debug server (pretty-printed JSON)
+  game-cmd <action> [key=value ...]
+                      Send a command to the debug server
+                        ror game-cmd select-all
+                        ror game-cmd camera-to x=100 y=200
+                        ror game-cmd speed rate=2
   help                Show this help message
 
 ${BOLD}ENVIRONMENT${RESET}
@@ -900,6 +968,9 @@ case "${1:-help}" in
     process-sprite)     shift; cmd_process_sprite "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
     split-sprites)      shift; cmd_split_sprites "$@" ;;
+    screenshot)         shift; cmd_screenshot "$@" ;;
+    game-status)        shift; cmd_game_status "$@" ;;
+    game-cmd)           shift; cmd_game_cmd "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
         err "Unknown command: $1"
