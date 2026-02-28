@@ -120,8 +120,14 @@ func setup_demo_entities() -> void:
 			res_node.depleted.connect(_root._on_resource_depleted)
 			_root._target_detector.register_entity(res_node)
 			res_index += 1
+	var start_cfg: Dictionary = _load_start_config(GameManager.player_difficulty)
 	var bld_pos := get_start_position(0)
-	_create_town_center(0, bld_pos, "")
+	if start_cfg.get("pre_built_tc", true):
+		_create_town_center(0, bld_pos, "")
+	var house_count: int = int(start_cfg.get("starting_houses", 0))
+	for i in house_count:
+		var house_offset := Vector2i(4 + i * 3, -1)
+		_create_house(0, bld_pos + house_offset, "")
 
 
 func setup_fauna() -> void:
@@ -278,9 +284,14 @@ func setup_ai() -> void:
 	var multiplier: float = tier_config.get("gather_rate_multiplier", 1.0)
 	if not is_equal_approx(multiplier, 1.0):
 		ResourceManager.set_gather_multiplier(1, multiplier)
-	var ai_tc := _create_ai_town_center()
+	var ai_start_cfg: Dictionary = _load_start_config(difficulty)
 	var villager_count: int = tier_config.get("starting_villagers", 3)
-	_create_ai_starting_villagers(ai_tc, villager_count)
+	if ai_start_cfg.get("pre_built_tc", true):
+		var ai_tc := _create_ai_town_center()
+		_create_ai_starting_villagers(ai_tc, villager_count)
+	else:
+		var ai_spawn := get_start_position(1)
+		_create_ai_starting_villagers(null, villager_count, ai_spawn)
 	var personality_id: String = str(tier_config.get("gameplay_personality", "random"))
 	if personality_id == "random":
 		personality_id = AIPersonality.get_random_id()
@@ -603,13 +614,53 @@ func _create_town_center(player_id: int, grid_pos: Vector2i, category: String) -
 	return building
 
 
+func _create_house(player_id: int, grid_pos: Vector2i, category: String) -> Node2D:
+	var stats: Dictionary = DataLoader.get_building_stats("house")
+	var max_hp: int = int(stats.get("hp", 550))
+	var footprint := Vector2i(int(stats.get("footprint", [2, 2])[0]), int(stats.get("footprint", [2, 2])[1]))
+	var building := Node2D.new()
+	building.name = "Building_House_%d_%d" % [player_id, grid_pos.x]
+	building.set_script(BuildingScript)
+	building.position = IsoUtils.grid_to_screen(Vector2(grid_pos))
+	building.owner_id = player_id
+	building.building_name = "house"
+	building.footprint = footprint
+	building.grid_pos = grid_pos
+	building.hp = max_hp
+	building.max_hp = max_hp
+	building.under_construction = false
+	building.build_progress = 1.0
+	if category != "":
+		building.entity_category = category
+	_root.add_child(building)
+	_root._target_detector.register_entity(building)
+	if _root._population_manager != null:
+		_root._population_manager.register_building(building, building.owner_id)
+	_root._entity_registry.register(building)
+	building.building_destroyed.connect(_root._on_building_destroyed)
+	var cells := BuildingValidator.get_footprint_cells(grid_pos, footprint)
+	for cell in cells:
+		_root._pathfinder.set_cell_solid(cell, true)
+	return building
+
+
+func _load_start_config(difficulty: String) -> Dictionary:
+	var data: Dictionary = DataLoader.load_json("res://data/settings/game/start_config.json")
+	if data == null or data.is_empty():
+		return {"pre_built_tc": true, "starting_houses": 0}
+	if difficulty in data:
+		return data[difficulty]
+	return data.get("normal", {"pre_built_tc": true, "starting_houses": 0})
+
+
 func _create_ai_town_center() -> Node2D:
 	var tc_pos := get_start_position(1)
 	return _create_town_center(1, tc_pos, "enemy_building")
 
 
-func _create_ai_starting_villagers(tc: Node2D, count: int) -> void:
+func _create_ai_starting_villagers(tc: Node2D, count: int, spawn_origin: Vector2i = Vector2i(-1, -1)) -> void:
 	var offsets := get_villager_offsets()
+	var base_pos: Vector2i = spawn_origin if tc == null else tc.grid_pos
 	for i in count:
 		var unit := Node2D.new()
 		unit.name = "AIVillager_%d" % i
@@ -618,7 +669,7 @@ func _create_ai_starting_villagers(tc: Node2D, count: int) -> void:
 		unit.owner_id = 1
 		unit.unit_color = Color(0.9, 0.2, 0.2)
 		var offset := offsets[i % offsets.size()]
-		var spawn_pos: Vector2i = tc.grid_pos + offset
+		var spawn_pos: Vector2i = base_pos + offset
 		unit.position = IsoUtils.grid_to_screen(Vector2(spawn_pos))
 		_root.add_child(unit)
 		unit._scene_root = _root
