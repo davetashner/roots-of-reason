@@ -702,15 +702,37 @@ func _draw() -> void:
 
 
 func move_to(world_pos: Vector2) -> void:
-	# Reject moves to impassable terrain (mountain, canyon, deep water, etc.)
-	var grid_pos := Vector2i(IsoUtils.screen_to_grid(world_pos))
+	var target := world_pos
+	var grid_pos := Vector2i(IsoUtils.screen_to_grid(target))
 	if _pathfinder and _pathfinder.has_method("is_cell_solid") and _pathfinder.is_cell_solid(grid_pos):
-		return
+		# Target is solid (building, etc.) — find nearest passable neighbor
+		target = _find_nearest_passable(grid_pos, target)
+		if target == world_pos:
+			return  # No passable neighbor found, reject move
 	_path.clear()
 	_path_index = 0
-	_target_pos = world_pos
+	_target_pos = target
 	_moving = true
 	mark_visual_dirty()
+
+
+func _find_nearest_passable(solid_pos: Vector2i, world_pos: Vector2) -> Vector2:
+	## Search the 8 neighbors of a solid cell for the nearest passable one.
+	var best_pos := world_pos
+	var best_dist := INF
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			if dx == 0 and dy == 0:
+				continue
+			var neighbor := solid_pos + Vector2i(dx, dy)
+			if _pathfinder.is_cell_solid(neighbor):
+				continue
+			var neighbor_world := IsoUtils.grid_to_screen(Vector2(neighbor))
+			var dist: float = position.distance_to(neighbor_world)
+			if dist < best_dist:
+				best_dist = dist
+				best_pos = neighbor_world
+	return best_pos
 
 
 func follow_path(waypoints: Array[Vector2]) -> void:
