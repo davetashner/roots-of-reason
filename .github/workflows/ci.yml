@@ -104,15 +104,50 @@ jobs:
     name: GdUnit4 Tests
     runs-on: ubuntu-latest
     needs: [lint, validate]
+    env:
+      GODOT_VERSION: "4.6"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run GdUnit4 tests
-        uses: godot-gdunit-labs/gdUnit4-action@b07efbad7ebb4399455d34de4a0980dc49b26f16 # v1.3.0
+      - name: Cache Godot binary
+        id: cache-godot
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          godot-version: "4.6"
-          paths: res://tests
-          timeout: 10
+          path: /usr/local/bin/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Install Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+
+      - name: Run GdUnit4 tests (4 parallel shards)
+        timeout-minutes: 10
+        env:
+          GODOT_BIN: /usr/local/bin/godot
+        run: ./tools/ror test --jobs=4
+
+      - name: Merge shard reports
+        if: always()
+        run: |
+          # Collect all JUnit XML results from shard directories
+          mkdir -p reports/merged
+          for f in reports/shard_*/results.xml; do
+            [ -f "$f" ] && cp "$f" "reports/merged/$(basename $(dirname $f))_results.xml"
+          done
+          # Fall back to single report if no shards
+          if [ -z "$(ls reports/merged/ 2>/dev/null)" ] && [ -f reports/report_1/results.xml ]; then
+            cp reports/report_1/results.xml reports/merged/results.xml
+          fi
+
+      - name: Publish test report
+        if: always()
+        uses: mikepenz/action-junit-report@cf701569b05ccdd861a76b8e67e23b901b76e01a # v5.5.1
+        with:
+          report_paths: reports/merged/*.xml
+          check_name: test-report.xml
 
   coverage:
     name: Test-File Coverage
