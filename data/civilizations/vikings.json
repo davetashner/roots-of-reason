@@ -1,0 +1,22 @@
+{
+  "name": "Vikings",
+  "description": "Fearsome raiders equally deadly on land and sea.",
+  "bonuses": {
+    "infantry_attack": 1.1,
+    "naval_speed": 1.15
+  },
+  "unique_building": {
+    "name": "Longhouse",
+    "replaces": "barracks",
+    "unit_heal_rate": 0.3
+  },
+  "unique_unit": {
+    "name": "Berserker",
+    "base_unit": "infantry",
+    "rage_threshold": 0.3,
+    "rage_attack_bonus": 1.5,
+    "defense_penalty": -3
+  },
+  "unique_techs": ["berserker_rage", "longship_mastery"],
+  "starting_bonuses": {}
+}

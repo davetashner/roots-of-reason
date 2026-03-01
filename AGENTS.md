@@ -424,6 +424,17 @@ Four milestones define the path from prototype to content-complete. Each milesto
 - Tech tree UI (fxt.4) must handle wider columns gracefully
 - All tests referencing tech counts need updating
 
+### ADR-022: Civilization Expansion — From 3 to 7 Civilizations
+
+**Status:** Accepted · **Bead:** roots-of-reason-kif
+
+- 4 new civs: Egypt (wonder/defense), China (research), Vikings (raid/hybrid), Maya (knowledge economy)
+- Each civ occupies exactly one primary + one secondary playstyle niche
+- No civ gets bonuses in more than 2 categories
+- Every unique unit must lose to at least one standard counter unit
+- All balance tunable via JSON — no hardcoded stats
+- Balance constraint: no civ >55% win rate vs any other at equal skill
+
 ### ADR-023: Debug Console & Integration Test Architecture
 
 - In-game debug console (backtick toggle) + DebugAPI for automated tests
