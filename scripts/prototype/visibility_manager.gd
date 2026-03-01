@@ -58,8 +58,14 @@ func update_visibility(player_id: int, units: Array, pinned_tiles: Array[Vector2
 		elif "los" in unit:
 			los_radius = int(unit.los)
 
-		# Convert unit screen position to grid position
-		var grid_pos := _screen_to_grid(unit.global_position)
+		# Convert unit screen position to grid position.
+		# For buildings with a footprint, use the center tile instead of the origin corner.
+		var grid_pos: Vector2i
+		if "grid_pos" in unit and "footprint" in unit:
+			var fp: Vector2i = unit.footprint
+			grid_pos = Vector2i(unit.grid_pos.x + fp.x / 2, unit.grid_pos.y + fp.y / 2)
+		else:
+			grid_pos = _screen_to_grid(unit.global_position)
 
 		var uid: int = unit.get_instance_id()
 		active_ids[uid] = true
