@@ -91,6 +91,8 @@ func _handle_connection(peer: StreamPeerTCP) -> void:
 		_handle_status(peer)
 	elif method == "GET" and base_path == "/combat-log":
 		_handle_combat_log(peer, query_string)
+	elif method == "GET" and base_path == "/economy":
+		_handle_economy(peer, query_string)
 	elif method == "GET" and base_path == "/entities":
 		_handle_entities(peer, query_string)
 	elif method == "POST" and base_path == "/command":
@@ -217,6 +219,19 @@ static func _world_to_screen(world_pos: Vector2, cam_pos: Vector2, cam_zoom: Vec
 	return (world_pos - cam_pos) * cam_zoom + vp_size / 2.0
 
 
+static func _make_label(text: String, pos: Vector2, font: Font, size: int, color: Color) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.position = pos
+	lbl.add_theme_font_override("font", font)
+	lbl.add_theme_font_size_override("font_size", size)
+	lbl.add_theme_color_override("font_color", color)
+	lbl.add_theme_color_override("font_shadow_color", Color.BLACK)
+	lbl.add_theme_constant_override("shadow_offset_x", 1)
+	lbl.add_theme_constant_override("shadow_offset_y", 1)
+	return lbl
+
+
 func _add_entity_annotations(
 	layer: CanvasLayer,
 	entity: Node2D,
@@ -244,16 +259,7 @@ func _add_entity_annotations(
 		name_text = str(entity.building_name)
 	elif is_resource:
 		name_text = str(entity.resource_name) if "resource_name" in entity else entity.name
-	var name_label := Label.new()
-	name_label.text = name_text
-	name_label.add_theme_font_override("font", font)
-	name_label.add_theme_font_size_override("font_size", font_size)
-	name_label.add_theme_color_override("font_color", Color.WHITE)
-	name_label.add_theme_color_override("font_shadow_color", Color.BLACK)
-	name_label.add_theme_constant_override("shadow_offset_x", 1)
-	name_label.add_theme_constant_override("shadow_offset_y", 1)
-	name_label.position = screen_pos - Vector2(30, 55)
-	layer.add_child(name_label)
+	layer.add_child(_make_label(name_text, screen_pos - Vector2(30, 55), font, font_size, Color.WHITE))
 	# Health bar (units and buildings)
 	if (is_unit or is_building) and "hp" in entity and "max_hp" in entity:
 		var hp: int = int(entity.hp)
@@ -290,54 +296,31 @@ func _add_entity_annotations(
 		var carried: int = int(entity._carried_amount) if "_carried_amount" in entity else 0
 		if carried > 0:
 			state_text += " (carrying %d %s)" % [carried, gather_type]
-		var state_label := Label.new()
-		state_label.text = state_text
-		state_label.add_theme_font_override("font", font)
-		state_label.add_theme_font_size_override("font_size", 10)
-		state_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.5))
-		state_label.add_theme_color_override("font_shadow_color", Color.BLACK)
-		state_label.add_theme_constant_override("shadow_offset_x", 1)
-		state_label.add_theme_constant_override("shadow_offset_y", 1)
-		state_label.position = screen_pos - Vector2(30, 30)
-		layer.add_child(state_label)
+		layer.add_child(_make_label(state_text, screen_pos - Vector2(30, 30), font, 10, Color(0.9, 0.9, 0.5)))
 	# Resource yield text
 	if is_resource and "current_yield" in entity and "total_yield" in entity:
-		var yield_label := Label.new()
-		yield_label.text = "%d/%d" % [int(entity.current_yield), int(entity.total_yield)]
-		yield_label.add_theme_font_override("font", font)
-		yield_label.add_theme_font_size_override("font_size", 10)
-		yield_label.add_theme_color_override("font_color", Color(0.5, 0.9, 0.9))
-		yield_label.add_theme_color_override("font_shadow_color", Color.BLACK)
-		yield_label.add_theme_constant_override("shadow_offset_x", 1)
-		yield_label.add_theme_constant_override("shadow_offset_y", 1)
-		yield_label.position = screen_pos - Vector2(20, 30)
-		layer.add_child(yield_label)
+		var yt := "%d/%d" % [int(entity.current_yield), int(entity.total_yield)]
+		layer.add_child(_make_label(yt, screen_pos - Vector2(20, 30), font, 10, Color(0.5, 0.9, 0.9)))
 
 
 func _handle_status(peer: StreamPeerTCP) -> void:
 	var gm: Node = _get_manager("GameManager")
 	var rm: Node = _get_manager("ResourceManager")
-	var data: Dictionary = {}
-	# Game state from GameManager
-	if gm != null:
-		data["game_time"] = gm.game_time
-		data["game_speed"] = gm.game_speed
-		data["is_paused"] = gm.is_paused
-		data["current_age"] = gm.current_age
-	else:
-		data["game_time"] = 0.0
-		data["game_speed"] = 1.0
-		data["is_paused"] = false
-		data["current_age"] = 0
-	# Player 0 resources from ResourceManager
-	data["player_resources"] = _get_player_resources(rm)
-	# Unit counts by owner_id from scene tree
-	data["unit_count"] = _get_unit_counts()
-	# Camera position and zoom
 	var cam_data := _get_camera_data()
-	data["camera_position"] = cam_data["position"]
-	data["camera_zoom"] = cam_data["zoom"]
-	_send_json(peer, 200, data)
+	_send_json(
+		peer,
+		200,
+		{
+			"game_time": float(gm.game_time) if gm != null else 0.0,
+			"game_speed": float(gm.game_speed) if gm != null else 1.0,
+			"is_paused": bool(gm.is_paused) if gm != null else false,
+			"current_age": int(gm.current_age) if gm != null else 0,
+			"player_resources": _get_player_resources(rm),
+			"unit_count": _get_unit_counts(),
+			"camera_position": cam_data["position"],
+			"camera_zoom": cam_data["zoom"],
+		}
+	)
 
 
 func _handle_combat_log(peer: StreamPeerTCP, query_string: String) -> void:
@@ -355,6 +338,32 @@ func _handle_combat_log(peer: StreamPeerTCP, query_string: String) -> void:
 			"capacity": CombatLogger.get_capacity(),
 			"total_logged": CombatLogger.get_total_logged(),
 			"game_time": game_time,
+		}
+	)
+
+
+func _handle_economy(peer: StreamPeerTCP, query_string: String) -> void:
+	var params := parse_query_string(query_string)
+	var pid: int = int(params.get("player", "0"))
+	var gm: Node = _get_manager("GameManager")
+	var rm: Node = _get_manager("ResourceManager")
+	var vd := EconomyLogger.get_villager_allocation(get_tree().current_scene, pid)
+	_send_json(
+		peer,
+		200,
+		{
+			"game_time": float(gm.game_time) if gm != null else 0.0,
+			"player_id": pid,
+			"player_resources": _get_player_resources(rm) if rm != null else {},
+			"gather_rates": EconomyLogger.get_gather_rates(pid),
+			"deposits_per_second": EconomyLogger.get_deposits_per_second(pid),
+			"villager_allocation": vd["allocation"],
+			"idle_villagers": vd["idle_count"],
+			"total_villagers": vd["total"],
+			"recent_deposits": EconomyLogger.get_events(int(params.get("limit", "20"))),
+			"total_deposits": EconomyLogger.get_total_logged(),
+			"gather_multiplier": rm.get_gather_multiplier(pid) if rm != null else 1.0,
+			"corruption_rate": rm.get_corruption_rate(pid) if rm != null else 0.0,
 		}
 	)
 
@@ -1154,7 +1163,7 @@ static func _should_activate() -> bool:
 	return OS.get_cmdline_user_args().has("--debug-server")
 
 
-## Build the response dictionary for /status (static, for testability).
+## Build /status response (static, for testability).
 static func build_status_response(
 	game_time: float,
 	game_speed: float,
@@ -1177,7 +1186,7 @@ static func build_status_response(
 	}
 
 
-## Parse a command body and validate the action field (static, for testability).
+## Parse command body and validate action field (static, for testability).
 static func parse_command_body(body_text: String) -> Dictionary:
 	if body_text.is_empty():
 		return {"error": "empty request body"}

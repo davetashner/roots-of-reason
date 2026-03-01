@@ -870,6 +870,12 @@ cmd_combat_log() {
     curl -s "http://127.0.0.1:9222/combat-log?limit=${limit}" | python3 -m json.tool
 }
 
+# ==================== economy ====================
+cmd_economy() {
+    local limit="${1:-10}"
+    curl -s "http://127.0.0.1:9222/economy?limit=${limit}" | python3 -m json.tool
+}
+
 # ==================== stop ====================
 cmd_stop() {
     # Send stop command to cancel all actions on selected units (or specific unit IDs)
@@ -2124,6 +2130,7 @@ case "${1:-help}" in
     test-scenarios)     shift; cmd_test_scenarios "$@" ;;
     game-status)        shift; cmd_game_status "$@" ;;
     combat-log)         shift; cmd_combat_log "$@" ;;
+    economy)            shift; cmd_economy "$@" ;;
     stop)               shift; cmd_stop "$@" ;;
     reset)              shift; cmd_reset "$@" ;;
     game-cmd)           shift; cmd_game_cmd "$@" ;;
