@@ -25,19 +25,20 @@
   },
   "canyon_moisture_threshold": 0.30,
   "elevation_noise": {
-    "frequency": 0.015,
+    "frequency": 0.008,
     "octaves": 4,
     "lacunarity": 2.0,
     "gain": 0.5,
     "seed_offset": 1000
   },
   "moisture_noise": {
-    "frequency": 0.02,
+    "frequency": 0.012,
     "octaves": 3,
     "lacunarity": 2.0,
     "gain": 0.5,
     "seed_offset": 3000
   },
+  "terrain_smoothing_passes": 2,
   "forest_moisture_threshold": 0.55,
   "dirt_moisture_threshold": 0.30,
   "island_edge_width": 3,
