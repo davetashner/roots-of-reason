@@ -53,6 +53,9 @@ var _bar_offset_y: float = -30.0
 
 var _sprite: Sprite2D = null
 var _has_sprite: bool = false
+var _build_seq_texture: Texture2D = null
+var _build_seq_frame_count: int = 0
+var _build_seq_frame_width: int = 0
 
 
 func _ready() -> void:
@@ -129,21 +132,29 @@ func _arr_to_color(arr: Array) -> Color:
 func _try_load_sprite() -> void:
 	if building_name == "":
 		return
+	# Try building sequence spritesheet first (horizontal strip of frames)
+	var seq_path := _SPRITE_BASE_PATH + building_name + "_building_sequence.png"
+	if ResourceLoader.exists(seq_path):
+		_build_seq_texture = load(seq_path)
 	var path := _SPRITE_BASE_PATH + building_name + ".png"
-	if not ResourceLoader.exists(path):
-		return
-	var tex: Texture2D = load(path)
-	if tex == null:
+	# Use the sequence first frame or single sprite for display
+	var display_tex: Texture2D = null
+	if _build_seq_texture != null:
+		var full_w: int = _build_seq_texture.get_width()
+		var full_h: int = _build_seq_texture.get_height()
+		# Detect frame count: frames are square-ish, width >= height per frame
+		_build_seq_frame_count = maxi(1, roundi(float(full_w) / float(full_h)))
+		_build_seq_frame_width = full_w / _build_seq_frame_count
+		display_tex = _make_atlas_frame(0)
+	elif ResourceLoader.exists(path):
+		display_tex = load(path)
+	if display_tex == null:
 		return
 	_sprite = Sprite2D.new()
-	_sprite.texture = tex
+	_sprite.texture = display_tex
 	_sprite.centered = true
-	# Anchor sprite so its bottom center aligns with the footprint center.
-	# The footprint center in screen coords is the midpoint of the NxN grid.
 	var fp_center := _footprint_screen_center()
-	# Offset: sprite center is at (0,0) of the texture when centered.
-	# We want the bottom of the sprite to sit at the footprint center's y.
-	var half_h := tex.get_height() / 2.0
+	var half_h := display_tex.get_height() / 2.0
 	_sprite.offset = Vector2(fp_center.x, fp_center.y - half_h)
 	# Apply player color shader for magenta mask recoloring
 	var shader: Shader = load(_SHADER_PATH) as Shader
@@ -156,6 +167,15 @@ func _try_load_sprite() -> void:
 	add_child(_sprite)
 	_has_sprite = true
 	_update_sprite_appearance()
+
+
+func _make_atlas_frame(frame_index: int) -> AtlasTexture:
+	var atlas := AtlasTexture.new()
+	atlas.atlas = _build_seq_texture
+	var x_off: int = frame_index * _build_seq_frame_width
+	var h: int = _build_seq_texture.get_height()
+	atlas.region = Rect2(x_off, 0, _build_seq_frame_width, h)
+	return atlas
 
 
 func _footprint_screen_center() -> Vector2:
@@ -296,8 +316,17 @@ func _update_sprite_appearance() -> void:
 		return
 	_sprite.visible = true
 	if under_construction:
-		_sprite.modulate.a = _construction_alpha
+		if _build_seq_frame_count > 1:
+			# Show the appropriate construction frame at full opacity
+			var frame_idx: int = _get_build_frame_index()
+			_sprite.texture = _make_atlas_frame(frame_idx)
+			_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		else:
+			_sprite.modulate.a = _construction_alpha
 	else:
+		if _build_seq_frame_count > 1:
+			# Show final frame when complete
+			_sprite.texture = _make_atlas_frame(_build_seq_frame_count - 1)
 		var damage_state := get_damage_state()
 		if damage_state == "critical":
 			_sprite.modulate = Color(0.6, 0.6, 0.6, 0.7)
@@ -305,6 +334,15 @@ func _update_sprite_appearance() -> void:
 			_sprite.modulate = Color(0.8, 0.8, 0.8, 1.0)
 		else:
 			_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+
+func _get_build_frame_index() -> int:
+	## Map build_progress (0.0-1.0) to a frame index.
+	## Frame 0 shown from 0-33%, frame 1 from 33-66%, last frame from 66%+.
+	if _build_seq_frame_count <= 1:
+		return 0
+	var idx: int = int(build_progress * float(_build_seq_frame_count))
+	return clampi(idx, 0, _build_seq_frame_count - 1)
 
 
 func _draw() -> void:
@@ -349,8 +387,16 @@ func _draw() -> void:
 		_draw_hp_bar()
 
 
+func _get_bar_y() -> float:
+	## Position the bar above the sprite if one exists, otherwise use config offset.
+	if _has_sprite and _sprite != null and _sprite.texture != null:
+		var half_h := _sprite.texture.get_height() / 2.0
+		return _sprite.offset.y - half_h - _bar_height - 2.0
+	return _bar_offset_y
+
+
 func _draw_progress_bar() -> void:
-	var bar_pos := Vector2(-_bar_width / 2.0, _bar_offset_y)
+	var bar_pos := Vector2(-_bar_width / 2.0, _get_bar_y())
 	var bar_size := Vector2(_bar_width, _bar_height)
 	BarDrawer.draw_bar(self, bar_pos, bar_size, build_progress, Color(0.2, 0.8, 0.2, 0.9))
 
@@ -364,7 +410,7 @@ func _draw_hp_bar() -> void:
 		hp_color = _hp_damaged_color
 	else:
 		hp_color = _hp_critical_color
-	var bar_pos := Vector2(-_bar_width / 2.0, _bar_offset_y)
+	var bar_pos := Vector2(-_bar_width / 2.0, _get_bar_y())
 	var bar_size := Vector2(_bar_width, _bar_height)
 	BarDrawer.draw_bar(self, bar_pos, bar_size, ratio, hp_color)
 
@@ -435,6 +481,14 @@ func _draw_selection_outline() -> void:
 
 
 ## -- Garrison System --
+
+
+func get_garrison_attack() -> int:
+	var total: int = 0
+	for unit in _garrisoned_units:
+		if is_instance_valid(unit) and unit.stats != null:
+			total += int(unit.stats.get_stat("attack"))
+	return total
 
 
 func garrison_unit(unit: Node2D) -> bool:

@@ -183,6 +183,57 @@ func test_save_state_includes_ruins_fields() -> void:
 	assert_float(float(state["ruins_timer"])).is_equal_approx(0.0, 0.001)
 
 
+# -- get_garrison_attack --
+
+
+class StubStats:
+	func get_stat(stat_name: String) -> float:
+		if stat_name == "attack":
+			return 5.0
+		return 0.0
+
+
+class StubGarrisonUnit:
+	extends Node2D
+	var stats: StubStats = null
+	var owner_id: int = 0
+
+	func _init() -> void:
+		stats = StubStats.new()
+
+
+func test_get_garrison_attack_empty_returns_zero() -> void:
+	var b := _create_building(false)
+	assert_int(b.get_garrison_attack()).is_equal(0)
+
+
+func test_get_garrison_attack_sums_garrisoned_attack() -> void:
+	var b := _create_building(false)
+	b.building_name = "town_center"
+	b.garrison_capacity = 15
+	# Directly add units to garrisoned array for testing
+	var u1 := StubGarrisonUnit.new()
+	add_child(u1)
+	auto_free(u1)
+	var u2 := StubGarrisonUnit.new()
+	add_child(u2)
+	auto_free(u2)
+	b._garrisoned_units.append(u1)
+	b._garrisoned_units.append(u2)
+	assert_int(b.get_garrison_attack()).is_equal(10)
+
+
+func test_get_garrison_attack_skips_null_stats() -> void:
+	var b := _create_building(false)
+	b.garrison_capacity = 15
+	var u := StubGarrisonUnit.new()
+	u.stats = null
+	add_child(u)
+	auto_free(u)
+	b._garrisoned_units.append(u)
+	assert_int(b.get_garrison_attack()).is_equal(0)
+
+
 func test_backward_compat_load_no_ruins_fields() -> void:
 	var b := _create_building(false)
 	# Old save data without ruins fields

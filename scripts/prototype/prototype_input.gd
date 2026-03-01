@@ -157,6 +157,13 @@ func _handle_key(key: InputEventKey) -> void:
 		if _river_overlay != null and _river_overlay.has_method("toggle"):
 			_river_overlay.toggle()
 		return
+	# Explore command
+	if keycode == KEY_E:
+		var selected := _get_selected_units()
+		for unit in selected:
+			if unit.has_method("start_explore"):
+				unit.start_explore()
+		return
 	# Escape cancels modes
 	if keycode == KEY_ESCAPE:
 		_attack_move_mode = false
@@ -319,6 +326,10 @@ func _move_selected(world_pos: Vector2) -> void:
 	selected = _filter_barges(selected)
 	if selected.is_empty():
 		return
+	# Cancel explore on manual move
+	for unit in selected:
+		if unit.has_method("_cancel_explore"):
+			unit._cancel_explore()
 	_show_click_marker(world_pos)
 	# Compute formation offsets
 	var first_pos: Vector2 = (selected[0] as Node2D).global_position

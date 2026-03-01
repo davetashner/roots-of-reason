@@ -125,8 +125,10 @@ def classify_asset(rel_path: str) -> str | None:
         # hi-res source images — use relaxed limits
         if len(parts) == 3:
             return "buildings_source"
-        # Infer from building data JSON using the filename (without extension)
+        # Spritesheets (e.g. house_building_sequence.png) get relaxed limits
         filename = Path(parts[-1]).stem
+        if filename.endswith("_building_sequence"):
+            return "buildings_spritesheet"
         return _building_footprint_category(filename)
 
     # tiles/ -> tiles, tiles_sheet, or tiles_source

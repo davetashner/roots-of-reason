@@ -269,6 +269,95 @@ func test_trade_affordability_with_resources_returns_true() -> void:
 	assert_that(result).is_true()
 
 
+func test_get_commands_for_town_center_returns_produce_villager() -> void:
+	var panel := _create_panel()
+	var unit := StubUnit.new()
+	unit.building_name = "town_center"
+	unit.selected = true
+	add_child(unit)
+	auto_free(unit)
+	var commands: Array = panel._get_commands_for_selection([unit])
+	assert_that(commands.size()).is_greater(0)
+	var ids: Array[String] = []
+	for cmd: Dictionary in commands:
+		ids.append(cmd.get("id", ""))
+	assert_that(ids).contains(["produce_villager"])
+
+
+class StubProductionQueue:
+	extends Node
+	var last_unit_type: String = ""
+	var queue_count: int = 0
+
+	func add_to_queue(unit_type: String) -> bool:
+		last_unit_type = unit_type
+		queue_count += 1
+		return true
+
+
+func test_produce_action_calls_add_to_queue() -> void:
+	var panel := _create_panel()
+	var handler := StubInputHandler.new()
+	add_child(handler)
+	auto_free(handler)
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	# Create a building with a ProductionQueue child
+	var building := StubUnit.new()
+	building.building_name = "town_center"
+	add_child(building)
+	auto_free(building)
+	var pq := StubProductionQueue.new()
+	pq.name = "ProductionQueue"
+	building.add_child(pq)
+	handler._selected = [building]
+	panel.setup(handler, placer)
+	var command := {"id": "produce_villager", "action": "produce", "unit": "villager"}
+	panel._on_command_pressed(command)
+	assert_that(pq.last_unit_type).is_equal("villager")
+
+
+func test_produce_affordability_with_food_returns_true() -> void:
+	var panel := _create_panel()
+	(
+		ResourceManager
+		. init_player(
+			0,
+			{
+				ResourceManager.ResourceType.FOOD: 100,
+				ResourceManager.ResourceType.WOOD: 0,
+				ResourceManager.ResourceType.STONE: 0,
+				ResourceManager.ResourceType.GOLD: 0,
+				ResourceManager.ResourceType.KNOWLEDGE: 0,
+			}
+		)
+	)
+	var command := {"id": "produce_villager", "action": "produce", "unit": "villager"}
+	var result: bool = panel._check_affordability(command)
+	assert_that(result).is_true()
+
+
+func test_produce_affordability_insufficient_returns_false() -> void:
+	var panel := _create_panel()
+	(
+		ResourceManager
+		. init_player(
+			0,
+			{
+				ResourceManager.ResourceType.FOOD: 10,
+				ResourceManager.ResourceType.WOOD: 0,
+				ResourceManager.ResourceType.STONE: 0,
+				ResourceManager.ResourceType.GOLD: 0,
+				ResourceManager.ResourceType.KNOWLEDGE: 0,
+			}
+		)
+	)
+	var command := {"id": "produce_villager", "action": "produce", "unit": "villager"}
+	var result: bool = panel._check_affordability(command)
+	assert_that(result).is_false()
+
+
 func test_trade_affordability_insufficient_returns_false() -> void:
 	var panel := _create_panel()
 	(

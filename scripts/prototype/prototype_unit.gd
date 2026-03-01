@@ -17,6 +17,7 @@ const TransportHandlerScript := preload("res://scripts/prototype/transport_handl
 const GathererComponentScript := preload("res://scripts/prototype/gatherer_component.gd")
 const CombatantComponentScript := preload("res://scripts/prototype/combatant_component.gd")
 const HealFeedComponentScript := preload("res://scripts/prototype/heal_feed_component.gd")
+const ExplorerComponentScript := preload("res://scripts/prototype/explorer_component.gd")
 const UnitSpriteHandlerScript := preload("res://scripts/prototype/unit_sprite_handler.gd")
 const RADIUS: float = 12.0
 const MOVE_SPEED: float = 105.0
@@ -65,6 +66,7 @@ var _transport_capacity: int = 0
 var _gatherer: RefCounted = null  # GathererComponent
 var _combatant: RefCounted = null  # CombatantComponent
 var _heal_feed: RefCounted = null  # HealFeedComponent
+var _explorer: RefCounted = null  # ExplorerComponent
 var _sprite_handler: RefCounted = null  # UnitSpriteHandler
 var _sprite_variant: String = ""
 
@@ -245,6 +247,8 @@ var _visibility_manager: Node:
 	set(v):
 		if _combatant != null:
 			_combatant.visibility_manager = v
+		if _explorer != null:
+			_explorer.visibility_manager = v
 
 # HealFeed forwarding
 var _feed_target: Node2D:
@@ -289,6 +293,7 @@ func _ready() -> void:
 	_gatherer = GathererComponentScript.new(self)
 	_combatant = CombatantComponentScript.new(self)
 	_heal_feed = HealFeedComponentScript.new(self)
+	_explorer = ExplorerComponentScript.new(self)
 	_init_stats()
 	_load_build_config()
 	_load_gather_config()
@@ -451,6 +456,7 @@ func _process(delta: float) -> void:
 	_gatherer.tick(game_delta)
 	_combatant.tick(game_delta)
 	_heal_feed.tick(game_delta)
+	_explorer.tick(game_delta)
 	if _transport != null:
 		_transport.tick(game_delta, _moving)
 	# Lazy-init sprite handler (after load_state may have set _sprite_variant)
@@ -494,6 +500,7 @@ func assign_gather_target(node: Node2D, gather_offset: Vector2 = Vector2.ZERO) -
 	_pending_build_target_name = ""
 	_cancel_combat()
 	_cancel_feed()
+	_cancel_explore()
 	_gatherer.assign_target(node, gather_offset)
 
 
@@ -501,6 +508,7 @@ func assign_build_target(building: Node2D) -> void:
 	_cancel_gather()
 	_cancel_combat()
 	_cancel_feed()
+	_cancel_explore()
 	_build_target = building
 	move_to(building.global_position)
 
@@ -512,6 +520,7 @@ func is_idle() -> bool:
 		and _gatherer.gather_state == GathererComponentScript.GatherState.NONE
 		and _combatant.combat_state == CombatantComponentScript.CombatState.NONE
 		and _feed_target == null
+		and _explorer.explore_state == ExplorerComponentScript.ExploreState.NONE
 	)
 
 
@@ -536,10 +545,24 @@ func _cancel_feed() -> void:
 	_heal_feed.cancel()
 
 
+func start_explore() -> void:
+	_cancel_gather()
+	_cancel_combat()
+	_cancel_feed()
+	_build_target = null
+	_pending_build_target_name = ""
+	_explorer.start_exploring()
+
+
+func _cancel_explore() -> void:
+	_explorer.cancel()
+
+
 func assign_feed_target(wolf: Node2D) -> void:
 	# Cancel other tasks
 	_cancel_gather()
 	_cancel_combat()
+	_cancel_explore()
 	_build_target = null
 	_pending_build_target_name = ""
 	_heal_feed.assign_feed_target(wolf)
@@ -563,6 +586,7 @@ func take_damage(amount: int, attacker: Node2D) -> void:
 func assign_attack_target(target: Node2D) -> void:
 	_cancel_gather()
 	_cancel_feed()
+	_cancel_explore()
 	_build_target = null
 	_pending_build_target_name = ""
 	_combatant.engage_target(target)
@@ -570,6 +594,7 @@ func assign_attack_target(target: Node2D) -> void:
 
 func attack_move_to(world_pos: Vector2) -> void:
 	_cancel_gather()
+	_cancel_explore()
 	_build_target = null
 	_pending_build_target_name = ""
 	_combatant.attack_move_to(world_pos)
@@ -577,6 +602,7 @@ func attack_move_to(world_pos: Vector2) -> void:
 
 func patrol_between(point_a: Vector2, point_b: Vector2) -> void:
 	_cancel_gather()
+	_cancel_explore()
 	_build_target = null
 	_pending_build_target_name = ""
 	_combatant.patrol_between(point_a, point_b)
@@ -621,6 +647,7 @@ func _die() -> void:
 	_cancel_feed()
 	_cancel_gather()
 	_cancel_combat()
+	_cancel_explore()
 	if _transport != null:
 		_transport.kill_passengers()
 	var killer: Node2D = _last_attacker
@@ -812,6 +839,7 @@ func save_state() -> Dictionary:
 	state.merge(_gatherer.save_state())
 	state.merge(_combatant.save_state())
 	state.merge(_heal_feed.save_state())
+	state.merge(_explorer.save_state())
 	if _transport != null:
 		state.merge(_transport.save_state())
 	return state
@@ -837,5 +865,6 @@ func load_state(data: Dictionary) -> void:
 	_gatherer.load_state(data)
 	_combatant.load_state(data)
 	_heal_feed.load_state(data)
+	_explorer.load_state(data)
 	if _transport != null and data.has("embarked_unit_names"):
 		_transport.load_state(data)

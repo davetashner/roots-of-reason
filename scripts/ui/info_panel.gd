@@ -201,6 +201,17 @@ func show_building(building: Node2D) -> void:
 		var pct := int(building.build_progress * 100.0)
 		_stats_label.text = "Progress: %d%%" % pct
 	else:
+		var stats_text := ""
+		# Building defense stat
+		var bstats := _get_building_stats(building)
+		var defense: int = int(bstats.get("defense", 0))
+		stats_text = "DEF: %d" % defense
+		# Garrison attack bonus
+		if building.has_method("get_garrison_attack"):
+			var garrison_atk: int = building.get_garrison_attack()
+			if garrison_atk > 0:
+				stats_text += "  ATK: %d" % garrison_atk
+		# Damage state
 		var state_text := ""
 		if building.has_method("get_damage_state"):
 			var state: String = building.get_damage_state()
@@ -223,7 +234,9 @@ func show_building(building: Node2D) -> void:
 				for res_name: String in rates:
 					rate_parts.append("%s: %d" % [res_name.capitalize(), int(rates[res_name])])
 				state_text = ", ".join(rate_parts) + "  Carts: %d" % carts
-		_stats_label.text = state_text
+		if state_text != "":
+			stats_text += "\n" + state_text
+		_stats_label.text = stats_text
 	_update_building_hp(building)
 
 
@@ -496,6 +509,9 @@ func _update_unit_hp(unit: Node2D, stats: Dictionary) -> void:
 
 
 func _update_building_hp(building: Node2D) -> void:
+	if building.under_construction:
+		_set_build_progress_bar(building.build_progress)
+		return
 	var current_hp: int = building.hp
 	var max_hp_val: int = building.max_hp
 	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
@@ -540,6 +556,17 @@ func _set_yield_bar(ratio: float, current: int, maximum: int) -> void:
 	_hp_label.text = "Yield: %d/%d" % [current, maximum]
 
 
+func _set_build_progress_bar(progress: float) -> void:
+	progress = clampf(progress, 0.0, 1.0)
+	var bar_width: float = _hp_bar_bg.custom_minimum_size.x
+	_hp_bar_fill.size = Vector2(bar_width * progress, _hp_bar_fill.size.y)
+	var fill_style: StyleBoxFlat = _hp_bar_fill.get_theme_stylebox("panel") as StyleBoxFlat
+	if fill_style != null:
+		fill_style.bg_color = Color(0.2, 0.8, 0.2, 0.9)
+	var pct := int(progress * 100.0)
+	_hp_label.text = "Building: %d%%" % pct
+
+
 func _get_unit_stats(unit: Node2D) -> Dictionary:
 	var unit_type: String = unit.unit_type if "unit_type" in unit else "villager"
 	var stats: Dictionary = {}
@@ -575,6 +602,19 @@ func _get_building_display_name(building: Node2D) -> String:
 	if bname != "":
 		return bname.replace("_", " ").capitalize()
 	return "Building"
+
+
+func _get_building_stats(building: Node2D) -> Dictionary:
+	var bname: String = building.building_name if "building_name" in building else ""
+	if bname == "":
+		return {}
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_building_stats(bname)
+	if is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("get_building_stats"):
+			return dl.get_building_stats(bname)
+	return {}
 
 
 func _get_carry_text(unit: Node2D) -> String:

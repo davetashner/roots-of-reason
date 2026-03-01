@@ -203,6 +203,8 @@ func setup_tech() -> void:
 	_root.add_child(_root._singularity_regression)
 	_root._singularity_regression.setup(_root._tech_manager, _root._notification_panel)
 	_root._tech_manager.victory_tech_completed.connect(_root._on_victory_tech_completed)
+	if _root._population_manager != null:
+		_root._tech_manager.tech_researched.connect(_root._population_manager._on_tech_researched)
 	if _root._building_placer != null:
 		_root._building_placer._tech_manager = _root._tech_manager
 

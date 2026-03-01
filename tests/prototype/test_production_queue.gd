@@ -152,10 +152,10 @@ func test_production_completes_after_time() -> void:
 	_init_resources()
 	var pq := _create_queue()
 	pq.add_to_queue("villager")
-	# Villager train_time = 25s. Simulate enough _process calls.
+	# Villager train_time = 20s. Simulate enough _process calls.
 	var produced_types: Array[String] = []
 	pq.unit_produced.connect(func(ut: String, _b: Node2D) -> void: produced_types.append(ut))
-	for i in 26:
+	for i in 21:
 		pq._process(1.0)
 	assert_int(produced_types.size()).is_equal(1)
 	assert_str(produced_types[0]).is_equal("villager")
@@ -167,8 +167,8 @@ func test_unit_produced_signal_emitted() -> void:
 	var produced_buildings: Array = []
 	pq.unit_produced.connect(func(ut: String, b: Node2D) -> void: produced_buildings.append([ut, b]))
 	pq.add_to_queue("villager")
-	# Advance past train_time (25s)
-	for i in 26:
+	# Advance past train_time (20s)
+	for i in 21:
 		pq._process(1.0)
 	assert_int(produced_buildings.size()).is_equal(1)
 	assert_str(produced_buildings[0][0]).is_equal("villager")
@@ -180,8 +180,8 @@ func test_queue_auto_starts_next() -> void:
 	var pq := _create_queue()
 	pq.add_to_queue("villager")
 	pq.add_to_queue("villager")
-	# Complete first (25s train time)
-	for i in 26:
+	# Complete first (20s train time)
+	for i in 21:
 		pq._process(1.0)
 	# Queue should now have 1 remaining, progress should be near 0
 	assert_int(pq.get_queue().size()).is_equal(1)
@@ -197,7 +197,7 @@ func test_progress_resets_between_units() -> void:
 	pq.add_to_queue("villager")
 	pq.add_to_queue("villager")
 	# Complete first unit
-	for i in 26:
+	for i in 21:
 		pq._process(1.0)
 	# Progress for second unit should be near start
 	assert_float(pq.get_progress()).is_less(0.1)
@@ -207,11 +207,11 @@ func test_get_progress_returns_ratio() -> void:
 	_init_resources()
 	var pq := _create_queue()
 	pq.add_to_queue("villager")
-	# Advance half the train time (12.5s, so ~12 frames at 1s each)
-	for i in 12:
+	# Advance half the train time (10s out of 20s)
+	for i in 10:
 		pq._process(1.0)
 	var progress: float = pq.get_progress()
-	# Should be approximately 12/25 = 0.48
+	# Should be approximately 10/20 = 0.5
 	assert_float(progress).is_greater(0.4)
 	assert_float(progress).is_less(0.6)
 
@@ -289,6 +289,6 @@ func test_save_load_preserves_progress() -> void:
 	var state: Dictionary = pq.save_state()
 	var pq2 := _create_queue()
 	pq2.load_state(state)
-	# Progress should be approximately 10/25 = 0.4
+	# Progress should be approximately 10/20 = 0.5
 	assert_float(pq2._progress).is_greater(9.0)
 	assert_float(pq2._current_train_time).is_greater(0.0)

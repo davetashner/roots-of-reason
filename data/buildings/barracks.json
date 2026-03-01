@@ -1,14 +1,24 @@
 {
   "name": "Barracks",
   "hp": 1200,
-  "footprint": [3, 3],
+  "footprint": [
+    3,
+    3
+  ],
   "build_time": 50,
-  "build_cost": { "wood": 175 },
+  "build_cost": {
+    "wood": 175
+  },
   "population_bonus": 0,
   "garrison_capacity": 10,
   "is_drop_off": false,
   "drop_off_types": [],
-  "units_produced": ["infantry", "archer", "cavalry"],
+  "units_produced": [
+    "infantry",
+    "archer",
+    "cavalry"
+  ],
   "age_required": 1,
-  "placement_constraint": ""
+  "placement_constraint": "",
+  "defense": 2
 }
