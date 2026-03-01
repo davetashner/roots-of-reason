@@ -1,5 +1,7 @@
 {
   "build_reach": 80.0,
+  "auto_build_search_radius_tiles": 10,
+  "auto_build_check_interval": 1.0,
   "progress_bar_width": 40.0,
   "progress_bar_height": 5.0,
   "progress_bar_offset_y": -30.0,
