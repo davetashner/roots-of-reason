@@ -1761,6 +1761,209 @@ cmd_scenario() {
     return 0
 }
 
+# ==================== test-scenarios ====================
+cmd_test_scenarios() {
+    local godot
+    if ! godot=$(find_godot); then
+        err "Godot binary not found. Set GODOT_BIN or install Godot."
+        exit 1
+    fi
+
+    local scenario_dir="$PROJECT_ROOT/tests/scenarios"
+    local filter=""
+    local timeout=120
+    local screenshot_on_fail=true
+    local civ="mesopotamia"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --filter)       filter="$2"; shift 2 ;;
+            --timeout)      timeout="$2"; shift 2 ;;
+            --no-screenshots) screenshot_on_fail=false; shift ;;
+            --civ)          civ="$2"; shift 2 ;;
+            *)              err "Unknown test-scenarios option: $1"; exit 1 ;;
+        esac
+    done
+
+    if [[ ! -d "$scenario_dir" ]]; then
+        err "Scenario directory not found: $scenario_dir"
+        exit 1
+    fi
+
+    # Discover scenario files
+    local -a scenario_files=()
+    while IFS= read -r -d '' f; do
+        local basename
+        basename="$(basename "$f" .scenario)"
+        if [[ -n "$filter" ]] && ! [[ "$basename" == *"$filter"* ]]; then
+            continue
+        fi
+        scenario_files+=("$f")
+    done < <(find "$scenario_dir" -name '*.scenario' -print0 | sort -z)
+
+    if [[ ${#scenario_files[@]} -eq 0 ]]; then
+        if [[ -n "$filter" ]]; then
+            err "No scenario files matching filter '$filter' in $scenario_dir"
+        else
+            err "No .scenario files found in $scenario_dir"
+        fi
+        exit 1
+    fi
+
+    printf "${BOLD}Found %d scenario(s)${RESET}\n" "${#scenario_files[@]}"
+
+    # Launch Godot with debug server
+    info "Launching Godot with debug server ..."
+    local godot_log
+    godot_log=$(mktemp)
+    "$godot" --path "$PROJECT_ROOT" \
+        --scene res://scenes/prototype/prototype_main.tscn \
+        -- --quick-start "$civ" --debug-server \
+        >"$godot_log" 2>&1 &
+    local godot_pid=$!
+
+    # Ensure cleanup on exit
+    trap '_test_scenarios_cleanup '"$godot_pid"' '"$godot_log" EXIT
+
+    # Wait for debug server to become available
+    local server_ready=false
+    local wait_start=$SECONDS
+    while [[ $(( SECONDS - wait_start )) -lt 30 ]]; do
+        if curl -sf "http://127.0.0.1:9222/ping" >/dev/null 2>&1; then
+            server_ready=true
+            break
+        fi
+        # Check if Godot crashed
+        if ! kill -0 "$godot_pid" 2>/dev/null; then
+            err "Godot process exited before debug server was ready"
+            echo "--- Godot log ---"
+            cat "$godot_log"
+            echo "--- end log ---"
+            trap - EXIT
+            rm -f "$godot_log"
+            exit 1
+        fi
+        sleep 0.5
+    done
+
+    if ! $server_ready; then
+        err "Debug server did not respond within 30s"
+        trap - EXIT
+        _test_scenarios_cleanup "$godot_pid" "$godot_log"
+        exit 1
+    fi
+    ok "Debug server ready (PID $godot_pid)"
+
+    # Run scenarios
+    local passed=0
+    local failed=0
+    local skipped=0
+    local -a failures=()
+    local screenshot_dir="$PROJECT_ROOT/tests/screenshots/scenarios"
+    mkdir -p "$screenshot_dir"
+
+    for scenario_file in "${scenario_files[@]}"; do
+        local scenario_name
+        scenario_name="$(basename "$scenario_file" .scenario)"
+
+        printf "\n${BOLD}━━━ %s ━━━${RESET}\n" "$scenario_name"
+
+        # Reset the scene before each scenario
+        curl -sf -X POST -H 'Content-Type: application/json' \
+            -d '{"action": "reset"}' "http://127.0.0.1:9222/command" >/dev/null 2>&1 || true
+
+        # Wait for scene to reload after reset
+        local reset_wait=0
+        while [[ $reset_wait -lt 10 ]]; do
+            if curl -sf "http://127.0.0.1:9222/ping" >/dev/null 2>&1; then
+                break
+            fi
+            sleep 0.5
+            reset_wait=$((reset_wait + 1))
+        done
+
+        # Check Godot is still alive
+        if ! kill -0 "$godot_pid" 2>/dev/null; then
+            err "Godot process died during scenario: $scenario_name"
+            failed=$((failed + 1))
+            failures+=("$scenario_name (Godot crashed)")
+            break
+        fi
+
+        # Run the scenario
+        if cmd_scenario --file "$scenario_file" 2>&1; then
+            ok "$scenario_name PASSED"
+            passed=$((passed + 1))
+        else
+            err "$scenario_name FAILED"
+            failed=$((failed + 1))
+            failures+=("$scenario_name")
+
+            # Capture failure screenshot
+            if $screenshot_on_fail; then
+                local fail_screenshot="$screenshot_dir/${scenario_name}_FAIL.png"
+                curl -sf "http://127.0.0.1:9222/screenshot?annotate=true" \
+                    -o "$fail_screenshot" 2>/dev/null || true
+                if [[ -f "$fail_screenshot" ]]; then
+                    info "Failure screenshot: $fail_screenshot"
+                fi
+            fi
+        fi
+    done
+
+    # Summary
+    echo ""
+    printf "${BOLD}═══════════════════════════════════════${RESET}\n"
+    printf "${BOLD}Scenario Test Results${RESET}\n"
+    printf "${BOLD}═══════════════════════════════════════${RESET}\n"
+    printf "  ${GREEN}Passed:${RESET}  %d\n" "$passed"
+    if [[ $failed -gt 0 ]]; then
+        printf "  ${RED}Failed:${RESET}  %d\n" "$failed"
+    else
+        printf "  Failed:  0\n"
+    fi
+    if [[ $skipped -gt 0 ]]; then
+        printf "  Skipped: %d\n" "$skipped"
+    fi
+    printf "  Total:   %d\n" "${#scenario_files[@]}"
+
+    if [[ $failed -gt 0 ]]; then
+        echo ""
+        printf "${RED}Failures:${RESET}\n"
+        for f in "${failures[@]}"; do
+            printf "  ${RED}✖${RESET} %s\n" "$f"
+        done
+        echo ""
+        # Don't call exit here — let the trap handle cleanup
+        return 1
+    fi
+
+    echo ""
+    ok "All scenarios passed!"
+    return 0
+}
+
+_test_scenarios_cleanup() {
+    local godot_pid="$1"
+    local godot_log="$2"
+
+    if kill -0 "$godot_pid" 2>/dev/null; then
+        info "Stopping Godot (PID $godot_pid) ..."
+        kill "$godot_pid" 2>/dev/null || true
+        # Give it a moment to exit gracefully
+        local wait_count=0
+        while kill -0 "$godot_pid" 2>/dev/null && [[ $wait_count -lt 10 ]]; do
+            sleep 0.5
+            wait_count=$((wait_count + 1))
+        done
+        # Force kill if still alive
+        if kill -0 "$godot_pid" 2>/dev/null; then
+            kill -9 "$godot_pid" 2>/dev/null || true
+        fi
+    fi
+    rm -f "$godot_log"
+}
+
 # ==================== help ====================
 cmd_help() {
     cat <<EOF
@@ -1833,6 +2036,15 @@ ${BOLD}COMMANDS${RESET}
                         ror wait-until time>120             — wait until game time > 120s
                         ror wait-until idle>3               — wait for 3+ idle player units
                         ror wait-until gold>500 --timeout 120 --interval 2
+  test-scenarios [opts]
+                      Run all .scenario files as integration tests
+                        ror test-scenarios                      — run all scenarios
+                        ror test-scenarios --filter gather      — run matching scenarios
+                        ror test-scenarios --civ polynesia      — use a specific civ
+                        ror test-scenarios --no-screenshots     — skip failure screenshots
+                      Launches Godot with --debug-server, runs each scenario file
+                      in tests/scenarios/, resets the scene between runs, captures
+                      failure screenshots, and reports pass/fail summary.
   scenario <script> | --file <path>
                       Execute a semicolon-separated sequence of debug commands
                         ror scenario 'select-all; gather 5 4; wait wood>250'
@@ -1882,6 +2094,7 @@ case "${1:-help}" in
     units)              shift; cmd_units "$@" ;;
     wait-until)         shift; cmd_wait_until "$@" ;;
     scenario)           shift; cmd_scenario "$@" ;;
+    test-scenarios)     shift; cmd_test_scenarios "$@" ;;
     game-status)        shift; cmd_game_status "$@" ;;
     stop)               shift; cmd_stop "$@" ;;
     reset)              shift; cmd_reset "$@" ;;
