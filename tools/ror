@@ -47,6 +47,31 @@ find_godot() {
     return 1
 }
 
+# --- Blender binary detection ---
+find_blender() {
+    if [[ -n "${BLENDER_BIN:-}" ]] && [[ -x "$BLENDER_BIN" ]]; then
+        echo "$BLENDER_BIN"
+        return
+    fi
+    # Common locations on macOS
+    local candidates=(
+        "/Applications/Blender.app/Contents/MacOS/Blender"
+        "$HOME/Applications/Blender.app/Contents/MacOS/Blender"
+    )
+    # Also check PATH
+    if command -v blender &>/dev/null; then
+        command -v blender
+        return
+    fi
+    for bin in "${candidates[@]}"; do
+        if [[ -x "$bin" ]]; then
+            echo "$bin"
+            return
+        fi
+    done
+    return 1
+}
+
 # --- gdtoolkit venv management ---
 VENV_DIR="$PROJECT_ROOT/.venv-gdtoolkit"
 
@@ -806,6 +831,18 @@ cmd_scene_tree() {
 cmd_process_sprite() {
     cd "$PROJECT_ROOT"
     python3 "$SCRIPT_DIR/process_sprite.py" "$@"
+}
+
+# ==================== blender-render ====================
+cmd_blender_render() {
+    local blender
+    blender=$(find_blender) || {
+        err "Blender not found. Set BLENDER_BIN or install Blender."
+        exit 1
+    }
+    cd "$PROJECT_ROOT"
+    info "Using Blender: $blender"
+    "$blender" --background --python "$PROJECT_ROOT/blender/render_isometric.py" -- "$@"
 }
 
 # ==================== sprite-sheet ====================
@@ -2079,6 +2116,11 @@ ${BOLD}COMMANDS${RESET}
                         ror process-sprite assets/sprites/buildings/lumber_camp_01.png
                         ror process-sprite source.png --canvas 256x192 --output out.png
                         ror process-sprite source.png --building barracks --dry-run
+  blender-render [subject] [opts]
+                      Render isometric sprites via Blender (headless)
+                        ror blender-render --poc             — PoC house, all 8 directions
+                        ror blender-render house --footprint 2 --directions s sw
+                        ror blender-render villager --type unit --directions s n
   sprite-sheet <variant> [animation] [direction] [--png] [--speed MS]
                       Generate animated GIFs (default) or static contact sheets
                         ror sprite-sheet villager_woman walk_c s  — animated GIF
@@ -2153,6 +2195,7 @@ ${BOLD}COMMANDS${RESET}
 
 ${BOLD}ENVIRONMENT${RESET}
   GODOT_BIN           Path to Godot binary (auto-detected if unset)
+  BLENDER_BIN         Path to Blender binary (auto-detected if unset)
 EOF
 }
 
@@ -2167,6 +2210,7 @@ case "${1:-help}" in
     scene-tree)         shift; cmd_scene_tree "$@" ;;
     validate-assets|va) shift; cmd_validate_assets "$@" ;;
     process-sprite)     shift; cmd_process_sprite "$@" ;;
+    blender-render)     shift; cmd_blender_render "$@" ;;
     sprite-sheet)       shift; cmd_sprite_sheet "$@" ;;
     animate)            shift; cmd_animate "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
