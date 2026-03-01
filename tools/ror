@@ -1150,6 +1150,368 @@ cmd_wait_until() {
     done
 }
 
+# ==================== scenario assertions ====================
+
+# assert <condition> — immediate check (same syntax as wait-until conditions)
+_scenario_assert() {
+    local condition="$1"
+    if [[ -z "$condition" ]]; then
+        err "assert requires a condition (e.g. assert food>=100)"
+        return 1
+    fi
+
+    # Validate condition format
+    if ! [[ "$condition" =~ ^[a-z_]+(>=|<=|!=|==|>|<)[0-9.]+$ ]]; then
+        err "Invalid assert condition: $condition"
+        echo "  Expected: <field><op><value>  e.g. food>=100, wood>250, time>120, idle==0"
+        return 1
+    fi
+
+    local status_json entities_json
+    status_json=$(curl -sf "http://127.0.0.1:9222/status" 2>/dev/null || echo "")
+    if [[ -z "$status_json" ]]; then
+        err "Assertion failed: could not reach debug server"
+        return 1
+    fi
+
+    entities_json="{}"
+    if [[ "$condition" == idle* ]]; then
+        entities_json=$(curl -sf "http://127.0.0.1:9222/entities?owner=0" 2>/dev/null || echo "{}")
+    fi
+
+    if _eval_condition "$condition" "$status_json" "$entities_json"; then
+        ok "Assertion passed: $condition"
+        return 0
+    else
+        # Extract the actual value for a useful error message
+        local field
+        field=$(echo "$condition" | sed 's/[><=!].*//')
+        local actual
+        actual=$(_extract_field_value "$field" "$status_json" "$entities_json")
+        err "Assertion failed: $condition (actual: $field=$actual)"
+        return 1
+    fi
+}
+
+# Extract a field's current value from status/entities JSON (for error messages)
+_extract_field_value() {
+    local field="$1"
+    local status_json="$2"
+    local entities_json="$3"
+
+    case "$field" in
+        time)
+            echo "$status_json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('game_time', 0))" 2>/dev/null
+            ;;
+        food|wood|gold|stone)
+            echo "$status_json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('player_resources',{}).get('$field', 0))" 2>/dev/null
+            ;;
+        idle)
+            echo "$entities_json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+count = sum(1 for e in data.get('entities', []) if e.get('action') == 'idle' and e.get('owner_id', -1) == 0)
+print(count)
+" 2>/dev/null
+            ;;
+        *)
+            echo "?"
+            ;;
+    esac
+}
+
+# assert-count [--category C] [--type T] [--owner N] [--action A] <op> <value>
+# Example: assert-count --owner 0 --category villager >= 5
+_scenario_assert_count() {
+    local args_str="$1"
+    if [[ -z "$args_str" ]]; then
+        err "assert-count requires filters and a comparison"
+        echo "  Usage: assert-count [--category C] [--type T] [--owner N] [--action A] <op> <value>"
+        echo "  Example: assert-count --owner 0 --type villager >= 5"
+        return 1
+    fi
+
+    local -a parts=()
+    read -ra parts <<< "$args_str"
+
+    # Separate filters from the trailing operator and value
+    local query=""
+    local filter_desc=""
+    local op="" value=""
+    local i=0
+    while [[ $i -lt ${#parts[@]} ]]; do
+        case "${parts[$i]}" in
+            --category)
+                query="${query:+$query&}category=${parts[$((i+1))]}"
+                filter_desc="${filter_desc:+$filter_desc, }category=${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            --type)
+                query="${query:+$query&}type=${parts[$((i+1))]}"
+                filter_desc="${filter_desc:+$filter_desc, }type=${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            --owner)
+                query="${query:+$query&}owner=${parts[$((i+1))]}"
+                filter_desc="${filter_desc:+$filter_desc, }owner=${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            --action)
+                # action is filtered client-side since the server doesn't support it
+                filter_desc="${filter_desc:+$filter_desc, }action=${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            '>='|'<='|'!='|'=='|'>'|'<')
+                op="${parts[$i]}"
+                value="${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            *)
+                # Try to parse as op+value combined (e.g. ">=5")
+                if [[ "${parts[$i]}" =~ ^(>=|<=|!=|==|>|<)([0-9]+)$ ]]; then
+                    op="${BASH_REMATCH[1]}"
+                    value="${BASH_REMATCH[2]}"
+                    i=$((i+1))
+                else
+                    err "Unknown assert-count argument: ${parts[$i]}"
+                    return 1
+                fi
+                ;;
+        esac
+    done
+
+    if [[ -z "$op" || -z "$value" ]]; then
+        err "assert-count requires an operator and value (e.g. >= 5)"
+        return 1
+    fi
+
+    local url="http://127.0.0.1:9222/entities"
+    if [[ -n "$query" ]]; then
+        url="${url}?${query}"
+    fi
+
+    local json
+    json=$(curl -sf "$url" 2>/dev/null) || {
+        err "Assertion failed: could not reach debug server"
+        return 1
+    }
+
+    # Extract action filter if present
+    local action_filter=""
+    if [[ "$args_str" == *"--action "* ]]; then
+        action_filter=$(echo "$args_str" | sed -n 's/.*--action \([^ ]*\).*/\1/p')
+    fi
+
+    local count
+    count=$(echo "$json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+entities = data.get('entities', [])
+action_filter = '$action_filter'
+if action_filter:
+    entities = [e for e in entities if e.get('action') == action_filter]
+print(len(entities))
+" 2>/dev/null)
+
+    if [[ -z "$count" ]]; then
+        err "Assertion failed: could not parse entity count"
+        return 1
+    fi
+
+    if python3 -c "exit(0 if $count $op $value else 1)" 2>/dev/null; then
+        ok "Assertion passed: count(${filter_desc:-all}) = $count $op $value"
+        return 0
+    else
+        err "Assertion failed: count(${filter_desc:-all}) = $count, expected $op $value"
+        return 1
+    fi
+}
+
+# assert-no-idle — all player-0 units must have a non-idle action
+_scenario_assert_no_idle() {
+    local json
+    json=$(curl -sf "http://127.0.0.1:9222/entities?owner=0" 2>/dev/null) || {
+        err "Assertion failed: could not reach debug server"
+        return 1
+    }
+
+    local result
+    result=$(echo "$json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+entities = data.get('entities', [])
+units = [e for e in entities if e.get('entity_category', '') in ('own_unit', 'enemy_unit') or e.get('unit_category', '')]
+idle = [e.get('name', '?') for e in units if e.get('action') == 'idle']
+if idle:
+    print('FAIL:' + ','.join(idle))
+else:
+    print('OK:' + str(len(units)))
+" 2>/dev/null)
+
+    if [[ "$result" == OK:* ]]; then
+        local unit_count="${result#OK:}"
+        ok "Assertion passed: no idle units ($unit_count active)"
+        return 0
+    else
+        local idle_names="${result#FAIL:}"
+        err "Assertion failed: idle units found: $idle_names"
+        return 1
+    fi
+}
+
+# assert-building-at <name> <x> <y> — verify a building exists at grid position
+_scenario_assert_building_at() {
+    local args_str="$1"
+    local bname bx by
+    read -r bname bx by <<< "$args_str"
+
+    if [[ -z "$bname" || -z "$bx" || -z "$by" ]]; then
+        err "assert-building-at requires NAME X Y"
+        echo "  Example: assert-building-at barracks 5 4"
+        return 1
+    fi
+
+    local json
+    json=$(curl -sf "http://127.0.0.1:9222/entities" 2>/dev/null) || {
+        err "Assertion failed: could not reach debug server"
+        return 1
+    }
+
+    local result
+    result=$(echo "$json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+name = '$bname'
+gx, gy = int('$bx'), int('$by')
+for e in data.get('entities', []):
+    if e.get('building_name') == name:
+        gp = e.get('grid_position', {})
+        if gp.get('x') == gx and gp.get('y') == gy:
+            hp = e.get('hp', 0)
+            max_hp = e.get('max_hp', 0)
+            print(f'OK:{hp}/{max_hp}')
+            sys.exit(0)
+print('FAIL')
+" 2>/dev/null)
+
+    if [[ "$result" == OK:* ]]; then
+        local hp_info="${result#OK:}"
+        ok "Assertion passed: $bname found at ($bx, $by) — HP $hp_info"
+        return 0
+    else
+        err "Assertion failed: no '$bname' building at ($bx, $by)"
+        return 1
+    fi
+}
+
+# assert-entity-hp <name-or-filter> <op> <value>
+# Example: assert-entity-hp --type villager > 0
+#          assert-entity-hp --name Unit_swordsman_0 >= 50
+_scenario_assert_entity_hp() {
+    local args_str="$1"
+    if [[ -z "$args_str" ]]; then
+        err "assert-entity-hp requires filters and a comparison"
+        echo "  Usage: assert-entity-hp [--name N] [--type T] [--owner O] <op> <value>"
+        echo "  Checks that ALL matching entities satisfy the HP condition."
+        return 1
+    fi
+
+    local -a parts=()
+    read -ra parts <<< "$args_str"
+
+    local name_filter="" type_filter="" owner_filter=""
+    local op="" value=""
+    local i=0
+    while [[ $i -lt ${#parts[@]} ]]; do
+        case "${parts[$i]}" in
+            --name)
+                name_filter="${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            --type)
+                type_filter="${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            --owner)
+                owner_filter="${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            '>='|'<='|'!='|'=='|'>'|'<')
+                op="${parts[$i]}"
+                value="${parts[$((i+1))]}"
+                i=$((i+2))
+                ;;
+            *)
+                if [[ "${parts[$i]}" =~ ^(>=|<=|!=|==|>|<)([0-9]+)$ ]]; then
+                    op="${BASH_REMATCH[1]}"
+                    value="${BASH_REMATCH[2]}"
+                    i=$((i+1))
+                else
+                    err "Unknown assert-entity-hp argument: ${parts[$i]}"
+                    return 1
+                fi
+                ;;
+        esac
+    done
+
+    if [[ -z "$op" || -z "$value" ]]; then
+        err "assert-entity-hp requires an operator and value (e.g. > 0)"
+        return 1
+    fi
+
+    local json
+    json=$(curl -sf "http://127.0.0.1:9222/entities" 2>/dev/null) || {
+        err "Assertion failed: could not reach debug server"
+        return 1
+    }
+
+    local result
+    result=$(echo "$json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+entities = data.get('entities', [])
+name_f = '$name_filter'
+type_f = '$type_filter'
+owner_f = '$owner_filter'
+matched = []
+for e in entities:
+    if name_f and e.get('name', '') != name_f:
+        continue
+    if type_f:
+        etype = e.get('unit_category', '') or e.get('building_name', '') or e.get('resource_type', '')
+        if etype != type_f:
+            continue
+    if owner_f and e.get('owner_id', -1) != int(owner_f):
+        continue
+    matched.append(e)
+if not matched:
+    print('NONE')
+    sys.exit(0)
+failed = []
+for e in matched:
+    hp = e.get('hp', 0)
+    if not eval(f'{hp} $op $value'):
+        failed.append(f\"{e.get('name','?')}={hp}\")
+if failed:
+    print('FAIL:' + ','.join(failed))
+else:
+    print('OK:' + str(len(matched)))
+" 2>/dev/null)
+
+    if [[ "$result" == "NONE" ]]; then
+        err "Assertion failed: no entities matched the filter"
+        return 1
+    elif [[ "$result" == OK:* ]]; then
+        local match_count="${result#OK:}"
+        ok "Assertion passed: $match_count entities have HP $op $value"
+        return 0
+    else
+        local failures="${result#FAIL:}"
+        err "Assertion failed: HP $op $value not satisfied — $failures"
+        return 1
+    fi
+}
+
 # ==================== scenario ====================
 # Execute a single scenario step. Returns 0 on success, 1 on failure.
 _run_scenario_step() {
@@ -1309,12 +1671,29 @@ _run_scenario_step() {
         stop)
             cmd_game_cmd "stop"
             ;;
+        assert-count)
+            _scenario_assert_count "$args_str"
+            ;;
+        assert-no-idle)
+            _scenario_assert_no_idle
+            ;;
+        assert-building-at)
+            _scenario_assert_building_at "$args_str"
+            ;;
+        assert-entity-hp)
+            _scenario_assert_entity_hp "$args_str"
+            ;;
+        assert)
+            _scenario_assert "$args_str"
+            ;;
         *)
             err "Unknown scenario command: $cmd"
             echo "  Available: select-all, gather X Y, right-click X Y, camera-to X Y,"
             echo "  speed N, pause, unpause, screenshot [NAME], wait CONDITION,"
             echo "  sleep N, status, entities, spawn TYPE X Y [OWNER], teleport X Y,"
-            echo "  place-building NAME X Y [OWNER] [--under-construction], stop"
+            echo "  place-building NAME X Y [OWNER] [--under-construction], stop,"
+            echo "  assert CONDITION, assert-count FILTERS OP VALUE,"
+            echo "  assert-no-idle, assert-building-at NAME X Y, assert-entity-hp FILTER OP VALUE"
             return 1
             ;;
     esac
@@ -1460,7 +1839,15 @@ ${BOLD}COMMANDS${RESET}
                         ror scenario --file tests/scenarios/gather_test.scenario
                       Commands: select-all, gather X Y, right-click X Y,
                         camera-to X Y, speed N, pause, unpause, screenshot [NAME] [--annotate],
-                        wait CONDITION, sleep N, status, entities, stop
+                        wait CONDITION, sleep N, status, entities, stop,
+                        spawn TYPE X Y [OWNER], teleport X Y,
+                        place-building NAME X Y [OWNER] [--under-construction]
+                      Assertions (fail scenario on mismatch):
+                        assert CONDITION              — e.g. assert food>=100
+                        assert-count [filters] OP N   — e.g. assert-count --owner 0 >= 5
+                        assert-no-idle                — all player units must be busy
+                        assert-building-at NAME X Y   — building exists at grid pos
+                        assert-entity-hp [filters] OP N — HP check on matching entities
   stop [unit_ids...]  Stop all actions (combat, gather, movement) on selected units
                         ror stop                        — stop selected units
                         ror stop Unit1 Unit2            — stop specific units by name
