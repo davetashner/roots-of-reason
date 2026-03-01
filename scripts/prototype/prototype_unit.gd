@@ -414,7 +414,7 @@ func _get_visual_state() -> String:
 		_combatant != null and _combatant.combat_state == CombatantComponentScript.CombatState.ATTACKING and not _moving
 	)
 	# Wolf/fauna AI bypasses combatant component and unit movement
-	var wolf_ai: Node = get_node_or_null("WolfAI")
+	var wolf_ai = get_node_or_null("WolfAI")
 	if wolf_ai != null:
 		is_attacking = wolf_ai._state == wolf_ai.WolfState.ATTACK and not wolf_ai._is_moving
 	if is_attacking:
