@@ -378,6 +378,8 @@ func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
 			_cmd_stop(peer, body)
 		"reset":
 			_cmd_reset(peer)
+		"set-resources":
+			_cmd_set_resources(peer, body)
 		_:
 			_send_json(peer, 400, {"error": "unknown action", "action": action})
 
@@ -1013,6 +1015,27 @@ func _cmd_stop(peer: StreamPeerTCP, body: Dictionary) -> void:
 func _cmd_reset(peer: StreamPeerTCP) -> void:
 	_send_json(peer, 200, {"action": "reset", "status": "reloading"})
 	get_tree().call_deferred("reload_current_scene")
+
+
+func _cmd_set_resources(peer: StreamPeerTCP, body: Dictionary) -> void:
+	var rm: Node = _get_manager("ResourceManager")
+	if rm == null:
+		_send_json(peer, 500, {"error": "ResourceManager not available"})
+		return
+	var resource_keys: Dictionary = rm.RESOURCE_KEYS
+	# Build reverse map: string key -> ResourceType enum
+	var key_to_type: Dictionary = {}
+	for res_type: Variant in resource_keys:
+		key_to_type[resource_keys[res_type]] = res_type
+	var updated: Dictionary = {}
+	for key: String in key_to_type:
+		if body.has(key):
+			var amount: int = int(body[key])
+			rm.set_resource(0, key_to_type[key], amount)
+			updated[key] = amount
+	# Return final resource values
+	var final_resources := _get_player_resources(rm)
+	_send_json(peer, 200, {"action": "set-resources", "resources": final_resources, "updated": updated})
 
 
 func _exit_tree() -> void:

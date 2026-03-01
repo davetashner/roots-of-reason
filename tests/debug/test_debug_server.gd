@@ -462,6 +462,28 @@ func test_parse_command_body_reset() -> void:
 	assert_dict(result).contains_keys(["action", "body"])
 
 
+func test_parse_command_body_set_resources() -> void:
+	var result := DebugServerScript.parse_command_body(
+		'{"action": "set-resources", "food": 500, "wood": 300, "gold": 200, "stone": 100}'
+	)
+	assert_str(result.get("action", "")).is_equal("set-resources")
+	var body: Dictionary = result.get("body", {})
+	assert_float(float(body.get("food", 0))).is_equal(500.0)
+	assert_float(float(body.get("wood", 0))).is_equal(300.0)
+	assert_float(float(body.get("gold", 0))).is_equal(200.0)
+	assert_float(float(body.get("stone", 0))).is_equal(100.0)
+
+
+func test_parse_command_body_set_resources_partial() -> void:
+	var result := DebugServerScript.parse_command_body('{"action": "set-resources", "food": 999}')
+	assert_str(result.get("action", "")).is_equal("set-resources")
+	var body: Dictionary = result.get("body", {})
+	assert_float(float(body.get("food", 0))).is_equal(999.0)
+	assert_bool(body.has("wood")).is_false()
+	assert_bool(body.has("gold")).is_false()
+	assert_bool(body.has("stone")).is_false()
+
+
 func test_parse_request_screenshot_with_annotate() -> void:
 	var result := DebugServerScript._parse_request("GET /screenshot?annotate=true HTTP/1.1\r\n\r\n")
 	assert_str(result.get("method", "")).is_equal("GET")

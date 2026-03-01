@@ -66,6 +66,22 @@ func get_corruption_rate(player_id: int) -> float:
 	return _corruption_rates.get(player_id, 0.0)
 
 
+func set_resource(player_id: int, resource_type: ResourceType, amount: int) -> void:
+	if player_id not in _stockpiles:
+		_stockpiles[player_id] = {}
+	var old_amount: int = _stockpiles[player_id].get(resource_type, 0)
+	_stockpiles[player_id][resource_type] = amount
+	(
+		resources_changed
+		. emit(
+			player_id,
+			RESOURCE_NAMES[resource_type],
+			old_amount,
+			amount,
+		)
+	)
+
+
 func add_resource(player_id: int, resource_type: ResourceType, amount: int) -> void:
 	if player_id not in _stockpiles:
 		_stockpiles[player_id] = {}
