@@ -39,6 +39,7 @@
     "seed_offset": 3000
   },
   "terrain_smoothing_passes": 2,
+  "border_blend_chance": 0.3,
   "forest_moisture_threshold": 0.55,
   "dirt_moisture_threshold": 0.30,
   "desert_moisture_threshold": 0.25,
