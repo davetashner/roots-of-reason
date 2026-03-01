@@ -393,7 +393,7 @@ func _get_visual_state() -> String:
 	if _build_target != null and not _moving:
 		return "build"
 	if _gatherer != null and _gatherer.gather_state == GathererComponentScript.GatherState.GATHERING:
-		return "gather"
+		return "chop" if _gatherer.gather_type == "wood" else "gather"
 	if _combatant != null and _combatant.combat_state == CombatantComponentScript.CombatState.ATTACKING and not _moving:
 		return "attack"
 	if _moving:

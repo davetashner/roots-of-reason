@@ -6,6 +6,8 @@ extends RefCounted
 ## CombatantComponent.
 
 const SHADER_PATH := "res://assets/shaders/player_color.gdshader"
+## Fallback map: if an animation has no frames for a direction, try this animation first.
+const _ANIM_FALLBACKS := {"chop": "gather"}
 
 var _unit: Node2D = null
 var _sprite: Sprite2D = null
@@ -168,7 +170,11 @@ func update(state: String, facing: Vector2, delta: float) -> void:
 	# Get the sequence for current state + direction
 	var seq_key := _current_anim + "_" + _current_dir
 	var seq: Array = _anim_sequences.get(seq_key, [])
-	# Fallback: try idle if current animation has no frames
+	# Fallback: resource-specific anims fall back to generic gather, then idle
+	if seq.is_empty() and _current_anim != "idle":
+		var fallback: String = _ANIM_FALLBACKS.get(_current_anim, "idle")
+		seq_key = fallback + "_" + _current_dir
+		seq = _anim_sequences.get(seq_key, [])
 	if seq.is_empty() and _current_anim != "idle":
 		seq_key = "idle_" + _current_dir
 		seq = _anim_sequences.get(seq_key, [])
