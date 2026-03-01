@@ -1257,11 +1257,34 @@ _run_scenario_step() {
             fi
             cmd_game_cmd "teleport" "grid_x=$tx" "grid_y=$ty"
             ;;
+        place-building)
+            # place-building NAME X Y [OWNER] [--under-construction]
+            local pb_name pb_x pb_y pb_owner pb_built
+            pb_built="true"
+            local -a pb_parts=()
+            for word in $args_str; do
+                if [[ "$word" == "--under-construction" ]]; then
+                    pb_built="false"
+                else
+                    pb_parts+=("$word")
+                fi
+            done
+            pb_name="${pb_parts[0]:-}"
+            pb_x="${pb_parts[1]:-}"
+            pb_y="${pb_parts[2]:-}"
+            pb_owner="${pb_parts[3]:-0}"
+            if [[ -z "$pb_name" || -z "$pb_x" || -z "$pb_y" ]]; then
+                err "place-building requires NAME X Y [OWNER] [--under-construction]"
+                return 1
+            fi
+            cmd_game_cmd "place-building" "building_name=$pb_name" "grid_x=$pb_x" "grid_y=$pb_y" "owner=$pb_owner" "built=$pb_built"
+            ;;
         *)
             err "Unknown scenario command: $cmd"
             echo "  Available: select-all, gather X Y, right-click X Y, camera-to X Y,"
             echo "  speed N, pause, unpause, screenshot [NAME], wait CONDITION,"
-            echo "  sleep N, status, entities, spawn TYPE X Y [OWNER], teleport X Y"
+            echo "  sleep N, status, entities, spawn TYPE X Y [OWNER], teleport X Y,"
+            echo "  place-building NAME X Y [OWNER] [--under-construction]"
             return 1
             ;;
     esac
