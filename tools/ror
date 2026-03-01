@@ -880,6 +880,12 @@ cmd_sprite_sheet() {
     python3 "$SCRIPT_DIR/sprite_sheet.py" "$@"
 }
 
+# ==================== pack-sprites ====================
+cmd_pack_sprites() {
+    cd "$PROJECT_ROOT"
+    python3 "$SCRIPT_DIR/spritesheet_packer.py" "$@"
+}
+
 # ==================== animate ====================
 cmd_animate() {
     cd "$PROJECT_ROOT"
@@ -2152,6 +2158,11 @@ ${BOLD}COMMANDS${RESET}
                         ror blender-render villager --type unit --directions s n
   blender-archer        Render geometric archer (full pipeline: Blender → downscale → manifest)
                         Produces 192 frames (4 anims × 8 dirs × variable frame counts)
+  pack-sprites <subject> [opts]
+                      Pack individual sprite PNGs into atlas spritesheets
+                        ror pack-sprites villager            — pack villager sprites
+                        ror pack-sprites archer --dry-run    — preview without writing
+                        ror pack-sprites villager --max-width 2048
   sprite-sheet <variant> [animation] [direction] [--png] [--speed MS]
                       Generate animated GIFs (default) or static contact sheets
                         ror sprite-sheet villager_woman walk_c s  — animated GIF
@@ -2244,6 +2255,7 @@ case "${1:-help}" in
     blender-render)     shift; cmd_blender_render "$@" ;;
     blender-archer)     shift; cmd_blender_archer "$@" ;;
     sprite-sheet)       shift; cmd_sprite_sheet "$@" ;;
+    pack-sprites)       shift; cmd_pack_sprites "$@" ;;
     animate)            shift; cmd_animate "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
     split-sprites)      shift; cmd_split_sprites "$@" ;;
