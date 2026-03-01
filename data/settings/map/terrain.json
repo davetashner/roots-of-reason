@@ -24,7 +24,7 @@
     "mountain":   { "buildable": false, "blocks_los": true  },
     "canyon":     { "buildable": false, "blocks_los": true  },
     "river":      { "buildable": false, "blocks_los": false },
-    "shore":      { "buildable": true,  "blocks_los": false },
+    "shore":      { "buildable": false, "blocks_los": false },
     "shallows":   { "buildable": false, "blocks_los": false },
     "deep_water": { "buildable": false, "blocks_los": false }
   },

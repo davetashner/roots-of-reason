@@ -25,7 +25,7 @@ static func is_placement_valid(
 	for cell in cells:
 		if not _is_in_bounds(cell, map_size):
 			return false
-		if _is_unbuildable(cell, map_node):
+		if _is_unbuildable(cell, map_node, placement_constraint):
 			return false
 		if _is_solid(cell, pathfinder):
 			return false
@@ -39,11 +39,16 @@ static func _is_in_bounds(cell: Vector2i, map_size: int) -> bool:
 	return cell.x >= 0 and cell.x < map_size and cell.y >= 0 and cell.y < map_size
 
 
-static func _is_unbuildable(cell: Vector2i, map_node: Node) -> bool:
+static func _is_unbuildable(cell: Vector2i, map_node: Node, placement_constraint: String = "") -> bool:
 	if map_node == null:
 		return false
 	if map_node.has_method("is_buildable"):
-		return not map_node.is_buildable(cell)
+		if not map_node.is_buildable(cell):
+			# Allow shore tiles for water-adjacent buildings (e.g. docks)
+			if placement_constraint == "adjacent_to_water":
+				if map_node.has_method("get_terrain_at"):
+					return map_node.get_terrain_at(cell) != "shore"
+			return true
 	if map_node.has_method("get_terrain_at"):
 		return map_node.get_terrain_at(cell) == "water"
 	return false
