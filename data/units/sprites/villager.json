@@ -1,5 +1,5 @@
 {
-  "variants": ["villager", "villager_woman"],
+  "variants": ["villager_woman"],
   "base_path": "res://assets/sprites/units",
   "scale": 0.5,
   "offset_y": -16.0,
