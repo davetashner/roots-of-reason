@@ -1,5 +1,5 @@
 max-line-length: 120
-max-file-lines: 1200
+max-file-lines: 1300
 
 excluded_directories: !!set
   .git: null

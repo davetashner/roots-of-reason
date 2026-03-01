@@ -19,6 +19,17 @@ class MockUnit:
 	var _carry_capacity: int = 10
 	var _combat_state: int = 0
 	var _moving: bool = false
+	var _gather_target: Node2D = null
+	var _gather_rate_multiplier: float = 1.0
+	var _gather_reach: float = 80.0
+	var _drop_off_reach: float = 80.0
+	var _drop_off_target: Node2D = null
+	var _stance: int = 0
+	var _combat_target: Node2D = null
+	var _attack_cooldown: float = 0.0
+	var _build_target: Node2D = null
+	var _path: Array[Vector2] = []
+	var _is_dead: bool = false
 
 
 class MockResource:
@@ -573,3 +584,72 @@ func test_add_entity_annotations_inferred_unit_gets_labels() -> void:
 	server._add_entity_annotations(layer, unit, Vector2(400, 300), font, 12)
 	# Should have added children: name label + health bar bg + health bar fg + state label
 	assert_int(layer.get_child_count()).is_greater(0)
+
+
+# -- serialize_entity_verbose tests --
+
+
+func test_serialize_entity_verbose_includes_base_fields() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.name = "VerboseUnit"
+	var result := DebugServerScript.serialize_entity_verbose(unit)
+	assert_str(result.get("name", "")).is_equal("VerboseUnit")
+	assert_str(result.get("unit_category", "")).is_equal("villager")
+	assert_str(result.get("action", "")).is_equal("idle")
+
+
+func test_serialize_entity_verbose_includes_gather_detail() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.name = "GatherUnit"
+	var result := DebugServerScript.serialize_entity_verbose(unit)
+	assert_dict(result).contains_keys(["gather_detail"])
+	var gd: Dictionary = result["gather_detail"]
+	assert_bool(gd.has("gather_reach")).is_true()
+
+
+func test_serialize_entity_verbose_includes_combat_detail() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.name = "CombatUnit"
+	var result := DebugServerScript.serialize_entity_verbose(unit)
+	assert_dict(result).contains_keys(["combat_detail"])
+	var cd: Dictionary = result["combat_detail"]
+	assert_bool(cd.has("stance")).is_true()
+
+
+func test_serialize_entity_verbose_includes_path_length() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.name = "PathUnit"
+	var result := DebugServerScript.serialize_entity_verbose(unit)
+	assert_bool(result.has("path_length")).is_true()
+
+
+func test_serialize_entity_verbose_includes_is_dead() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.name = "DeadUnit"
+	var result := DebugServerScript.serialize_entity_verbose(unit)
+	assert_bool(result.get("is_dead", true)).is_false()
+
+
+func test_serialize_entity_verbose_resource_unchanged() -> void:
+	var res := MockResource.new()
+	auto_free(res)
+	res.name = "VerboseTree"
+	var base := DebugServerScript.serialize_entity(res)
+	var verbose := DebugServerScript.serialize_entity_verbose(res)
+	# Resources should not get extra verbose fields
+	assert_str(verbose.get("resource_type", "")).is_equal("wood")
+	assert_bool(verbose.has("gather_detail")).is_false()
+
+
+func test_serialize_entity_verbose_empty_for_no_category() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = ""
+	unit.unit_category = ""
+	var result := DebugServerScript.serialize_entity_verbose(unit)
+	assert_dict(result).is_empty()
