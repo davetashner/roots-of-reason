@@ -380,6 +380,10 @@ func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
 			_cmd_reset(peer)
 		"set-resources":
 			_cmd_set_resources(peer, body)
+		"save":
+			_cmd_save(peer, body)
+		"load":
+			_cmd_load(peer, body)
 		_:
 			_send_json(peer, 400, {"error": "unknown action", "action": action})
 
@@ -1036,6 +1040,59 @@ func _cmd_set_resources(peer: StreamPeerTCP, body: Dictionary) -> void:
 	# Return final resource values
 	var final_resources := _get_player_resources(rm)
 	_send_json(peer, 200, {"action": "set-resources", "resources": final_resources, "updated": updated})
+
+
+func _cmd_save(peer: StreamPeerTCP, body: Dictionary) -> void:
+	var slot: String = str(body.get("slot", "debug_scenario"))
+	var sm: Node = _get_manager("SaveManager")
+	if sm == null:
+		_send_json(peer, 500, {"error": "SaveManager not available"})
+		return
+	var save_path := "user://saves/debug_%s.json" % slot
+	sm._ensure_save_dir()
+	var data := {
+		"version": sm.SAVE_VERSION,
+		"timestamp": Time.get_unix_time_from_system(),
+		"game_manager": GameManager.save_state(),
+		"resource_manager": ResourceManager.save_state(),
+		"civ_bonus_manager": CivBonusManager.save_state(),
+	}
+	if sm._scene_provider != null and sm._scene_provider.has_method("save_state"):
+		data["scene"] = sm._scene_provider.save_state()
+	var json_str := JSON.stringify(data, "\t")
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
+	if file == null:
+		_send_json(peer, 500, {"error": "failed to write save file", "path": save_path})
+		return
+	file.store_string(json_str)
+	file.close()
+	_send_json(peer, 200, {"action": "save", "slot": slot, "path": save_path})
+
+
+func _cmd_load(peer: StreamPeerTCP, body: Dictionary) -> void:
+	var slot: String = str(body.get("slot", "debug_scenario"))
+	var sm: Node = _get_manager("SaveManager")
+	if sm == null:
+		_send_json(peer, 500, {"error": "SaveManager not available"})
+		return
+	var save_path := "user://saves/debug_%s.json" % slot
+	if not FileAccess.file_exists(save_path):
+		_send_json(peer, 400, {"error": "save file not found", "slot": slot, "path": save_path})
+		return
+	var file := FileAccess.open(save_path, FileAccess.READ)
+	if file == null:
+		_send_json(peer, 500, {"error": "failed to read save file", "path": save_path})
+		return
+	var json_str := file.get_as_text()
+	file.close()
+	var parsed: Variant = JSON.parse_string(json_str)
+	if parsed == null or not (parsed is Dictionary):
+		_send_json(peer, 500, {"error": "failed to parse save file", "path": save_path})
+		return
+	var data: Dictionary = parsed as Dictionary
+	_send_json(peer, 200, {"action": "load", "slot": slot, "status": "loading"})
+	# Defer the state application like reset, since it may reload the scene
+	sm.call_deferred("apply_loaded_state", data)
 
 
 func _exit_tree() -> void:
