@@ -864,6 +864,27 @@ cmd_game_status() {
     curl -s "http://127.0.0.1:9222/status" | python3 -m json.tool
 }
 
+# ==================== stop ====================
+cmd_stop() {
+    # Send stop command to cancel all actions on selected units (or specific unit IDs)
+    local json
+    if [[ $# -gt 0 ]]; then
+        # Build unit_ids array from arguments
+        local ids=""
+        for uid in "$@"; do
+            if [[ -n "$ids" ]]; then
+                ids+=", "
+            fi
+            ids+="\"${uid}\""
+        done
+        json="{\"action\": \"stop\", \"unit_ids\": [${ids}]}"
+    else
+        json='{"action": "stop"}'
+    fi
+    curl -s -X POST -H 'Content-Type: application/json' -d "$json" "http://127.0.0.1:9222/command"
+    echo ""
+}
+
 # ==================== game-cmd ====================
 cmd_game_cmd() {
     if [[ $# -lt 1 ]]; then
@@ -1279,12 +1300,15 @@ _run_scenario_step() {
             fi
             cmd_game_cmd "place-building" "building_name=$pb_name" "grid_x=$pb_x" "grid_y=$pb_y" "owner=$pb_owner" "built=$pb_built"
             ;;
+        stop)
+            cmd_game_cmd "stop"
+            ;;
         *)
             err "Unknown scenario command: $cmd"
             echo "  Available: select-all, gather X Y, right-click X Y, camera-to X Y,"
             echo "  speed N, pause, unpause, screenshot [NAME], wait CONDITION,"
             echo "  sleep N, status, entities, spawn TYPE X Y [OWNER], teleport X Y,"
-            echo "  place-building NAME X Y [OWNER] [--under-construction]"
+            echo "  place-building NAME X Y [OWNER] [--under-construction], stop"
             return 1
             ;;
     esac
@@ -1430,7 +1454,10 @@ ${BOLD}COMMANDS${RESET}
                         ror scenario --file tests/scenarios/gather_test.scenario
                       Commands: select-all, gather X Y, right-click X Y,
                         camera-to X Y, speed N, pause, unpause, screenshot [NAME] [--annotate],
-                        wait CONDITION, sleep N, status, entities
+                        wait CONDITION, sleep N, status, entities, stop
+  stop [unit_ids...]  Stop all actions (combat, gather, movement) on selected units
+                        ror stop                        — stop selected units
+                        ror stop Unit1 Unit2            — stop specific units by name
   game-status         Query game state from the debug server (pretty-printed JSON)
   game-cmd <action> [key=value ...]
                       Send a command to the debug server
@@ -1463,6 +1490,7 @@ case "${1:-help}" in
     wait-until)         shift; cmd_wait_until "$@" ;;
     scenario)           shift; cmd_scenario "$@" ;;
     game-status)        shift; cmd_game_status "$@" ;;
+    stop)               shift; cmd_stop "$@" ;;
     game-cmd)           shift; cmd_game_cmd "$@" ;;
     help|--help|-h) cmd_help ;;
     *)
