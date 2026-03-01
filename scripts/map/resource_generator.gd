@@ -117,6 +117,16 @@ func _place_resource(
 	noise.seed = base_seed + noise_seed_offset
 	noise.frequency = 0.05
 
+	# Optional forest clustering noise (low-frequency mask for tree grouping)
+	var forest_freq: float = float(res_cfg.get("forest_noise_frequency", 0.0))
+	var forest_threshold: float = float(res_cfg.get("forest_noise_threshold", 0.0))
+	var forest_noise: FastNoiseLite = null
+	if forest_freq > 0.0:
+		forest_noise = FastNoiseLite.new()
+		forest_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		forest_noise.seed = base_seed + int(res_cfg.get("forest_noise_seed_offset", 4500))
+		forest_noise.frequency = forest_freq
+
 	# Score all candidate tiles
 	var candidates: Array = []  # Array of [score, Vector2i]
 	for y in map_height:
@@ -131,6 +141,11 @@ func _place_resource(
 			# Skip already occupied
 			if occupied.has(pos):
 				continue
+			# Forest clustering: reject tiles where forest density noise is low
+			if forest_noise != null:
+				var forest_val: float = (forest_noise.get_noise_2d(float(x), float(y)) + 1.0) / 2.0
+				if forest_val < forest_threshold:
+					continue
 			# Compute suitability
 			var affinity: float = float(terrain_affinity.get(terrain, 0.0))
 			if affinity <= 0.0:
