@@ -374,6 +374,8 @@ func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
 			_cmd_place_building(peer, body)
 		"zoom":
 			_cmd_zoom(peer, body)
+		"stop":
+			_cmd_stop(peer, body)
 		_:
 			_send_json(peer, 400, {"error": "unknown action", "action": action})
 
@@ -959,6 +961,47 @@ func _cmd_place_building(peer: StreamPeerTCP, body: Dictionary) -> void:
 			"built": built,
 		},
 	)
+
+
+func _cmd_stop(peer: StreamPeerTCP, body: Dictionary) -> void:
+	var unit_ids: Array = body.get("unit_ids", []) as Array
+	var units: Array[Node2D] = []
+	if unit_ids.is_empty():
+		# Stop all selected player 0 units
+		for unit: Node2D in _get_player_units(0):
+			if "selected" in unit and unit.selected:
+				units.append(unit)
+	else:
+		# Stop specific units by name
+		var root := get_tree().current_scene
+		if root != null:
+			for uid: Variant in unit_ids:
+				var node := root.get_node_or_null(NodePath(str(uid)))
+				if node is Node2D:
+					units.append(node as Node2D)
+	var stopped := 0
+	for unit: Node2D in units:
+		# Cancel combat
+		if unit.has_method("_cancel_combat"):
+			unit._cancel_combat()
+		# Cancel gathering
+		if unit.has_method("_cancel_gather"):
+			unit._cancel_gather()
+		# Cancel feeding
+		if unit.has_method("_cancel_feed"):
+			unit._cancel_feed()
+		# Stop movement
+		if "_moving" in unit:
+			unit._moving = false
+		if "_path" in unit:
+			unit._path.clear()
+		# Clear build target
+		if "_build_target" in unit:
+			unit._build_target = null
+		if "_pending_build_target_name" in unit:
+			unit._pending_build_target_name = ""
+		stopped += 1
+	_send_json(peer, 200, {"action": "stop", "stopped": stopped})
 
 
 func _exit_tree() -> void:

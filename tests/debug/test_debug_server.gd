@@ -442,6 +442,20 @@ func test_world_to_screen_zoom() -> void:
 # -- screenshot query string tests --
 
 
+func test_parse_command_body_stop() -> void:
+	var result := DebugServerScript.parse_command_body('{"action": "stop"}')
+	assert_str(result.get("action", "")).is_equal("stop")
+	assert_dict(result).contains_keys(["action", "body"])
+
+
+func test_parse_command_body_stop_with_unit_ids() -> void:
+	var result := DebugServerScript.parse_command_body('{"action": "stop", "unit_ids": ["Unit1", "Unit2"]}')
+	assert_str(result.get("action", "")).is_equal("stop")
+	var body: Dictionary = result.get("body", {})
+	var ids: Array = body.get("unit_ids", []) as Array
+	assert_int(ids.size()).is_equal(2)
+
+
 func test_parse_request_screenshot_with_annotate() -> void:
 	var result := DebugServerScript._parse_request("GET /screenshot?annotate=true HTTP/1.1\r\n\r\n")
 	assert_str(result.get("method", "")).is_equal("GET")
