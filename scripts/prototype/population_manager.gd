@@ -12,6 +12,7 @@ var _current_population: Dictionary = {}  # player_id -> int
 var _population_cap: Dictionary = {}  # player_id -> int
 var _building_contributions: Dictionary = {}  # player_id -> Array[int] (instance_id -> bonus)
 var _building_count: Dictionary = {}  # player_id -> int (total buildings including zero-bonus)
+var _housing_tech_bonus: Dictionary = {}  # player_id -> int (extra pop per housing building from tech)
 
 var _hard_cap: int = 200
 var _starting_cap: int = 5
@@ -39,6 +40,8 @@ func _ensure_player(player_id: int) -> void:
 		_building_contributions[player_id] = {}
 	if player_id not in _building_count:
 		_building_count[player_id] = 0
+	if player_id not in _housing_tech_bonus:
+		_housing_tech_bonus[player_id] = 0
 
 
 func register_building(building: Node, player_id: int = 0) -> void:
@@ -126,8 +129,24 @@ func _recalculate_cap(player_id: int) -> void:
 	var contributions: Dictionary = _building_contributions.get(player_id, {})
 	for bid in contributions:
 		total += int(contributions[bid])
+	var tech_bonus: int = int(_housing_tech_bonus.get(player_id, 0))
+	if tech_bonus > 0:
+		total += tech_bonus * contributions.size()
 	_population_cap[player_id] = mini(total, _hard_cap)
 	_emit_population_changed(player_id)
+
+
+func apply_housing_tech_bonus(player_id: int, extra_per_house: int) -> void:
+	_ensure_player(player_id)
+	_housing_tech_bonus[player_id] = int(_housing_tech_bonus[player_id]) + extra_per_house
+	_recalculate_cap(player_id)
+
+
+func _on_tech_researched(player_id: int, _tech_id: String, effects: Dictionary) -> void:
+	var econ: Dictionary = effects.get("economic_bonus", {})
+	var bonus: int = int(econ.get("house_capacity", 0))
+	if bonus > 0:
+		apply_housing_tech_bonus(player_id, bonus)
 
 
 func _emit_population_changed(player_id: int) -> void:
@@ -148,11 +167,15 @@ func save_state() -> Dictionary:
 	var bld_counts: Dictionary = {}
 	for pid in _building_count:
 		bld_counts[str(pid)] = int(_building_count[pid])
+	var housing_bonus: Dictionary = {}
+	for pid in _housing_tech_bonus:
+		housing_bonus[str(pid)] = int(_housing_tech_bonus[pid])
 	return {
 		"population": pop_data,
 		"hard_cap": _hard_cap,
 		"starting_cap": _starting_cap,
 		"building_counts": bld_counts,
+		"housing_tech_bonus": housing_bonus,
 	}
 
 
@@ -161,6 +184,7 @@ func load_state(data: Dictionary) -> void:
 	_population_cap.clear()
 	_building_contributions.clear()
 	_building_count.clear()
+	_housing_tech_bonus.clear()
 	_hard_cap = int(data.get("hard_cap", _hard_cap))
 	_starting_cap = int(data.get("starting_cap", _starting_cap))
 	var pop_data: Dictionary = data.get("population", {})
@@ -173,3 +197,6 @@ func load_state(data: Dictionary) -> void:
 	var bld_counts: Dictionary = data.get("building_counts", {})
 	for pid_str in bld_counts:
 		_building_count[int(pid_str)] = int(bld_counts[pid_str])
+	var housing_bonus: Dictionary = data.get("housing_tech_bonus", {})
+	for pid_str in housing_bonus:
+		_housing_tech_bonus[int(pid_str)] = int(housing_bonus[pid_str])

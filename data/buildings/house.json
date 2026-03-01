@@ -4,7 +4,7 @@
   "footprint": [2, 2],
   "build_time": 25,
   "build_cost": { "wood": 25 },
-  "population_bonus": 5,
+  "population_bonus": 10,
   "garrison_capacity": 0,
   "is_drop_off": false,
   "drop_off_types": [],
