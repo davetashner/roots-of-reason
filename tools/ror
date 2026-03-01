@@ -913,6 +913,97 @@ cmd_entities() {
     curl -s "$url" | python3 -m json.tool
 }
 
+# ==================== units ====================
+cmd_units() {
+    local show_all=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --all) show_all=true; shift ;;
+            *)     err "Unknown units option: $1"; exit 1 ;;
+        esac
+    done
+
+    local url="http://127.0.0.1:9222/entities"
+    if ! $show_all; then
+        url="${url}?category=own_unit"
+    fi
+
+    local json
+    json=$(curl -sf "$url" 2>/dev/null) || {
+        err "Could not connect to debug server at 127.0.0.1:9222"
+        echo "  Is the game running with --debug-server?"
+        exit 1
+    }
+
+    python3 -c "
+import sys, json
+
+data = json.loads(sys.argv[1])
+entities = data.get('entities', [])
+if not entities:
+    print('No entities found.')
+    sys.exit(0)
+
+# Header
+fmt = '%-20s  %-18s  %-16s  %-10s  %s'
+print(fmt % ('NAME', 'STATE', 'CARRIED', 'HP', 'POSITION'))
+print('-' * 85)
+
+for e in entities:
+    name = e.get('name', '?')
+    cat = e.get('entity_category', '')
+
+    # State: action for units, category label for non-units
+    action = e.get('action', '')
+    if action:
+        state = action
+        gt = e.get('gather_type', '')
+        if gt and state in ('gathering', 'moving_to_resource', 'moving_to_drop_off', 'depositing'):
+            state += ' ' + gt
+    elif cat == 'resource_node':
+        rn = e.get('resource_name', e.get('resource_type', ''))
+        cy = e.get('current_yield', 0)
+        ty = e.get('total_yield', 0)
+        state = '%s %d/%d' % (rn, cy, ty)
+    elif cat == 'building':
+        state = 'building'
+        if e.get('under_construction'):
+            state = 'constructing'
+    else:
+        state = cat
+
+    # Carried
+    carried_amt = e.get('carried_amount', 0)
+    carry_cap = e.get('carry_capacity', 0)
+    gather_type = e.get('gather_type', '')
+    if carried_amt > 0:
+        carried = '%d/%d %s' % (carried_amt, carry_cap, gather_type)
+    elif carry_cap > 0:
+        carried = '0/%d' % carry_cap
+    else:
+        carried = ''
+
+    # HP
+    hp = e.get('hp', 0)
+    max_hp = e.get('max_hp', 0)
+    if max_hp > 0:
+        hp_str = '%d/%d' % (hp, max_hp)
+    else:
+        hp_str = ''
+
+    # Position — prefer grid_position, fall back to world position
+    gp = e.get('grid_position')
+    if gp:
+        pos = '(%g, %g)' % (gp['x'], gp['y'])
+    else:
+        wp = e.get('position', {})
+        pos = '(%.0f, %.0f)' % (wp.get('x', 0), wp.get('y', 0))
+
+    print(fmt % (name[:20], state[:18], carried[:16], hp_str[:10], pos))
+" "$json"
+}
+
 # ==================== wait-until ====================
 # Evaluate a condition string against game status JSON.
 # Condition format: <field><op><value> where op is >, >=, <, <=, ==, !=
@@ -1300,6 +1391,9 @@ ${BOLD}COMMANDS${RESET}
                         ror entities --category unit    — only units
                         ror entities --type villager    — filter by type
                         ror entities --owner 0          — player 0 only
+  units [--all]       Compact unit status table from the debug server
+                        ror units                       — player units only
+                        ror units --all                 — all entities
   wait-until <cond> [--timeout N] [--interval N]
                       Poll debug server until condition is met
                         ror wait-until wood>250             — wait for 250+ wood
@@ -1342,6 +1436,7 @@ case "${1:-help}" in
     split-sprites)      shift; cmd_split_sprites "$@" ;;
     screenshot)         shift; cmd_screenshot "$@" ;;
     entities)           shift; cmd_entities "$@" ;;
+    units)              shift; cmd_units "$@" ;;
     wait-until)         shift; cmd_wait_until "$@" ;;
     scenario)           shift; cmd_scenario "$@" ;;
     game-status)        shift; cmd_game_status "$@" ;;
