@@ -361,18 +361,12 @@ func _handle_economy(peer: StreamPeerTCP, query_string: String) -> void:
 
 
 func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
-	if body_text.is_empty():
-		_send_json(peer, 400, {"error": "empty request body"})
+	var result := parse_command_body(body_text)
+	if result.has("error"):
+		_send_json(peer, 400, result)
 		return
-	var parsed: Variant = JSON.parse_string(body_text)
-	if parsed == null or not (parsed is Dictionary):
-		_send_json(peer, 400, {"error": "invalid JSON"})
-		return
-	var body: Dictionary = parsed
-	var action: String = str(body.get("action", ""))
-	if action.is_empty():
-		_send_json(peer, 400, {"error": "missing action field"})
-		return
+	var action: String = result["action"]
+	var body: Dictionary = result["body"]
 	match action:
 		"select-all":
 			_cmd_select_all(peer)
@@ -429,12 +423,36 @@ func _cmd_right_click(peer: StreamPeerTCP, body: Dictionary) -> void:
 	var gx: float = float(body["grid_x"])
 	var gy: float = float(body["grid_y"])
 	var wp := IsoUtils.grid_to_screen(Vector2(gx, gy))
-	var moved := 0
+	# Detect target entity at position (mirrors prototype_input._issue_context_command)
+	var root := get_tree().current_scene
+	var target: Node = null
+	if root and "_target_detector" in root and root._target_detector:
+		target = root._target_detector.detect(wp) if root._target_detector.has_method("detect") else null
+	# Resolve command via the same table the input handler uses
+	var selected: Array[Node] = []
 	for u: Node2D in _get_player_units(0):
-		if "selected" in u and u.selected and u.has_method("move_to"):
-			u.move_to(wp)
-			moved += 1
-	_send_json(peer, 200, {"action": "right-click", "grid_x": gx, "grid_y": gy, "moved": moved})
+		if "selected" in u and u.selected:
+			selected.append(u)
+	var tbl: Dictionary = GameUtils.dl_settings("commands").get("command_table", {})
+	var cmd := CommandResolver.resolve(
+		CommandResolver.get_primary_unit_type(selected), CommandResolver.get_target_category(target), tbl
+	)
+	var method: String = (
+		{"build": "assign_build_target", "gather": "assign_gather_target", "attack": "assign_attack_target"}
+		. get(cmd, "")
+	)
+	var count := 0
+	if method != "" and target != null:
+		for u in selected:
+			if u.has_method(method):
+				u.call(method, target)
+				count += 1
+	else:
+		for u in selected:
+			if u.has_method("move_to"):
+				u.move_to(wp)
+				count += 1
+	_send_json(peer, 200, {"action": "right-click", "grid_x": gx, "grid_y": gy, "command": cmd, "count": count})
 
 
 func _cmd_camera_to(peer: StreamPeerTCP, body: Dictionary) -> void:
@@ -1274,10 +1292,9 @@ static func parse_command_body(body_text: String) -> Dictionary:
 	if body_text.is_empty():
 		return {"error": "empty request body"}
 	var parsed: Variant = JSON.parse_string(body_text)
-	if parsed == null or not (parsed is Dictionary):
+	if not (parsed is Dictionary):
 		return {"error": "invalid JSON"}
-	var body: Dictionary = parsed
-	var action: String = str(body.get("action", ""))
+	var action: String = str((parsed as Dictionary).get("action", ""))
 	if action.is_empty():
 		return {"error": "missing action field"}
-	return {"action": action, "body": body}
+	return {"action": action, "body": parsed as Dictionary}
