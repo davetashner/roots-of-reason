@@ -864,6 +864,12 @@ cmd_game_status() {
     curl -s "http://127.0.0.1:9222/status" | python3 -m json.tool
 }
 
+# ==================== combat-log ====================
+cmd_combat_log() {
+    local limit="${1:-20}"
+    curl -s "http://127.0.0.1:9222/combat-log?limit=${limit}" | python3 -m json.tool
+}
+
 # ==================== stop ====================
 cmd_stop() {
     # Send stop command to cancel all actions on selected units (or specific unit IDs)
@@ -2117,6 +2123,7 @@ case "${1:-help}" in
     scenario)           shift; cmd_scenario "$@" ;;
     test-scenarios)     shift; cmd_test_scenarios "$@" ;;
     game-status)        shift; cmd_game_status "$@" ;;
+    combat-log)         shift; cmd_combat_log "$@" ;;
     stop)               shift; cmd_stop "$@" ;;
     reset)              shift; cmd_reset "$@" ;;
     game-cmd)           shift; cmd_game_cmd "$@" ;;

@@ -231,6 +231,7 @@ func _deal_damage_to_target() -> void:
 	var attacker_stats := _get_attacker_stats()
 	_fill_target_stats(combat_target)
 	var damage := CombatResolver.calculate_damage(attacker_stats, _reusable_target_stats, combat_config)
+	var hp_before: int = int(combat_target.hp) if "hp" in combat_target else 0
 	_play_attack_visuals(damage)
 	if combat_target.has_method("take_damage"):
 		combat_target.take_damage(damage, _unit)
@@ -238,6 +239,16 @@ func _deal_damage_to_target() -> void:
 		combat_target.hp -= damage
 		if combat_target.hp <= 0:
 			combat_target.hp = 0
+	var hp_after: int = int(combat_target.hp) if "hp" in combat_target else 0
+	var max_hp: int = int(combat_target.max_hp) if "max_hp" in combat_target else 0
+	var war_survived: bool = hp_before > 0 and damage >= hp_before and hp_after > 0
+	var log_extras := {
+		"hp_before": hp_before,
+		"hp_after": hp_after,
+		"max_hp": max_hp,
+		"war_survived": war_survived,
+	}
+	CombatLogger.log_damage(_unit, combat_target, damage, attacker_stats, _reusable_target_stats, log_extras)
 
 
 func _play_attack_visuals(damage: int) -> void:
