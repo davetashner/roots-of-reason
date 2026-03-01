@@ -1,0 +1,25 @@
+# Written by MakeHuman UNKNOWN:UNKNOWN
+version v1.2.0
+camera 6.5 350.5 -0.21781474468604442 0.5118420316199582 -0.12794093483869926 0.9
+modifier forehead/forehead-trans-backward|forward 0.390000
+modifier forehead/forehead-scale-vert-decr|incr 0.218000
+modifier neck/neck-scale-vert-decr|incr 0.046000
+modifier chin/chin-jaw-drop-decr|incr -0.242000
+modifier chin/chin-prominent-decr|incr -0.206000
+modifier breast/BreastSize 0.500000
+modifier breast/BreastFirmness 0.500000
+modifier macrodetails/Gender 1.000000
+modifier macrodetails/Age 0.460000
+modifier macrodetails/African 0.442201
+modifier macrodetails/Asian 0.413799
+modifier macrodetails/Caucasian 0.144000
+modifier macrodetails-universal/Muscle 0.747000
+modifier macrodetails-universal/Weight 0.264000
+modifier macrodetails-height/Height 0.356000
+modifier macrodetails-proportions/BodyProportions 0.500000
+eyes HighPolyEyes 2c12f43b-1303-432c-b7ce-d78346baf2e6
+pose standing02.bvh
+clothesHideFaces True
+skinMaterial skins/default.mhmat
+material HighPolyEyes 2c12f43b-1303-432c-b7ce-d78346baf2e6 eyes/materials/brown.mhmat
+subdivide False

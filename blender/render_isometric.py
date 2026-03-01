@@ -488,6 +488,66 @@ def render_animated_unit(cam_obj, directions, animations, frames_per_anim,
 
 
 # ---------------------------------------------------------------------------
+# Action-based animation rendering (for rigged .blend models)
+# ---------------------------------------------------------------------------
+
+def _find_armature():
+    """Find the first armature object in the scene."""
+    for obj in bpy.data.objects:
+        if obj.type == "ARMATURE":
+            return obj
+    return None
+
+
+def render_action_animations(cam_obj, directions, animations, frames_per_anim,
+                             output_dir, subject, armature):
+    """Render using Blender Actions stored on the armature.
+
+    Each animation name maps to a Blender Action. The Action's keyframes
+    are evaluated at integer frames 1..N for each animation.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    total_rendered = 0
+
+    if not armature.animation_data:
+        armature.animation_data_create()
+
+    # Map available actions by name
+    available_actions = {a.name: a for a in bpy.data.actions}
+    print(f"  Available actions: {list(available_actions.keys())}")
+
+    for anim, n_frames in zip(animations, frames_per_anim):
+        action = available_actions.get(anim)
+        if not action:
+            print(f"  WARNING: Action '{anim}' not found, skipping")
+            continue
+
+        # Assign this action to the armature
+        armature.animation_data.action = action
+
+        for frame_idx in range(n_frames):
+            # Set Blender scene frame (Actions use 1-indexed frames)
+            frame = frame_idx + 1
+            bpy.context.scene.frame_set(frame)
+
+            for dir_name in directions:
+                azimuth = DIRECTIONS[dir_name]
+                _position_camera(cam_obj, azimuth)
+
+                fname = f"{subject}_{anim}_{dir_name}_{frame_idx + 1:02d}.png"
+                filepath = os.path.join(output_dir, fname)
+                bpy.context.scene.render.filepath = filepath
+                bpy.ops.render.render(write_still=True)
+                total_rendered += 1
+
+        print(f"  {anim}: {n_frames} frames x {len(directions)} dirs = "
+              f"{n_frames * len(directions)} renders")
+
+    print(f"  Total: {total_rendered} frames rendered")
+    return total_rendered
+
+
+# ---------------------------------------------------------------------------
 # Render loop (buildings / static)
 # ---------------------------------------------------------------------------
 
@@ -624,40 +684,45 @@ def main():
 
     # Build or load model
     archer_root = None
-    if args.blend_file:
-        # Append all objects from the blend file's Scene collection
-        with bpy.data.libraries.load(args.blend_file) as (data_from, data_to):
+    blend_path = args.blend_file or os.path.join(
+        project_root, "blender", "models", f"{args.subject}.blend")
+
+    if args.blend_file or os.path.exists(blend_path):
+        # Load .blend file (explicit or auto-detected from blender/models/)
+        with bpy.data.libraries.load(blend_path) as (data_from, data_to):
             data_to.objects = data_from.objects
+            data_to.actions = data_from.actions
         for obj in data_to.objects:
             if obj is not None:
                 bpy.context.scene.collection.objects.link(obj)
-        print(f"  Loaded: {args.blend_file}")
+        print(f"  Loaded: {blend_path}")
     elif args.subject == "poc_house" or args.poc:
         build_poc_house()
         print("  Built PoC house model")
     elif args.subject == "archer" and asset_type == "unit":
         archer_root = build_geometric_archer()
     else:
-        # Try loading a .blend file from blender/models/
-        blend_path = os.path.join(project_root, "blender", "models",
-                                  f"{args.subject}.blend")
-        if os.path.exists(blend_path):
-            with bpy.data.libraries.load(blend_path) as (data_from, data_to):
-                data_to.objects = data_from.objects
-            for obj in data_to.objects:
-                if obj is not None:
-                    bpy.context.scene.collection.objects.link(obj)
-            print(f"  Loaded: {blend_path}")
-        else:
-            print(f"  WARNING: No model found for '{args.subject}'")
-            print(f"  Expected: {blend_path}")
-            print(f"  Rendering empty scene.")
+        print(f"  WARNING: No model found for '{args.subject}'")
+        print(f"  Expected: {blend_path}")
+        print(f"  Rendering empty scene.")
 
     # Render
     if animations and archer_root:
+        # Geometric archer: procedural animation
         render_animated_unit(cam, args.directions, animations,
                              frames_per_anim, output_dir, args.subject,
                              archer_root)
+    elif animations:
+        # Action-based animation from loaded .blend armature
+        armature = _find_armature()
+        if armature:
+            render_action_animations(cam, args.directions, animations,
+                                     frames_per_anim, output_dir,
+                                     args.subject, armature)
+        else:
+            print("  WARNING: Animations requested but no armature found. "
+                  "Rendering static.")
+            render_directions(cam, args.directions, output_dir, args.subject)
     else:
         render_directions(cam, args.directions, output_dir, args.subject)
 
