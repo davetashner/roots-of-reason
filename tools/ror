@@ -807,6 +807,18 @@ cmd_process_sprite() {
     python3 "$SCRIPT_DIR/process_sprite.py" "$@"
 }
 
+# ==================== sprite-sheet ====================
+cmd_sprite_sheet() {
+    cd "$PROJECT_ROOT"
+    python3 "$SCRIPT_DIR/sprite_sheet.py" "$@"
+}
+
+# ==================== animate ====================
+cmd_animate() {
+    cd "$PROJECT_ROOT"
+    python3 "$SCRIPT_DIR/animate.py" "$@"
+}
+
 # ==================== validate-assets ====================
 cmd_validate_assets() {
     cd "$PROJECT_ROOT"
@@ -2045,6 +2057,17 @@ ${BOLD}COMMANDS${RESET}
                         ror process-sprite assets/sprites/buildings/lumber_camp_01.png
                         ror process-sprite source.png --canvas 256x192 --output out.png
                         ror process-sprite source.png --building barracks --dry-run
+  sprite-sheet <variant> [animation] [direction]
+                      Generate sprite contact sheets for animation verification
+                        ror sprite-sheet villager_woman walk_a s  — one direction
+                        ror sprite-sheet villager_woman walk_a    — all 8 directions
+                        ror sprite-sheet villager_woman           — all animations
+  animate [animation] [direction]
+                      Capture live animation filmstrips from the debug server
+                        ror animate walk s              — filmstrip of walk-south
+                        ror animate walk                — all 8 directions
+                        ror animate                     — walk in all directions
+                      Requires: game running with --debug-server
   split-sprites <input.png> [opts]
                       Split a spritesheet into individual tiles
                         ror split-sprites assets/raw/terrain/grass_quad.png --tile-size 128x64
@@ -2120,6 +2143,8 @@ case "${1:-help}" in
     scene-tree)         shift; cmd_scene_tree "$@" ;;
     validate-assets|va) shift; cmd_validate_assets "$@" ;;
     process-sprite)     shift; cmd_process_sprite "$@" ;;
+    sprite-sheet)       shift; cmd_sprite_sheet "$@" ;;
+    animate)            shift; cmd_animate "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
     split-sprites)      shift; cmd_split_sprites "$@" ;;
     screenshot)         shift; cmd_screenshot "$@" ;;
