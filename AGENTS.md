@@ -424,6 +424,15 @@ Four milestones define the path from prototype to content-complete. Each milesto
 - Tech tree UI (fxt.4) must handle wider columns gracefully
 - All tests referencing tech counts need updating
 
+### ADR-023: Debug Console & Integration Test Architecture
+
+- In-game debug console (backtick toggle) + DebugAPI for automated tests
+- Shared DebugCommandRegistry backend — commands registered as {name, args_spec, handler, help_text}
+- Command categories: Spawn, Control, Economy, Tech, Vision, Time, Overlays, Query
+- All mutations go through existing system APIs (GameManager, ResourceManager, etc.)
+- Stripped from release builds via OS.is_debug_build() guards
+- DebugServer HTTP API extended with write endpoints delegating to DebugCommandRegistry
+
 ---
 
 ## Coding Standards & Workflow
