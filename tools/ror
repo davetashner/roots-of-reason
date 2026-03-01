@@ -483,7 +483,8 @@ cmd_coverage() {
         printf '{"total":%d,"covered":%d,"uncovered":%d,"percentage":%d,"threshold":%d,"pass":%s,"uncovered_files":%s}\n' \
             "$total" "$covered" "$((total - covered))" "$pct" "$threshold" "$pass" "$uncov_json"
     else
-        printf "${BOLD}Test-file coverage report${RESET}\n"
+        printf "${BOLD}Test-file presence report${RESET}\n"
+        printf "Checks whether each script in scripts/ has a corresponding test file in tests/.\n"
         echo ""
         if [[ ${#uncovered[@]} -gt 0 ]]; then
             printf "${YELLOW}Uncovered scripts (no matching test file):${RESET}\n"
@@ -499,12 +500,12 @@ cmd_coverage() {
             done
             echo ""
         fi
-        printf "Coverage: ${BOLD}%d/%d (%d%%)${RESET}  Threshold: %d%%\n" "$covered" "$total" "$pct" "$threshold"
+        printf "Test-file presence: ${BOLD}%d/%d (%d%%)${RESET}  Threshold: %d%%\n" "$covered" "$total" "$pct" "$threshold"
         echo ""
         if $pass; then
-            ok "Coverage gate passed"
+            ok "Test-file presence gate passed"
         else
-            err "Coverage gate failed — ${pct}% < ${threshold}% threshold"
+            err "Test-file presence gate failed — ${pct}% < ${threshold}% threshold"
             return 1
         fi
     fi
@@ -2035,10 +2036,11 @@ ${BOLD}COMMANDS${RESET}
                         ror scaffold ui/minimap --type Control
   new-test <script.gd> Generate a GdUnit4 test file for a source script
                         ror new-test scripts/autoloads/resource_manager.gd
-  coverage [options]  Test-file coverage gate
+  coverage [options]  Test-file presence gate (checks each script has a test file)
                         ror coverage                — check at 90% threshold
                         ror coverage --threshold 90 — custom threshold
                         ror coverage --json         — machine-readable output
+                      NOTE: This checks test FILE existence, not line/branch coverage.
   gen-sprites [cat..] Generate placeholder sprite assets
                         ror gen-sprites             — generate all categories
                         ror gen-sprites tiles       — generate only tiles

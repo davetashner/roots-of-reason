@@ -37,7 +37,7 @@ Run before committing:
 ```bash
 ./tools/ror test        # Run GdUnit4 tests
 ./tools/ror lint        # Run gdtoolkit lint + format check
-./tools/ror coverage    # Check 90% line coverage on gameplay scripts
+./tools/ror coverage    # Check that each script has a corresponding test file
 ```
 
 > **Note:** `ror` is a local script at `./tools/ror`, not a global command. Always invoke it with the `./tools/` prefix.
