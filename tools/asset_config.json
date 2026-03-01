@@ -11,6 +11,7 @@
     "buildings_3x3": {"max_width": 384, "max_height": 256},
     "buildings_4x4": {"max_width": 512, "max_height": 320},
     "buildings_5x5": {"max_width": 640, "max_height": 384},
+    "buildings_spritesheet": {"max_width": 1536, "max_height": 384},
     "buildings_source": {"max_width": 2048, "max_height": 1280},
     "resources": {"max_width": 80, "max_height": 80},
     "tiles": {"max_width": 128, "max_height": 64},

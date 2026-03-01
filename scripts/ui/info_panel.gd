@@ -509,6 +509,9 @@ func _update_unit_hp(unit: Node2D, stats: Dictionary) -> void:
 
 
 func _update_building_hp(building: Node2D) -> void:
+	if building.under_construction:
+		_set_build_progress_bar(building.build_progress)
+		return
 	var current_hp: int = building.hp
 	var max_hp_val: int = building.max_hp
 	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
@@ -551,6 +554,17 @@ func _set_yield_bar(ratio: float, current: int, maximum: int) -> void:
 	if fill_style != null:
 		fill_style.bg_color = _get_yield_color(ratio)
 	_hp_label.text = "Yield: %d/%d" % [current, maximum]
+
+
+func _set_build_progress_bar(progress: float) -> void:
+	progress = clampf(progress, 0.0, 1.0)
+	var bar_width: float = _hp_bar_bg.custom_minimum_size.x
+	_hp_bar_fill.size = Vector2(bar_width * progress, _hp_bar_fill.size.y)
+	var fill_style: StyleBoxFlat = _hp_bar_fill.get_theme_stylebox("panel") as StyleBoxFlat
+	if fill_style != null:
+		fill_style.bg_color = Color(0.2, 0.8, 0.2, 0.9)
+	var pct := int(progress * 100.0)
+	_hp_label.text = "Building: %d%%" % pct
 
 
 func _get_unit_stats(unit: Node2D) -> Dictionary:
