@@ -28,7 +28,8 @@
     "attack_move": { "text": "[A-MOV]", "color": [1.0, 0.4, 0.0, 1.0] },
     "patrol":      { "text": "[PAT]",   "color": [0.4, 0.4, 1.0, 1.0] },
     "feed":        { "text": "[FEED]",  "color": [0.8, 0.6, 0.2, 1.0] },
-    "embark":      { "text": "[EMB]",   "color": [0.2, 0.7, 0.8, 1.0] }
+    "embark":      { "text": "[EMB]",   "color": [0.2, 0.7, 0.8, 1.0] },
+    "explore":     { "text": "[EXP]",  "color": [0.1, 0.8, 0.8, 1.0] }
   },
   "click_marker_colors": {
     "attack":   [1.0, 0.2, 0.2, 1.0],
