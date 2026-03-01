@@ -334,6 +334,11 @@ func _generate_map() -> void:
 	if smoothing_passes > 0:
 		TerrainMapperScript.smooth_terrain(_tile_grid, _map_width, _map_height, smoothing_passes)
 
+	# 4++. Blend biome borders for softer transitions
+	var blend_chance: float = float(_map_gen_config.get("border_blend_chance", 0.0))
+	if blend_chance > 0.0:
+		TerrainMapperScript.blend_borders(_tile_grid, _map_width, _map_height, _seed_value, blend_chance)
+
 	# 4a. Reclassify water/land adjacency into shore/shallows/deep_water
 	var coast_gen := CoastlineGenerator.new()
 	coast_gen.configure(_map_gen_config.get("coastline_generation", {}))

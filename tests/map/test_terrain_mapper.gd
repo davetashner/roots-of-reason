@@ -316,3 +316,74 @@ func test_smooth_terrain_requires_supermajority() -> void:
 	)
 	TerrainMapperScript.smooth_terrain(grid, 3, 3, 1)
 	assert_str(grid[Vector2i(1, 1)]).is_equal("forest")
+
+
+# -- Blend borders tests --
+
+
+func test_blend_borders_changes_border_tiles() -> void:
+	# 5x3 grid: left half grass, right half dirt — border at x=2
+	var grid := _build_grid(
+		[
+			["grass", "grass", "dirt", "dirt", "dirt"],
+			["grass", "grass", "dirt", "dirt", "dirt"],
+			["grass", "grass", "dirt", "dirt", "dirt"],
+		]
+	)
+	# High blend chance to guarantee some changes
+	TerrainMapperScript.blend_borders(grid, 5, 3, 42, 1.0)
+	# Border tiles (x=1 or x=2) should have some blending
+	var changed := 0
+	for y in 3:
+		if grid[Vector2i(1, y)] != "grass":
+			changed += 1
+		if grid[Vector2i(2, y)] != "dirt":
+			changed += 1
+	assert_int(changed).is_greater(0)
+
+
+func test_blend_borders_zero_chance_no_change() -> void:
+	var grid := _build_grid(
+		[
+			["grass", "grass", "dirt", "dirt"],
+			["grass", "grass", "dirt", "dirt"],
+		]
+	)
+	var original: Dictionary = grid.duplicate()
+	TerrainMapperScript.blend_borders(grid, 4, 2, 42, 0.0)
+	for pos: Vector2i in original:
+		assert_str(grid[pos]).is_equal(original[pos])
+
+
+func test_blend_borders_skips_water() -> void:
+	var grid := _build_grid(
+		[
+			["grass", "water", "dirt"],
+			["grass", "water", "dirt"],
+		]
+	)
+	TerrainMapperScript.blend_borders(grid, 3, 2, 42, 1.0)
+	# Water tiles should never change
+	assert_str(grid[Vector2i(1, 0)]).is_equal("water")
+	assert_str(grid[Vector2i(1, 1)]).is_equal("water")
+
+
+func test_blend_borders_deterministic() -> void:
+	var grid1 := _build_grid(
+		[
+			["grass", "grass", "dirt", "dirt"],
+			["grass", "grass", "dirt", "dirt"],
+			["grass", "grass", "dirt", "dirt"],
+		]
+	)
+	var grid2 := _build_grid(
+		[
+			["grass", "grass", "dirt", "dirt"],
+			["grass", "grass", "dirt", "dirt"],
+			["grass", "grass", "dirt", "dirt"],
+		]
+	)
+	TerrainMapperScript.blend_borders(grid1, 4, 3, 42, 0.5)
+	TerrainMapperScript.blend_borders(grid2, 4, 3, 42, 0.5)
+	for pos: Vector2i in grid1:
+		assert_str(grid2[pos]).is_equal(grid1[pos])

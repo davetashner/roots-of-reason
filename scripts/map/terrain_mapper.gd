@@ -5,6 +5,9 @@ extends RefCounted
 ## Used by tilemap_terrain.gd to replace random weighted terrain generation
 ## with procedural noise-based terrain.
 
+## Terrain types that should never be blended into or out of.
+const _NO_BLEND := ["water", "mountain", "canyon", "river", "shore", "shallows", "deep_water"]
+
 var _thresholds: Dictionary = {
 	"water": 0.30,
 	"sand": 0.40,
@@ -128,3 +131,50 @@ static func smooth_terrain(
 					changes[pos] = best
 		for pos: Vector2i in changes:
 			tile_grid[pos] = changes[pos]
+
+
+static func blend_borders(
+	tile_grid: Dictionary,
+	map_width: int,
+	map_height: int,
+	base_seed: int,
+	blend_chance: float = 0.3,
+) -> void:
+	## Probabilistic border blending — at biome boundaries, randomly replace
+	## tiles with a neighboring type. Uses deterministic seed per position
+	## for reproducibility. Skips impassable/water terrain.
+	var directions: Array[Vector2i] = [
+		Vector2i(-1, 0),
+		Vector2i(1, 0),
+		Vector2i(0, -1),
+		Vector2i(0, 1),
+	]
+	var no_blend_set: Dictionary = {}
+	for t: String in _NO_BLEND:
+		no_blend_set[t] = true
+
+	var changes: Dictionary = {}
+	for y in map_height:
+		for x in map_width:
+			var pos := Vector2i(x, y)
+			var current: String = tile_grid.get(pos, "")
+			if current.is_empty() or no_blend_set.has(current):
+				continue
+			# Check if this tile is on a border
+			var neighbor_types: Array[String] = []
+			for dir: Vector2i in directions:
+				var n_terrain: String = tile_grid.get(pos + dir, "")
+				if n_terrain.is_empty() or no_blend_set.has(n_terrain):
+					continue
+				if n_terrain != current and n_terrain not in neighbor_types:
+					neighbor_types.append(n_terrain)
+			if neighbor_types.is_empty():
+				continue
+			# Deterministic random per position
+			var hash_val: int = absi(base_seed + x * 7919 + y * 104729)
+			var roll: float = float(hash_val % 1000) / 1000.0
+			if roll < blend_chance:
+				changes[pos] = neighbor_types[hash_val % neighbor_types.size()]
+
+	for pos: Vector2i in changes:
+		tile_grid[pos] = changes[pos]
