@@ -222,7 +222,7 @@ func _add_entity_annotations(
 	font: Font,
 	font_size: int,
 ) -> void:
-	var cat: String = str(entity.entity_category) if "entity_category" in entity else ""
+	var cat: String = _infer_entity_category(entity)
 	if cat == "":
 		return
 	var is_unit := "unit_category" in entity and str(entity.unit_category) != ""
@@ -649,12 +649,16 @@ static func _matches_filters(data: Dictionary, params: Dictionary) -> bool:
 	return true
 
 
-static func serialize_entity(entity: Node2D) -> Dictionary:
+static func _infer_entity_category(entity: Node2D) -> String:
 	var cat: String = str(entity.get("entity_category")) if "entity_category" in entity else ""
-	# Infer category from properties when entity_category is empty (player units)
 	if cat == "" and "unit_category" in entity and str(entity.unit_category) != "":
 		var oid: int = int(entity.owner_id) if "owner_id" in entity else 0
 		cat = "own_unit" if oid == 0 else "enemy_unit"
+	return cat
+
+
+static func serialize_entity(entity: Node2D) -> Dictionary:
+	var cat: String = _infer_entity_category(entity)
 	if cat == "":
 		return {}
 	var result: Dictionary = {

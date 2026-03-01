@@ -466,3 +466,60 @@ func test_parse_request_screenshot_with_annotate() -> void:
 	var result := DebugServerScript._parse_request("GET /screenshot?annotate=true HTTP/1.1\r\n\r\n")
 	assert_str(result.get("method", "")).is_equal("GET")
 	assert_str(result.get("path", "")).is_equal("/screenshot?annotate=true")
+
+
+# -- _infer_entity_category tests --
+
+
+func test_infer_entity_category_own_unit() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = ""
+	unit.unit_category = "villager"
+	unit.owner_id = 0
+	assert_str(DebugServerScript._infer_entity_category(unit)).is_equal("own_unit")
+
+
+func test_infer_entity_category_enemy_unit() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = ""
+	unit.unit_category = "archer"
+	unit.owner_id = 1
+	assert_str(DebugServerScript._infer_entity_category(unit)).is_equal("enemy_unit")
+
+
+func test_infer_entity_category_empty_when_no_unit_category() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = ""
+	unit.unit_category = ""
+	assert_str(DebugServerScript._infer_entity_category(unit)).is_equal("")
+
+
+func test_infer_entity_category_preserves_existing() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = "own_unit"
+	assert_str(DebugServerScript._infer_entity_category(unit)).is_equal("own_unit")
+
+
+# -- annotation overlay with inferred category --
+
+
+func test_add_entity_annotations_inferred_unit_gets_labels() -> void:
+	var server := DebugServerScript.new()
+	auto_free(server)
+	var layer := CanvasLayer.new()
+	auto_free(layer)
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = ""
+	unit.unit_category = "villager"
+	unit.owner_id = 0
+	unit.name = "PlayerVillager"
+	var font: Font = ThemeDB.fallback_font
+	# Before fix, this would return early due to empty entity_category
+	server._add_entity_annotations(layer, unit, Vector2(400, 300), font, 12)
+	# Should have added children: name label + health bar bg + health bar fg + state label
+	assert_int(layer.get_child_count()).is_greater(0)
