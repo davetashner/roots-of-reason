@@ -653,3 +653,86 @@ func test_serialize_entity_verbose_empty_for_no_category() -> void:
 	unit.unit_category = ""
 	var result := DebugServerScript.serialize_entity_verbose(unit)
 	assert_dict(result).is_empty()
+
+
+# -- terrain validation helpers used by place-building / spawn --
+
+
+class MockMapNode:
+	extends Node
+	var _map_size: int = 64
+	var _unbuildable: Dictionary = {}  # Vector2i -> bool
+
+	func get_map_size() -> int:
+		return _map_size
+
+	func is_buildable(cell: Vector2i) -> bool:
+		return not _unbuildable.has(cell)
+
+	func get_terrain_at(cell: Vector2i) -> String:
+		if _unbuildable.has(cell):
+			return _unbuildable[cell]
+		return "grass"
+
+
+class MockPathfinder:
+	extends Node
+	var _solid: Dictionary = {}  # Vector2i -> bool
+
+	func is_cell_solid(pos: Vector2i) -> bool:
+		return _solid.has(pos)
+
+	func set_cell_solid(pos: Vector2i, solid: bool) -> void:
+		if solid:
+			_solid[pos] = true
+		elif _solid.has(pos):
+			_solid.erase(pos)
+
+
+func test_place_building_rejects_unbuildable_terrain() -> void:
+	# Simulates what _cmd_place_building now checks via BuildingValidator
+	var map := MockMapNode.new()
+	auto_free(map)
+	var pf := MockPathfinder.new()
+	auto_free(pf)
+	# Mark cell (5,5) as water — unbuildable
+	map._unbuildable[Vector2i(5, 5)] = "water"
+	var origin := Vector2i(5, 5)
+	var footprint := Vector2i(2, 2)
+	assert_bool(BuildingValidator.is_placement_valid(origin, footprint, map, pf)).is_false()
+
+
+func test_place_building_accepts_valid_terrain() -> void:
+	var map := MockMapNode.new()
+	auto_free(map)
+	var pf := MockPathfinder.new()
+	auto_free(pf)
+	var origin := Vector2i(3, 3)
+	var footprint := Vector2i(2, 2)
+	assert_bool(BuildingValidator.is_placement_valid(origin, footprint, map, pf)).is_true()
+
+
+func test_place_building_rejects_solid_cell() -> void:
+	var map := MockMapNode.new()
+	auto_free(map)
+	var pf := MockPathfinder.new()
+	auto_free(pf)
+	# Mark one footprint cell as solid (e.g., existing building)
+	pf._solid[Vector2i(4, 4)] = true
+	var origin := Vector2i(4, 4)
+	var footprint := Vector2i(1, 1)
+	assert_bool(BuildingValidator.is_placement_valid(origin, footprint, map, pf)).is_false()
+
+
+func test_spawn_unit_rejects_solid_cell() -> void:
+	# Simulates the pathfinder.is_cell_solid() check in _cmd_spawn
+	var pf := MockPathfinder.new()
+	auto_free(pf)
+	pf._solid[Vector2i(10, 10)] = true
+	assert_bool(pf.is_cell_solid(Vector2i(10, 10))).is_true()
+
+
+func test_spawn_unit_accepts_walkable_cell() -> void:
+	var pf := MockPathfinder.new()
+	auto_free(pf)
+	assert_bool(pf.is_cell_solid(Vector2i(10, 10))).is_false()

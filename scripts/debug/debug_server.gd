@@ -828,37 +828,22 @@ func _cmd_spawn(peer: StreamPeerTCP, body: Dictionary) -> void:
 		if node == null:
 			_send_json(peer, 500, {"error": "failed to spawn resource", "type": spawn_type})
 			return
-		_send_json(
-			peer,
-			200,
-			{
-				"action": "spawn",
-				"entity": "resource",
-				"type": spawn_type,
-				"name": node.name,
-				"grid_x": gx,
-				"grid_y": gy,
-			}
-		)
+		var d := {
+			"action": "spawn", "entity": "resource", "type": spawn_type, "name": node.name, "grid_x": gx, "grid_y": gy
+		}
+		_send_json(peer, 200, d)
 	else:
+		if "_pathfinder" in root and root._pathfinder != null and root._pathfinder.is_cell_solid(gp):
+			_send_json(peer, 400, {"error": "cell (%d, %d) is not walkable" % [gp.x, gp.y]})
+			return
 		var oid: int = int(body.get("owner", 0))
 		var node := _spawn_unit(root, spawn_type, oid, gp, wp)
 		if node == null:
 			_send_json(peer, 500, {"error": "failed to spawn unit", "type": spawn_type})
 			return
-		_send_json(
-			peer,
-			200,
-			{
-				"action": "spawn",
-				"entity": "unit",
-				"type": spawn_type,
-				"name": node.name,
-				"owner": oid,
-				"grid_x": gx,
-				"grid_y": gy,
-			}
-		)
+		var d := {"action": "spawn", "entity": "unit", "type": spawn_type}
+		d.merge({"name": node.name, "owner": oid, "grid_x": gx, "grid_y": gy})
+		_send_json(peer, 200, d)
 
 
 func _spawn_unit(root: Node, unit_type: String, oid: int, _grid_pos: Vector2i, wp: Vector2) -> Node2D:
@@ -962,6 +947,12 @@ func _cmd_place_building(peer: StreamPeerTCP, body: Dictionary) -> void:
 	var mhp: int = int(st.get("hp", 100))
 	var fp_arr: Array = st.get("footprint", [1, 1])
 	var fp := Vector2i(int(fp_arr[0]), int(fp_arr[1]))
+	var pc: String = str(st.get("placement_constraint", ""))
+	var mn: Node = root._map_node if "_map_node" in root else null
+	var pf: Node = root._pathfinder if "_pathfinder" in root else null
+	if not BuildingValidator.is_placement_valid(gp, fp, mn, pf, pc):
+		_send_json(peer, 400, {"error": "invalid terrain for building at (%d, %d)" % [gx, gy]})
+		return
 	var b := Node2D.new()
 	b.name = "Building_%s_%d_%d" % [bn, gx, gy]
 	b.set_script(BuildingScript)
@@ -982,6 +973,13 @@ func _cmd_place_building(peer: StreamPeerTCP, body: Dictionary) -> void:
 		b.build_progress = 0.0
 		b._build_time = float(st.get("build_time", 25))
 	root.add_child(b)
+	_register_building(root, b, oid, pf, gp, fp)
+	var resp := {"action": "place-building", "building_name": bn}
+	resp.merge({"grid_x": gx, "grid_y": gy, "owner": oid, "built": built})
+	_send_json(peer, 200, resp)
+
+
+func _register_building(root: Node, b: Node2D, oid: int, pf: Node, gp: Vector2i, fp: Vector2i) -> void:
 	if "_target_detector" in root and root._target_detector != null:
 		root._target_detector.register_entity(b)
 	if "_population_manager" in root and root._population_manager != null:
@@ -990,21 +988,9 @@ func _cmd_place_building(peer: StreamPeerTCP, body: Dictionary) -> void:
 		root._entity_registry.register(b)
 	if b.has_signal("building_destroyed") and root.has_method("_on_building_destroyed"):
 		b.building_destroyed.connect(root._on_building_destroyed)
-	if "_pathfinder" in root and root._pathfinder != null:
+	if pf != null:
 		for cell: Vector2i in BuildingValidator.get_footprint_cells(gp, fp):
-			root._pathfinder.set_cell_solid(cell, true)
-	_send_json(
-		peer,
-		200,
-		{
-			"action": "place-building",
-			"building_name": bn,
-			"grid_x": gx,
-			"grid_y": gy,
-			"owner": oid,
-			"built": built,
-		}
-	)
+			pf.set_cell_solid(cell, true)
 
 
 func _cmd_stop(peer: StreamPeerTCP, body: Dictionary) -> void:
