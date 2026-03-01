@@ -170,9 +170,24 @@ func take_damage(amount: int, _attacker: Node2D) -> void:
 		return
 	if _attacker != null and "owner_id" in _attacker:
 		last_attacker_id = _attacker.owner_id
+	var hp_before: int = hp
 	hp -= amount
 	if hp < 0:
 		hp = 0
+	var atk_stats := {}
+	if _attacker != null and _attacker.has_method("get_stat"):
+		atk_stats = {
+			"attack": _attacker.get_stat("attack"),
+			"attack_type": "melee",
+			"unit_type": str(_attacker.unit_type) if "unit_type" in _attacker else "",
+		}
+	var def_stats := {
+		"defense": 0.0,
+		"unit_category": "building",
+		"unit_type": building_name,
+	}
+	var log_extras := {"hp_before": hp_before, "hp_after": hp, "max_hp": max_hp}
+	CombatLogger.log_damage(_attacker, self, amount, atk_stats, def_stats, log_extras)
 	queue_redraw()
 	if hp <= 0:
 		_on_destroyed()

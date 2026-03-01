@@ -89,6 +89,8 @@ func _handle_connection(peer: StreamPeerTCP) -> void:
 		await _handle_screenshot(peer, query_string)
 	elif method == "GET" and base_path == "/status":
 		_handle_status(peer)
+	elif method == "GET" and base_path == "/combat-log":
+		_handle_combat_log(peer, query_string)
 	elif method == "GET" and base_path == "/entities":
 		_handle_entities(peer, query_string)
 	elif method == "POST" and base_path == "/command":
@@ -336,6 +338,25 @@ func _handle_status(peer: StreamPeerTCP) -> void:
 	data["camera_position"] = cam_data["position"]
 	data["camera_zoom"] = cam_data["zoom"]
 	_send_json(peer, 200, data)
+
+
+func _handle_combat_log(peer: StreamPeerTCP, query_string: String) -> void:
+	var params := parse_query_string(query_string)
+	var limit: int = int(params.get("limit", "50"))
+	var events := CombatLogger.get_events(limit)
+	var gm: Node = _get_manager("GameManager")
+	var game_time: float = float(gm.game_time) if gm != null else 0.0
+	_send_json(
+		peer,
+		200,
+		{
+			"events": events,
+			"count": events.size(),
+			"capacity": CombatLogger.get_capacity(),
+			"total_logged": CombatLogger.get_total_logged(),
+			"game_time": game_time,
+		}
+	)
 
 
 func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
