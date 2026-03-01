@@ -195,3 +195,46 @@ func test_non_pirate_unit_has_no_bounty_text() -> void:
 	auto_free(unit)
 	panel.show_unit(unit)
 	assert_str(panel._stats_label.text).not_contains("Bounty")
+
+
+# -- Garrison capacity indicator --
+
+
+func test_show_building_garrison_capacity_shown() -> void:
+	var panel := _create_panel()
+	var b := _create_building(800, 800)
+	b.building_name = "town_center"
+	b.garrison_capacity = 15
+	panel.show_building(b)
+	assert_str(panel._stats_label.text).contains("Garrisoned: 0/15")
+
+
+func test_show_building_no_garrison_for_zero_capacity() -> void:
+	var panel := _create_panel()
+	var b := _create_building(400, 400)
+	b.building_name = "farm"
+	b.garrison_capacity = 0
+	panel.show_building(b)
+	assert_str(panel._stats_label.text).not_contains("Garrisoned")
+
+
+func test_garrison_count_updates_in_realtime() -> void:
+	var panel := _create_panel()
+	var b := _create_building(800, 800)
+	b.building_name = "town_center"
+	b.garrison_capacity = 15
+	panel.show_building(b)
+	assert_str(panel._stats_label.text).contains("Garrisoned: 0/15")
+	# Simulate garrisoning units by adding to internal garrison list
+	var mock_unit := Node2D.new()
+	mock_unit.set_script(UnitScript)
+	mock_unit.unit_type = "villager"
+	mock_unit.owner_id = 0
+	mock_unit.hp = 25
+	mock_unit.max_hp = 25
+	add_child(mock_unit)
+	auto_free(mock_unit)
+	b._garrisoned_units.append(mock_unit)
+	# Trigger update by calling show_building again (simulates _update path)
+	panel.show_building(b)
+	assert_str(panel._stats_label.text).contains("Garrisoned: 1/15")
