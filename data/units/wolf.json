@@ -1,7 +1,7 @@
 {
   "name": "Wolf",
-  "hp": 30,
-  "attack": 3,
+  "hp": 18,
+  "attack": 5,
   "defense": 0,
   "speed": 2.0,
   "range": 0,

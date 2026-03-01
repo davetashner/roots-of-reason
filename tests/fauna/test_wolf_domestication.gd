@@ -35,8 +35,8 @@ func _create_wolf(pos: Vector2 = Vector2.ZERO) -> Node2D:
 	unit.owner_id = -1
 	unit.unit_color = Color(0.5, 0.5, 0.5)
 	unit.position = pos
-	unit.hp = 30
-	unit.max_hp = 30
+	unit.hp = 18
+	unit.max_hp = 18
 	add_child(unit)
 	unit._scene_root = self
 	auto_free(unit)
@@ -143,8 +143,8 @@ func test_feeding_interrupted_by_damage() -> void:
 	var ai := _get_ai(wolf)
 	var feeder := _create_civilian()
 	ai.begin_feeding(feeder, 0)
-	# Simulate damage: lower wolf HP
-	wolf.hp = 20
+	# Simulate damage: lower wolf HP below flee threshold
+	wolf.hp = 12
 	ai._tick_being_fed(0.1)
 	assert_int(ai._state).is_equal(WolfAIScript.WolfState.FLEE)
 	assert_object(ai._current_feeder).is_null()

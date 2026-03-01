@@ -27,8 +27,8 @@ func _create_wolf(pos: Vector2 = Vector2.ZERO) -> Node2D:
 	unit.set_script(UnitScript)
 	unit.unit_type = "wolf"
 	unit.owner_id = -1
-	unit.hp = 30
-	unit.max_hp = 30
+	unit.hp = 18
+	unit.max_hp = 18
 	unit.position = pos
 	add_child(unit)
 	unit._scene_root = self
