@@ -387,3 +387,71 @@ func test_blend_borders_deterministic() -> void:
 	TerrainMapperScript.blend_borders(grid2, 4, 3, 42, 0.5)
 	for pos: Vector2i in grid1:
 		assert_str(grid2[pos]).is_equal(grid1[pos])
+
+
+# -- Forest clearings tests --
+
+
+func test_forest_clearings_converts_some_forest_to_grass() -> void:
+	# All-forest grid — some should become grass with high clearing chance
+	var grid := _build_grid(
+		[
+			["forest", "forest", "forest", "forest", "forest"],
+			["forest", "forest", "forest", "forest", "forest"],
+			["forest", "forest", "forest", "forest", "forest"],
+			["forest", "forest", "forest", "forest", "forest"],
+			["forest", "forest", "forest", "forest", "forest"],
+		]
+	)
+	TerrainMapperScript.add_forest_clearings(grid, 5, 5, 42, 0.5)
+	var grass_count := 0
+	for pos: Vector2i in grid:
+		if grid[pos] == "grass":
+			grass_count += 1
+	assert_int(grass_count).is_greater(0)
+
+
+func test_forest_clearings_zero_chance_no_change() -> void:
+	var grid := _build_grid(
+		[
+			["forest", "forest", "forest"],
+			["forest", "forest", "forest"],
+		]
+	)
+	TerrainMapperScript.add_forest_clearings(grid, 3, 2, 42, 0.0)
+	for pos: Vector2i in grid:
+		assert_str(grid[pos]).is_equal("forest")
+
+
+func test_forest_clearings_ignores_non_forest() -> void:
+	var grid := _build_grid(
+		[
+			["grass", "dirt", "sand"],
+			["water", "stone", "mountain"],
+		]
+	)
+	var original: Dictionary = grid.duplicate()
+	TerrainMapperScript.add_forest_clearings(grid, 3, 2, 42, 1.0)
+	for pos: Vector2i in original:
+		assert_str(grid[pos]).is_equal(original[pos])
+
+
+func test_forest_clearings_deterministic() -> void:
+	var grid1 := _build_grid(
+		[
+			["forest", "forest", "forest", "forest"],
+			["forest", "forest", "forest", "forest"],
+			["forest", "forest", "forest", "forest"],
+		]
+	)
+	var grid2 := _build_grid(
+		[
+			["forest", "forest", "forest", "forest"],
+			["forest", "forest", "forest", "forest"],
+			["forest", "forest", "forest", "forest"],
+		]
+	)
+	TerrainMapperScript.add_forest_clearings(grid1, 4, 3, 42, 0.3)
+	TerrainMapperScript.add_forest_clearings(grid2, 4, 3, 42, 0.3)
+	for pos: Vector2i in grid1:
+		assert_str(grid2[pos]).is_equal(grid1[pos])
