@@ -24,5 +24,6 @@
   ],
   "age_required": 1,
   "placement_constraint": "adjacent_to_water",
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

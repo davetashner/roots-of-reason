@@ -17,5 +17,6 @@
   "units_produced": [],
   "age_required": 6,
   "placement_constraint": "",
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

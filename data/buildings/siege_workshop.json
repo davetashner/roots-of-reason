@@ -21,5 +21,6 @@
   ],
   "age_required": 2,
   "placement_constraint": "",
-  "defense": 0
+  "defense": 0,
+  "los": 6
 }

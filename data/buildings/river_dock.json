@@ -26,5 +26,6 @@
   "max_barge_capacity": 30,
   "barge_spawn_interval": 5.0,
   "barge_hp": 15,
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

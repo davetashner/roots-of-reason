@@ -18,5 +18,6 @@
   "age_required": 2,
   "placement_constraint": "",
   "knowledge_rate": 0.75,
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

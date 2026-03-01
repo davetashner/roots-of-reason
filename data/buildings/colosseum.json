@@ -27,5 +27,6 @@
   "morale_aura": true,
   "morale_aura_radius": 6,
   "morale_speed_bonus": 0.05,
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

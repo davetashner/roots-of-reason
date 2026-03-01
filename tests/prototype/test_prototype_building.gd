@@ -234,6 +234,63 @@ func test_get_garrison_attack_skips_null_stats() -> void:
 	assert_int(b.get_garrison_attack()).is_equal(0)
 
 
+# -- Line of Sight --
+
+
+func test_get_los_returns_zero_during_construction() -> void:
+	var b := _create_building()
+	b.los = 4
+	assert_int(b.get_los()).is_equal(0)
+
+
+func test_get_los_returns_base_los_when_complete() -> void:
+	var b := _create_building(false)
+	b.los = 4
+	assert_int(b.get_los()).is_equal(4)
+
+
+func test_get_los_returns_zero_when_ruins() -> void:
+	var b := _create_building(false)
+	b.los = 4
+	b.take_damage(550, null)
+	assert_int(b.get_los()).is_equal(0)
+
+
+func test_get_los_includes_dog_bonus() -> void:
+	var b := _create_building(false)
+	b.los = 4
+	b.set_dog_los_bonus(2)
+	assert_int(b.get_los()).is_equal(6)
+
+
+func test_get_los_dog_bonus_stacks_on_base() -> void:
+	var b := _create_building(false)
+	b.los = 6
+	b.set_dog_los_bonus(4)
+	assert_int(b.get_los()).is_equal(10)
+
+
+func test_default_building_los_is_four() -> void:
+	var b := _create_building(false)
+	b.los = 4
+	assert_int(b.get_los()).is_equal(4)
+
+
+func test_defensive_building_los_is_six() -> void:
+	var b := _create_building(false)
+	b.los = 6
+	assert_int(b.get_los()).is_equal(6)
+
+
+func test_save_load_preserves_los() -> void:
+	var b := _create_building(false)
+	b.los = 6
+	var state: Dictionary = b.save_state()
+	var b2 := _create_building(false)
+	b2.load_state(state)
+	assert_int(b2.los).is_equal(6)
+
+
 func test_backward_compat_load_no_ruins_fields() -> void:
 	var b := _create_building(false)
 	# Old save data without ruins fields
