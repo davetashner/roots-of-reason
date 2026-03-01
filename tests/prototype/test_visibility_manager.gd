@@ -258,6 +258,47 @@ func test_invalidate_fov_cache_clears_all() -> void:
 	assert_int(mgr.get_fov_cache_size()).is_equal(0)
 
 
+# -- Pinned tiles tests --
+
+
+func test_pinned_tiles_always_visible() -> void:
+	var mgr := _make_manager()
+	var pinned: Array[Vector2i] = [Vector2i(5, 5), Vector2i(6, 6)]
+	mgr.update_visibility(0, [], pinned)
+	assert_bool(mgr.is_visible(0, Vector2i(5, 5))).is_true()
+	assert_bool(mgr.is_visible(0, Vector2i(6, 6))).is_true()
+
+
+func test_pinned_tiles_marked_explored() -> void:
+	var mgr := _make_manager()
+	var pinned: Array[Vector2i] = [Vector2i(7, 7)]
+	mgr.update_visibility(0, [], pinned)
+	assert_bool(mgr.is_explored(0, Vector2i(7, 7))).is_true()
+
+
+func test_pinned_tiles_persist_without_los_units() -> void:
+	var mgr := _make_manager()
+	# First update with a unit that has LOS
+	var unit := _make_mock_unit(16, 16, 3)
+	mgr.update_visibility(0, [unit])
+	assert_bool(mgr.is_visible(0, Vector2i(16, 16))).is_true()
+
+	# Second update with no LOS units but pinned tile at (16, 16)
+	var pinned: Array[Vector2i] = [Vector2i(16, 16)]
+	mgr.update_visibility(0, [], pinned)
+	assert_bool(mgr.is_visible(0, Vector2i(16, 16))).is_true()
+
+
+func test_pinned_tiles_merge_with_los_visible() -> void:
+	var mgr := _make_manager()
+	var unit := _make_mock_unit(16, 16, 3)
+	var pinned: Array[Vector2i] = [Vector2i(1, 1)]
+	mgr.update_visibility(0, [unit], pinned)
+	# Both unit LOS tiles and pinned tile should be visible
+	assert_bool(mgr.is_visible(0, Vector2i(16, 16))).is_true()
+	assert_bool(mgr.is_visible(0, Vector2i(1, 1))).is_true()
+
+
 func test_load_state_clears_cache() -> void:
 	var mgr := _make_manager()
 	var unit := _make_mock_unit(16, 16, 3)

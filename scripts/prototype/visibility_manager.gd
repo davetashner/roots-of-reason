@@ -28,7 +28,7 @@ func setup(map_width: int, map_height: int, blocks_los_fn: Callable) -> void:
 	_blocks_los_fn = blocks_los_fn
 
 
-func update_visibility(player_id: int, units: Array) -> void:
+func update_visibility(player_id: int, units: Array, pinned_tiles: Array[Vector2i] = []) -> void:
 	if not _explored.has(player_id):
 		_explored[player_id] = {}
 
@@ -89,6 +89,11 @@ func update_visibility(player_id: int, units: Array) -> void:
 		for tile: Vector2i in tiles:
 			new_visible[tile] = true
 			_explored[player_id][tile] = true
+
+	# Merge pinned tiles (own entity positions) — always visible regardless of LOS
+	for tile: Vector2i in pinned_tiles:
+		new_visible[tile] = true
+		_explored[player_id][tile] = true
 
 	# Evict stale cache entries for units no longer in the list
 	var stale_ids: Array = []
