@@ -85,7 +85,7 @@ func _handle_connection(peer: StreamPeerTCP) -> void:
 	if method == "GET" and base_path == "/ping":
 		_send_json(peer, 200, {"status": "ok"})
 	elif method == "GET" and base_path == "/screenshot":
-		_handle_screenshot(peer)
+		await _handle_screenshot(peer, query_string)
 	elif method == "GET" and base_path == "/status":
 		_handle_status(peer)
 	elif method == "GET" and base_path == "/entities":
@@ -146,12 +146,23 @@ static func _parse_request(raw: String) -> Dictionary:
 	return {"method": parts[0], "path": parts[1], "headers": headers}
 
 
-func _handle_screenshot(peer: StreamPeerTCP) -> void:
+func _handle_screenshot(peer: StreamPeerTCP, query_string: String) -> void:
 	var viewport := get_viewport()
 	if viewport == null:
 		_send_json(peer, 500, {"error": "no viewport"})
 		return
+	var params := parse_query_string(query_string)
+	var annotate: bool = str(params.get("annotate", "false")) == "true"
+	var overlay: CanvasLayer = null
+	if annotate:
+		overlay = _create_annotation_overlay()
+		add_child(overlay)
+		# Wait two frames: one for layout, one for draw
+		await get_tree().process_frame
+		await get_tree().process_frame
 	var image := viewport.get_texture().get_image()
+	if overlay != null:
+		overlay.queue_free()
 	if image == null:
 		_send_json(peer, 500, {"error": "failed to capture image"})
 		return
@@ -166,6 +177,138 @@ func _handle_screenshot(peer: StreamPeerTCP) -> void:
 	header += "\r\n"
 	peer.put_data(header.to_utf8_buffer())
 	peer.put_data(png_data)
+
+
+func _create_annotation_overlay() -> CanvasLayer:
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	var root := get_tree().current_scene
+	if root == null:
+		return layer
+	var camera := _get_camera()
+	var viewport := get_viewport()
+	if viewport == null or camera == null:
+		return layer
+	var vp_size := Vector2(viewport.get_visible_rect().size)
+	var cam_pos := camera.global_position
+	var cam_zoom := camera.zoom
+	var font: Font = ThemeDB.fallback_font
+	var font_size: int = 12
+	for child: Node in root.get_children():
+		if not (child is Node2D):
+			continue
+		if "entity_category" not in child:
+			continue
+		var entity := child as Node2D
+		var screen_pos := _world_to_screen(entity.global_position, cam_pos, cam_zoom, vp_size)
+		# Skip entities off-screen
+		if screen_pos.x < -100 or screen_pos.x > vp_size.x + 100:
+			continue
+		if screen_pos.y < -100 or screen_pos.y > vp_size.y + 100:
+			continue
+		_add_entity_annotations(layer, entity, screen_pos, font, font_size)
+	return layer
+
+
+static func _world_to_screen(world_pos: Vector2, cam_pos: Vector2, cam_zoom: Vector2, vp_size: Vector2) -> Vector2:
+	return (world_pos - cam_pos) * cam_zoom + vp_size / 2.0
+
+
+func _add_entity_annotations(
+	layer: CanvasLayer,
+	entity: Node2D,
+	screen_pos: Vector2,
+	font: Font,
+	font_size: int,
+) -> void:
+	var cat: String = str(entity.entity_category) if "entity_category" in entity else ""
+	if cat == "":
+		return
+	var is_unit := "unit_category" in entity and str(entity.unit_category) != ""
+	var is_building := "building_name" in entity and str(entity.building_name) != ""
+	var is_resource := cat == "resource_node"
+	# Selection highlight (bright outline for selected units/buildings)
+	var is_selected := bool(entity.selected) if "selected" in entity else false
+	if is_selected:
+		var highlight := ColorRect.new()
+		highlight.color = Color(0, 1, 0, 0.3)
+		highlight.size = Vector2(60, 60)
+		highlight.position = screen_pos - Vector2(30, 50)
+		layer.add_child(highlight)
+	# Name label
+	var name_text := entity.name
+	if is_building:
+		name_text = str(entity.building_name)
+	elif is_resource:
+		name_text = str(entity.resource_name) if "resource_name" in entity else entity.name
+	var name_label := Label.new()
+	name_label.text = name_text
+	name_label.add_theme_font_override("font", font)
+	name_label.add_theme_font_size_override("font_size", font_size)
+	name_label.add_theme_color_override("font_color", Color.WHITE)
+	name_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	name_label.add_theme_constant_override("shadow_offset_x", 1)
+	name_label.add_theme_constant_override("shadow_offset_y", 1)
+	name_label.position = screen_pos - Vector2(30, 55)
+	layer.add_child(name_label)
+	# Health bar (units and buildings)
+	if (is_unit or is_building) and "hp" in entity and "max_hp" in entity:
+		var hp: int = int(entity.hp)
+		var max_hp: int = int(entity.max_hp)
+		if max_hp > 0:
+			var bar_width: float = 50.0
+			var bar_height: float = 4.0
+			var hp_ratio: float = clampf(float(hp) / float(max_hp), 0.0, 1.0)
+			# Background (dark)
+			var bg := ColorRect.new()
+			bg.color = Color(0.2, 0.2, 0.2, 0.8)
+			bg.size = Vector2(bar_width, bar_height)
+			bg.position = screen_pos - Vector2(25, 40)
+			layer.add_child(bg)
+			# Foreground (green→yellow→red)
+			var fg := ColorRect.new()
+			if hp_ratio > 0.6:
+				fg.color = Color(0, 0.8, 0, 0.9)
+			elif hp_ratio > 0.3:
+				fg.color = Color(0.9, 0.8, 0, 0.9)
+			else:
+				fg.color = Color(0.9, 0.1, 0, 0.9)
+			fg.size = Vector2(bar_width * hp_ratio, bar_height)
+			fg.position = screen_pos - Vector2(25, 40)
+			layer.add_child(fg)
+	# State text (units only)
+	if is_unit:
+		var state_text := _get_unit_action(entity)
+		# Add gather detail if gathering
+		var gather_type: String = str(entity._gather_type) if "_gather_type" in entity else ""
+		if gather_type != "" and state_text in ["gathering", "moving_to_resource"]:
+			state_text += " " + gather_type
+		# Add carry info
+		var carried: int = int(entity._carried_amount) if "_carried_amount" in entity else 0
+		if carried > 0:
+			state_text += " (carrying %d %s)" % [carried, gather_type]
+		var state_label := Label.new()
+		state_label.text = state_text
+		state_label.add_theme_font_override("font", font)
+		state_label.add_theme_font_size_override("font_size", 10)
+		state_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.5))
+		state_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+		state_label.add_theme_constant_override("shadow_offset_x", 1)
+		state_label.add_theme_constant_override("shadow_offset_y", 1)
+		state_label.position = screen_pos - Vector2(30, 30)
+		layer.add_child(state_label)
+	# Resource yield text
+	if is_resource and "current_yield" in entity and "total_yield" in entity:
+		var yield_label := Label.new()
+		yield_label.text = "%d/%d" % [int(entity.current_yield), int(entity.total_yield)]
+		yield_label.add_theme_font_override("font", font)
+		yield_label.add_theme_font_size_override("font_size", 10)
+		yield_label.add_theme_color_override("font_color", Color(0.5, 0.9, 0.9))
+		yield_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+		yield_label.add_theme_constant_override("shadow_offset_x", 1)
+		yield_label.add_theme_constant_override("shadow_offset_y", 1)
+		yield_label.position = screen_pos - Vector2(20, 30)
+		layer.add_child(yield_label)
 
 
 func _handle_status(peer: StreamPeerTCP) -> void:

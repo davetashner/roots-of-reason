@@ -832,12 +832,14 @@ cmd_data_check() {
 cmd_screenshot() {
     local output=""
     local name=""
+    local annotate=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --output) output="$2"; shift 2 ;;
-            --name)   name="$2"; shift 2 ;;
-            *)        err "Unknown screenshot option: $1"; exit 1 ;;
+            --output)   output="$2"; shift 2 ;;
+            --name)     name="$2"; shift 2 ;;
+            --annotate) annotate="true"; shift ;;
+            *)          err "Unknown screenshot option: $1"; exit 1 ;;
         esac
     done
 
@@ -849,7 +851,11 @@ cmd_screenshot() {
         output="$PROJECT_ROOT/tests/screenshots/${name}.png"
     fi
 
-    curl -s "http://127.0.0.1:9222/screenshot" -o "$output"
+    local url="http://127.0.0.1:9222/screenshot"
+    if [[ "$annotate" == "true" ]]; then
+        url="${url}?annotate=true"
+    fi
+    curl -s "$url" -o "$output"
     echo "$output"
 }
 
@@ -1091,11 +1097,23 @@ _run_scenario_step() {
             cmd_game_cmd "unpause"
             ;;
         screenshot)
-            if [[ -n "$args_str" ]]; then
-                cmd_screenshot --name "$args_str"
-            else
-                cmd_screenshot
+            local screenshot_args=()
+            local screenshot_name=""
+            local screenshot_annotate=""
+            for word in $args_str; do
+                if [[ "$word" == "--annotate" ]]; then
+                    screenshot_annotate="true"
+                elif [[ -z "$screenshot_name" ]]; then
+                    screenshot_name="$word"
+                fi
+            done
+            if [[ -n "$screenshot_name" ]]; then
+                screenshot_args+=(--name "$screenshot_name")
             fi
+            if [[ "$screenshot_annotate" == "true" ]]; then
+                screenshot_args+=(--annotate)
+            fi
+            cmd_screenshot "${screenshot_args[@]}"
             ;;
         wait)
             if [[ -z "$args_str" ]]; then
@@ -1276,6 +1294,7 @@ ${BOLD}COMMANDS${RESET}
                         ror screenshot                          — save timestamped PNG
                         ror screenshot --name my_shot           — save as my_shot.png
                         ror screenshot --output /tmp/shot.png   — save to custom path
+                        ror screenshot --annotate               — overlay debug annotations
   entities [options]  List all game entities from the debug server
                         ror entities                    — all entities (JSON)
                         ror entities --category unit    — only units
@@ -1293,7 +1312,7 @@ ${BOLD}COMMANDS${RESET}
                         ror scenario 'select-all; gather 5 4; wait wood>250'
                         ror scenario --file tests/scenarios/gather_test.scenario
                       Commands: select-all, gather X Y, right-click X Y,
-                        camera-to X Y, speed N, pause, unpause, screenshot [NAME],
+                        camera-to X Y, speed N, pause, unpause, screenshot [NAME] [--annotate],
                         wait CONDITION, sleep N, status, entities
   game-status         Query game state from the debug server (pretty-printed JSON)
   game-cmd <action> [key=value ...]
