@@ -46,12 +46,16 @@ func test_hide_screen_hides() -> void:
 	assert_bool(screen.visible).is_false()
 
 
-func test_three_civ_cards_created() -> void:
+func test_all_civ_cards_created() -> void:
 	var screen := _create_screen()
-	assert_int(screen._cards.size()).is_equal(3)
+	assert_int(screen._cards.size()).is_equal(7)
 	assert_bool(screen._cards.has("mesopotamia")).is_true()
 	assert_bool(screen._cards.has("rome")).is_true()
 	assert_bool(screen._cards.has("polynesia")).is_true()
+	assert_bool(screen._cards.has("egypt")).is_true()
+	assert_bool(screen._cards.has("china")).is_true()
+	assert_bool(screen._cards.has("vikings")).is_true()
+	assert_bool(screen._cards.has("maya")).is_true()
 
 
 func test_start_button_disabled_initially() -> void:
@@ -143,8 +147,8 @@ func test_ai_picker_has_random_plus_all_civs() -> void:
 	var screen := _create_screen()
 	# First item should be "Random"
 	assert_str(screen._ai_picker.get_item_text(0)).is_equal("Random")
-	# Should have 4 total items (Random + 3 civs)
-	assert_int(screen._ai_picker.item_count).is_equal(4)
+	# Should have 8 total items (Random + 7 civs)
+	assert_int(screen._ai_picker.item_count).is_equal(8)
 
 
 func test_card_displays_civ_name() -> void:
@@ -183,19 +187,27 @@ func test_start_does_nothing_without_selection() -> void:
 	assert_bool(screen.visible).is_true()
 
 
-func test_get_all_civ_ids_returns_three() -> void:
+func test_get_all_civ_ids_returns_seven() -> void:
 	var ids: Array = DataLoader.get_all_civ_ids()
-	assert_int(ids.size()).is_equal(3)
+	assert_int(ids.size()).is_equal(7)
 	assert_bool(ids.has("mesopotamia")).is_true()
 	assert_bool(ids.has("rome")).is_true()
 	assert_bool(ids.has("polynesia")).is_true()
+	assert_bool(ids.has("egypt")).is_true()
+	assert_bool(ids.has("china")).is_true()
+	assert_bool(ids.has("vikings")).is_true()
+	assert_bool(ids.has("maya")).is_true()
 
 
 func test_get_all_civ_ids_sorted() -> void:
 	var ids: Array = DataLoader.get_all_civ_ids()
-	assert_str(ids[0] as String).is_equal("mesopotamia")
-	assert_str(ids[1] as String).is_equal("polynesia")
-	assert_str(ids[2] as String).is_equal("rome")
+	assert_str(ids[0] as String).is_equal("china")
+	assert_str(ids[1] as String).is_equal("egypt")
+	assert_str(ids[2] as String).is_equal("maya")
+	assert_str(ids[3] as String).is_equal("mesopotamia")
+	assert_str(ids[4] as String).is_equal("polynesia")
+	assert_str(ids[5] as String).is_equal("rome")
+	assert_str(ids[6] as String).is_equal("vikings")
 
 
 func _find_child_by_name(parent: Node, child_name: String) -> Node:
