@@ -475,11 +475,16 @@ func _cmd_gather(peer: StreamPeerTCP, body: Dictionary) -> void:
 		_send_json(peer, 200, {"action": "gather", "error": "no resource node found near position"})
 		return
 	var units := _get_player_units(0)
-	var count := 0
+	var gatherers: Array[Node2D] = []
 	for unit: Node2D in units:
 		if "selected" in unit and unit.selected and unit.has_method("assign_gather_target"):
-			unit.assign_gather_target(target)
-			count += 1
+			gatherers.append(unit)
+	var offsets: Array[Vector2] = _gather_offsets(target, gatherers.size())
+	var count := 0
+	for i in gatherers.size():
+		var offset: Vector2 = offsets[i] if i < offsets.size() else Vector2.ZERO
+		gatherers[i].assign_gather_target(target, offset)
+		count += 1
 	_send_json(
 		peer,
 		200,
@@ -506,6 +511,29 @@ func _find_nearest_resource(world_pos: Vector2) -> Node2D:
 				best_dist = dist
 				best = child as Node2D
 	return best
+
+
+func _gather_offsets(target: Node2D, count: int) -> Array[Vector2]:
+	## Compute formation offsets around a gather target so units spread out.
+	if count <= 1:
+		return [Vector2.ZERO]
+	var root := get_tree().current_scene
+	if root == null or "_pathfinder" not in root or root._pathfinder == null:
+		var zeros: Array[Vector2] = []
+		zeros.resize(count)
+		zeros.fill(Vector2.ZERO)
+		return zeros
+	var nav_pos: Vector2 = target.global_position
+	if "grid_position" in target and target.grid_position != Vector2i.ZERO:
+		nav_pos = IsoUtils.grid_to_screen(Vector2(target.grid_position))
+	var center := IsoUtils.snap_to_grid(nav_pos)
+	var cells: Array[Vector2i] = root._pathfinder.get_formation_targets(center, count)
+	var result: Array[Vector2] = []
+	for cell in cells:
+		result.append(IsoUtils.grid_to_screen(Vector2(cell)) - nav_pos)
+	while result.size() < count:
+		result.append(Vector2.ZERO)
+	return result
 
 
 static func _get_player_resources(rm: Node) -> Dictionary:
