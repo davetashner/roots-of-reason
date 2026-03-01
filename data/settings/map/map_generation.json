@@ -41,6 +41,7 @@
   "terrain_smoothing_passes": 2,
   "forest_moisture_threshold": 0.55,
   "dirt_moisture_threshold": 0.30,
+  "desert_moisture_threshold": 0.25,
   "island_edge_width": 3,
   "island_falloff_width": 8,
   "coastline_generation": {
