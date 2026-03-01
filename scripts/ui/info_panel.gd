@@ -211,6 +211,10 @@ func show_building(building: Node2D) -> void:
 			var garrison_atk: int = building.get_garrison_attack()
 			if garrison_atk > 0:
 				stats_text += "  ATK: %d" % garrison_atk
+		# Garrison capacity indicator
+		if "garrison_capacity" in building and building.garrison_capacity > 0:
+			var garrisoned: int = building.get_garrisoned_count() if building.has_method("get_garrisoned_count") else 0
+			stats_text += "  Garrisoned: %d/%d" % [garrisoned, building.garrison_capacity]
 		# Damage state
 		var state_text := ""
 		if building.has_method("get_damage_state"):
@@ -471,8 +475,42 @@ func _update() -> void:
 		if _tracked_entity.under_construction:
 			var pct := int(_tracked_entity.build_progress * 100.0)
 			_stats_label.text = "Progress: %d%%" % pct
-		elif _tracked_entity.has_method("get_damage_state"):
-			_stats_label.text = _tracked_entity.get_damage_state().capitalize()
+		else:
+			var bstats := _get_building_stats(_tracked_entity as Node2D)
+			var defense: int = int(bstats.get("defense", 0))
+			var new_stats := "DEF: %d" % defense
+			if _tracked_entity.has_method("get_garrison_attack"):
+				var garrison_atk: int = _tracked_entity.get_garrison_attack()
+				if garrison_atk > 0:
+					new_stats += "  ATK: %d" % garrison_atk
+			if "garrison_capacity" in _tracked_entity and _tracked_entity.garrison_capacity > 0:
+				var garrisoned: int = (
+					_tracked_entity.get_garrisoned_count() if _tracked_entity.has_method("get_garrisoned_count") else 0
+				)
+				new_stats += "  Garrisoned: %d/%d" % [garrisoned, _tracked_entity.garrison_capacity]
+			var state_text := ""
+			if _tracked_entity.has_method("get_damage_state"):
+				var state: String = _tracked_entity.get_damage_state()
+				state_text = state.capitalize()
+			if _river_transport != null and _tracked_entity.building_name == "river_dock":
+				var dock_info: Dictionary = _river_transport.get_dock_info(_tracked_entity)
+				if not dock_info.is_empty():
+					var queued: int = dock_info.get("queued_total", 0)
+					var barges: int = dock_info.get("active_barge_count", 0)
+					var countdown: float = dock_info.get("time_until_next_dispatch", 0.0)
+					state_text = ("Queued: %d  Barges: %d  Next: %.0fs" % [queued, barges, countdown])
+			if _trade_manager != null and _tracked_entity.building_name == "market":
+				var market_info: Dictionary = _trade_manager.get_market_info(_tracked_entity)
+				if not market_info.is_empty():
+					var rates: Dictionary = market_info.get("rates", {})
+					var carts: int = market_info.get("active_cart_count", 0)
+					var rate_parts: Array[String] = []
+					for res_name: String in rates:
+						rate_parts.append("%s: %d" % [res_name.capitalize(), int(rates[res_name])])
+					state_text = (", ".join(rate_parts) + "  Carts: %d" % carts)
+			if state_text != "":
+				new_stats += "\n" + state_text
+			_stats_label.text = new_stats
 	else:
 		var unit: Node2D = _tracked_entity as Node2D
 		var stats := _get_unit_stats(unit)
