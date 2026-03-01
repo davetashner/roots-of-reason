@@ -28,7 +28,11 @@
           }
         },
         "half_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
-        "offset_y": { "type": "number" }
+        "offset_y": { "type": "number" },
+        "scales": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        }
       },
       "required": ["base_path", "states"],
       "additionalProperties": false
