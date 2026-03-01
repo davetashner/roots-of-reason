@@ -68,3 +68,51 @@ static func apply_island_mask(
 
 static func _min_edge_distance(pos: Vector2i, w: int, h: int) -> int:
 	return mini(mini(pos.x, w - 1 - pos.x), mini(pos.y, h - 1 - pos.y))
+
+
+static func smooth_terrain(
+	tile_grid: Dictionary,
+	map_width: int,
+	map_height: int,
+	passes: int = 1,
+) -> void:
+	## Majority-vote cellular automaton that replaces isolated terrain tiles
+	## with their most common neighbor type. Skips water tiles to preserve
+	## coastlines. Modifies tile_grid in-place.
+	var directions: Array[Vector2i] = [
+		Vector2i(-1, -1),
+		Vector2i(0, -1),
+		Vector2i(1, -1),
+		Vector2i(-1, 0),
+		Vector2i(1, 0),
+		Vector2i(-1, 1),
+		Vector2i(0, 1),
+		Vector2i(1, 1),
+	]
+	for _pass in passes:
+		var changes: Dictionary = {}
+		for y in map_height:
+			for x in map_width:
+				var pos := Vector2i(x, y)
+				var current: String = tile_grid.get(pos, "")
+				if current.is_empty() or current == "water":
+					continue
+				var counts: Dictionary = {}
+				for dir: Vector2i in directions:
+					var neighbor := pos + dir
+					var n_terrain: String = tile_grid.get(neighbor, "")
+					if n_terrain.is_empty() or n_terrain == "water":
+						continue
+					counts[n_terrain] = int(counts.get(n_terrain, 0)) + 1
+				if counts.is_empty():
+					continue
+				var best: String = current
+				var best_count: int = 0
+				for terrain: String in counts:
+					if int(counts[terrain]) > best_count:
+						best_count = int(counts[terrain])
+						best = terrain
+				if best != current and best_count >= 5:
+					changes[pos] = best
+		for pos: Vector2i in changes:
+			tile_grid[pos] = changes[pos]

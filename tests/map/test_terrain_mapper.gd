@@ -219,3 +219,82 @@ func test_different_seeds_produce_different_terrain() -> void:
 		if terrains1[pos] != terrains2.get(pos, ""):
 			differences += 1
 	assert_int(differences).is_greater(0)
+
+
+# -- Smooth terrain tests --
+
+
+func _build_grid(rows: Array) -> Dictionary:
+	## Helper: build tile_grid from 2D array of terrain strings.
+	var grid: Dictionary = {}
+	for y in rows.size():
+		var row: Array = rows[y]
+		for x in row.size():
+			grid[Vector2i(x, y)] = row[x]
+	return grid
+
+
+func test_smooth_terrain_removes_isolated_tile() -> void:
+	# 3x3 grid: center is "dirt" surrounded by 8 "grass" tiles
+	var grid := _build_grid(
+		[
+			["grass", "grass", "grass"],
+			["grass", "dirt", "grass"],
+			["grass", "grass", "grass"],
+		]
+	)
+	TerrainMapperScript.smooth_terrain(grid, 3, 3, 1)
+	# All 8 neighbors are grass, so dirt should flip to grass
+	assert_str(grid[Vector2i(1, 1)]).is_equal("grass")
+
+
+func test_smooth_terrain_preserves_majority() -> void:
+	# 3x3 grid: center is "grass" surrounded by 5 "grass" and 3 "dirt"
+	var grid := _build_grid(
+		[
+			["grass", "grass", "grass"],
+			["dirt", "grass", "dirt"],
+			["dirt", "grass", "grass"],
+		]
+	)
+	TerrainMapperScript.smooth_terrain(grid, 3, 3, 1)
+	# Center has 5 grass neighbors, should stay grass
+	assert_str(grid[Vector2i(1, 1)]).is_equal("grass")
+
+
+func test_smooth_terrain_skips_water() -> void:
+	# Water tiles should never be changed
+	var grid := _build_grid(
+		[
+			["grass", "grass", "grass"],
+			["grass", "water", "grass"],
+			["grass", "grass", "grass"],
+		]
+	)
+	TerrainMapperScript.smooth_terrain(grid, 3, 3, 1)
+	assert_str(grid[Vector2i(1, 1)]).is_equal("water")
+
+
+func test_smooth_terrain_zero_passes_no_change() -> void:
+	var grid := _build_grid(
+		[
+			["grass", "grass", "grass"],
+			["grass", "dirt", "grass"],
+			["grass", "grass", "grass"],
+		]
+	)
+	TerrainMapperScript.smooth_terrain(grid, 3, 3, 0)
+	assert_str(grid[Vector2i(1, 1)]).is_equal("dirt")
+
+
+func test_smooth_terrain_requires_supermajority() -> void:
+	# 4 grass vs 4 dirt neighbors — should NOT change (needs >= 5)
+	var grid := _build_grid(
+		[
+			["dirt", "grass", "dirt"],
+			["grass", "forest", "dirt"],
+			["grass", "grass", "dirt"],
+		]
+	)
+	TerrainMapperScript.smooth_terrain(grid, 3, 3, 1)
+	assert_str(grid[Vector2i(1, 1)]).is_equal("forest")

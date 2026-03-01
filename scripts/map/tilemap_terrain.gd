@@ -329,6 +329,11 @@ func _generate_map() -> void:
 			var terrain: String = mapper.get_terrain(elevation, moisture)
 			_tile_grid[pos] = terrain
 
+	# 4+. Smooth terrain to reduce single-tile outliers
+	var smoothing_passes: int = int(_map_gen_config.get("terrain_smoothing_passes", 0))
+	if smoothing_passes > 0:
+		TerrainMapperScript.smooth_terrain(_tile_grid, _map_width, _map_height, smoothing_passes)
+
 	# 4a. Reclassify water/land adjacency into shore/shallows/deep_water
 	var coast_gen := CoastlineGenerator.new()
 	coast_gen.configure(_map_gen_config.get("coastline_generation", {}))
