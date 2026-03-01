@@ -109,15 +109,18 @@
         "noise_seed_offset": 4200
       },
       "tree": {
-        "density_per_1000_tiles": 12,
+        "density_per_1000_tiles": 18,
         "terrain_affinity": { "forest": 1.0, "grass": 0.6, "dirt": 0.3 },
         "forbidden_terrain": ["water", "river", "mountain", "shallows", "deep_water", "shore", "canyon"],
-        "min_spacing": 2,
+        "min_spacing": 1,
         "noise_weight": 0.5,
         "noise_seed_offset": 4300,
-        "cluster_size_min": 3,
-        "cluster_size_max": 4,
-        "cluster_seed_offset": 4350
+        "cluster_size_min": 4,
+        "cluster_size_max": 7,
+        "cluster_seed_offset": 4350,
+        "forest_noise_frequency": 0.03,
+        "forest_noise_threshold": 0.3,
+        "forest_noise_seed_offset": 4500
       },
       "fish": {
         "density_per_1000_tiles": 4,
