@@ -1,0 +1,31 @@
+# resource_depletion.scenario — Villager handles tree exhaustion.
+# Tests gather→depletion→retarget-or-idle chain.
+# Trees have 50 yield, gather rate 0.4/s → depletes in 125 game-seconds.
+
+speed 10
+
+# Set up a controlled area with one tree and a lumber camp
+spawn tree 30 30
+place-building lumber_camp 32 30 0
+
+# Spawn a single villager and assign to gather
+spawn villager 30 28 0
+select-all
+gather 30 30
+
+# At 10x speed, 125 game-seconds = ~12.5 real seconds.
+# Wait for wood to increase (confirms gathering is working).
+wait wood>200 --timeout 20
+
+# Keep waiting for the tree to deplete.
+# Total 50 wood yield, carry capacity 10, so ~5 trips.
+# After tree depletes, villager should go idle or retarget.
+sleep 15
+
+# Verify wood has increased significantly (started at 200, tree gives ~50)
+assert wood>=230
+
+# Villager should still be alive
+assert-count --owner 0 --type villager >= 1
+
+screenshot resource_depletion_done --annotate

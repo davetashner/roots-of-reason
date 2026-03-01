@@ -1,0 +1,37 @@
+# save_load_economy.scenario — Economy survives save/load round-trip.
+# Tests that resource values persist through save and load.
+
+speed 5
+
+# Set specific resource values so we can verify them after load
+set-resources food=1000 wood=2000 gold=3000 stone=4000
+
+# Verify resources were set correctly
+assert food==1000
+assert wood==2000
+assert gold==3000
+assert stone==4000
+
+# Save game state
+save test_economy
+
+# Change resources to different values
+set-resources food=0 wood=0 gold=0 stone=0
+
+# Confirm resources are now zeroed
+assert food==0
+assert wood==0
+
+# Load the saved state
+load test_economy
+
+# Wait a moment for load to apply
+sleep 2
+
+# Verify resources restored to pre-save values
+assert food==1000
+assert wood==2000
+assert gold==3000
+assert stone==4000
+
+screenshot save_load_economy_done --annotate

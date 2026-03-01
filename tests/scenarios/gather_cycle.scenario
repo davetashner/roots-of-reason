@@ -1,0 +1,28 @@
+# gather_cycle.scenario — Villager gathers wood and deposits at drop-off.
+# Tests the full gather→walk→chop→carry→drop-off→resource-increment chain.
+
+# Speed up for faster test execution
+speed 5
+
+# Spawn a tree and a villager near each other in a neutral area
+spawn tree 30 30
+spawn villager 30 28 0
+
+# Place a lumber camp near the tree for drop-off
+place-building lumber_camp 32 30 0
+
+# Select all player units and assign to gather the tree
+select-all
+gather 30 30
+
+# Wait for at least one drop-off cycle (carry capacity=10, rate=0.4/s)
+# At 5x speed this should take ~6 real seconds
+wait wood>200 --timeout 30
+
+# Verify wood increased (started at 200, should have gained at least 10)
+assert wood>200
+
+# Verify the villager is still alive and doing something
+assert-count --owner 0 --type villager >= 1
+
+screenshot gather_cycle_done --annotate
