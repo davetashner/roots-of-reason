@@ -299,7 +299,7 @@ func test_can_train_blocked_with_no_barracks() -> void:
 
 func test_can_train_blocked_by_pop_cap() -> void:
 	_init_resources()
-	# Pop cap = 0 (starting=0) + 5 (TC bonus) = 5
+	# Pop cap = 0 (starting=0) + 10 (TC bonus) = 10
 	var pop_mgr := _create_pop_manager(0)
 	var tc := _create_town_center(1, Vector2i(50, 50))
 	pop_mgr.register_building(tc, 1)
@@ -307,9 +307,9 @@ func test_can_train_blocked_by_pop_cap() -> void:
 	var barracks := _create_barracks(1, Vector2i(45, 50), pop_mgr)
 	var own_barracks: Array[Node2D] = [barracks]
 	var own_factories: Array[Node2D] = []
-	# 3 military units / 5 cap = 60% >= 50% threshold
+	# 6 military units / 10 cap = 60% >= 50% threshold
 	var own_military: Array[Node2D] = []
-	for i in 3:
+	for i in 6:
 		var unit := _create_military_unit(1, "infantry", Vector2(i * 10, 0))
 		pop_mgr.register_unit(unit, 1)
 		own_military.append(unit)

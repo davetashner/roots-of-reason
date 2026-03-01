@@ -10,7 +10,7 @@
     "wood": 275,
     "stone": 100
   },
-  "population_bonus": 5,
+  "population_bonus": 10,
   "garrison_capacity": 15,
   "is_drop_off": true,
   "drop_off_types": [
