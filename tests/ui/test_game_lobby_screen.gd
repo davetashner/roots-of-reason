@@ -68,12 +68,16 @@ func test_map_size_options_present() -> void:
 	assert_bool(screen._map_size_keys.has("dev")).is_true()
 
 
-func test_three_civ_cards_created() -> void:
+func test_all_civ_cards_created() -> void:
 	var screen := _create_screen()
-	assert_int(screen._cards.size()).is_equal(3)
+	assert_int(screen._cards.size()).is_equal(7)
 	assert_bool(screen._cards.has("mesopotamia")).is_true()
 	assert_bool(screen._cards.has("rome")).is_true()
 	assert_bool(screen._cards.has("polynesia")).is_true()
+	assert_bool(screen._cards.has("egypt")).is_true()
+	assert_bool(screen._cards.has("china")).is_true()
+	assert_bool(screen._cards.has("vikings")).is_true()
+	assert_bool(screen._cards.has("maya")).is_true()
 
 
 func test_start_button_disabled_initially() -> void:
