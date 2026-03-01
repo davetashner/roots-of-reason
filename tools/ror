@@ -845,6 +845,35 @@ cmd_blender_render() {
     "$blender" --background --python "$PROJECT_ROOT/blender/render_isometric.py" -- "$@"
 }
 
+# ==================== blender-archer ====================
+cmd_blender_archer() {
+    local blender
+    blender=$(find_blender) || {
+        err "Blender not found. Set BLENDER_BIN or install Blender."
+        exit 1
+    }
+    cd "$PROJECT_ROOT"
+
+    local subject="archer"
+    local animations="idle,walk,attack,death"
+    local frames="4,8,6,6"
+
+    info "Step 1/2: Rendering geometric archer in Blender ..."
+    "$blender" --background --python "$PROJECT_ROOT/blender/render_isometric.py" -- \
+        "$subject" --type unit \
+        --animations "$animations" \
+        --frames-per-anim "$frames"
+
+    info "Step 2/2: Generating manifest + sprite config ..."
+    python3 "$PROJECT_ROOT/blender/generate_manifest.py" "$subject"
+
+    ok "Archer pipeline complete"
+    info "Rendered frames: blender/renders/$subject/"
+    info "Game sprites:    assets/sprites/units/$subject/"
+    info "Manifest:        assets/sprites/units/$subject/manifest.json"
+    info "Sprite config:   data/units/sprites/$subject.json"
+}
+
 # ==================== sprite-sheet ====================
 cmd_sprite_sheet() {
     cd "$PROJECT_ROOT"
@@ -2121,6 +2150,8 @@ ${BOLD}COMMANDS${RESET}
                         ror blender-render --poc             — PoC house, all 8 directions
                         ror blender-render house --footprint 2 --directions s sw
                         ror blender-render villager --type unit --directions s n
+  blender-archer        Render geometric archer (full pipeline: Blender → downscale → manifest)
+                        Produces 192 frames (4 anims × 8 dirs × variable frame counts)
   sprite-sheet <variant> [animation] [direction] [--png] [--speed MS]
                       Generate animated GIFs (default) or static contact sheets
                         ror sprite-sheet villager_woman walk_c s  — animated GIF
@@ -2211,6 +2242,7 @@ case "${1:-help}" in
     validate-assets|va) shift; cmd_validate_assets "$@" ;;
     process-sprite)     shift; cmd_process_sprite "$@" ;;
     blender-render)     shift; cmd_blender_render "$@" ;;
+    blender-archer)     shift; cmd_blender_archer "$@" ;;
     sprite-sheet)       shift; cmd_sprite_sheet "$@" ;;
     animate)            shift; cmd_animate "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
