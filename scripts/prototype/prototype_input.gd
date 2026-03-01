@@ -35,6 +35,7 @@ var _formation_manager: RefCounted = null
 var _formation_type: int = 0  # FormationManager.FormationType.STAGGERED
 var _river_overlay: Node = null
 var _command_handlers: Array[RefCounted] = []
+var _gather_handler: RefCounted = null
 
 
 func _ready() -> void:
@@ -77,15 +78,17 @@ func _load_formation_config() -> void:
 
 
 func _init_command_handlers() -> void:
+	var gather_handler := GatherCmdHandler.new()
 	_command_handlers = [
 		AttackCmdHandler.new(),
 		FeedCmdHandler.new(),
 		BuildCmdHandler.new(),
-		GatherCmdHandler.new(),
+		gather_handler,
 		GarrisonCmdHandler.new(),
 		EmbarkCmdHandler.new(),
 		DisembarkCmdHandler.new(),
 	]
+	_gather_handler = gather_handler
 
 
 func setup(
@@ -98,6 +101,8 @@ func setup(
 	_pathfinder = pathfinder
 	_target_detector = target_detector
 	_cursor_overlay = cursor_overlay
+	if _gather_handler != null and _pathfinder != null:
+		_gather_handler.setup(_pathfinder)
 
 
 func _refresh_units() -> void:

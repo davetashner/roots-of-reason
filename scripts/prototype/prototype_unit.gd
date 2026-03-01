@@ -471,12 +471,12 @@ func _tick_build(game_delta: float) -> void:
 		_build_target = null
 
 
-func assign_gather_target(node: Node2D) -> void:
+func assign_gather_target(node: Node2D, gather_offset: Vector2 = Vector2.ZERO) -> void:
 	_build_target = null
 	_pending_build_target_name = ""
 	_cancel_combat()
 	_cancel_feed()
-	_gatherer.assign_target(node)
+	_gatherer.assign_target(node, gather_offset)
 
 
 func assign_build_target(building: Node2D) -> void:

@@ -203,6 +203,18 @@ func test_gather_execute_calls_assign_gather_target() -> void:
 	assert_object(unit.assign_gather_target_arg).is_same(target)
 
 
+func test_gather_execute_passes_offset_to_multiple_units() -> void:
+	var handler: CommandHandler = GatherScript.new()
+	var target := _mock_target()
+	var unit_a := _mock_unit(["assign_gather_target"])
+	var unit_b := _mock_unit(["assign_gather_target"])
+	var units: Array[Node] = [unit_a, unit_b]
+	var result := handler.execute("gather", target, units, _pos)
+	assert_bool(result).is_true()
+	assert_bool(unit_a.assign_gather_target_called).is_true()
+	assert_bool(unit_b.assign_gather_target_called).is_true()
+
+
 func test_gather_execute_returns_false_for_wrong_cmd() -> void:
 	var handler: CommandHandler = GatherScript.new()
 	var target := _mock_target()

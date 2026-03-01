@@ -620,3 +620,36 @@ func test_moving_to_drop_off_enters_waiting_on_invalid_target() -> void:
 	gc.tick(0.016)
 	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.WAITING_FOR_DROP_OFF)
 	assert_int(gc.carried_amount).is_equal(5)
+
+
+# ---------------------------------------------------------------------------
+# gather_offset
+# ---------------------------------------------------------------------------
+
+
+func test_assign_target_with_offset_moves_to_offset_position() -> void:
+	var gc := _make_component()
+	var res := _make_resource(Vector2(40, 0))
+	gc.assign_target(res, Vector2(20, 10))
+	assert_vector(gc.gather_offset).is_equal(Vector2(20, 10))
+	var mu := _unit as MockUnit
+	assert_vector(mu._last_move_target).is_equal_approx(Vector2(60, 10), Vector2(0.01, 0.01))
+
+
+func test_cancel_resets_gather_offset() -> void:
+	var gc := _make_component()
+	var res := _make_resource()
+	gc.assign_target(res, Vector2(20, 10))
+	gc.cancel()
+	assert_vector(gc.gather_offset).is_equal(Vector2.ZERO)
+
+
+func test_save_load_preserves_gather_offset() -> void:
+	var gc := _make_component()
+	gc.gather_offset = Vector2(30, -15)
+	var state: Dictionary = gc.save_state()
+	assert_float(float(state["gather_offset_x"])).is_equal_approx(30.0, 0.01)
+	assert_float(float(state["gather_offset_y"])).is_equal_approx(-15.0, 0.01)
+	var gc2 := _make_component()
+	gc2.load_state(state)
+	assert_vector(gc2.gather_offset).is_equal_approx(Vector2(30, -15), Vector2(0.01, 0.01))
