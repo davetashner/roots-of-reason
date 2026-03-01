@@ -2057,11 +2057,13 @@ ${BOLD}COMMANDS${RESET}
                         ror process-sprite assets/sprites/buildings/lumber_camp_01.png
                         ror process-sprite source.png --canvas 256x192 --output out.png
                         ror process-sprite source.png --building barracks --dry-run
-  sprite-sheet <variant> [animation] [direction]
-                      Generate sprite contact sheets for animation verification
-                        ror sprite-sheet villager_woman walk_a s  — one direction
-                        ror sprite-sheet villager_woman walk_a    — all 8 directions
+  sprite-sheet <variant> [animation] [direction] [--png] [--speed MS]
+                      Generate animated GIFs (default) or static contact sheets
+                        ror sprite-sheet villager_woman walk_c s  — animated GIF
+                        ror sprite-sheet villager_woman walk_c    — GIF per direction
                         ror sprite-sheet villager_woman           — all animations
+                        ror sprite-sheet villager_woman walk_c --png  — static sheet
+                        ror sprite-sheet villager_woman walk_c --speed 150  — faster
   animate [animation] [direction]
                       Capture live animation filmstrips from the debug server
                         ror animate walk s              — filmstrip of walk-south
