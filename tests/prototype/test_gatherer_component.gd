@@ -626,6 +626,89 @@ func test_moving_to_drop_off_enters_waiting_on_invalid_target() -> void:
 
 
 # ---------------------------------------------------------------------------
+# Full gather-deposit-return cycle — verify return to ORIGINAL resource
+# ---------------------------------------------------------------------------
+
+
+func test_full_cycle_returns_to_original_resource_not_nearest() -> void:
+	# Setup: two trees — tree_far is the original target, tree_near is closer to the drop-off
+	ResourceManager.init_player(0, {})
+	var gc := _make_component()
+	gc.carry_capacity = 2
+	# tree_far: original target, far from drop-off but with plenty of yield
+	var tree_far := _make_resource(Vector2(200, 0), "wood", 50)
+	# tree_near: closer to drop-off, should NOT be selected after deposit
+	var tree_near := _make_resource(Vector2(-20, 0), "wood", 50)
+	var drop := _make_drop_off(Vector2(-50, 0))
+
+	# 1. Assign to the far tree
+	gc.assign_target(tree_far)
+	assert_bool(gc.gather_target == tree_far).is_true()
+
+	# 2. Simulate arrival at far tree
+	_unit.position = Vector2(200, 0)
+	_unit._moving = false
+	gc.tick(0.0)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.GATHERING)
+
+	# 3. Fill carry capacity (2 units)
+	gc.carried_amount = 1
+	gc.gather_accumulator = 0.9
+	gc.tick(0.75)  # 0.75s * 0.4/s = 0.3 → accum ~1.2 → extract 1 → carried=2 → full
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_DROP_OFF)
+
+	# 4. Simulate arrival at drop-off
+	_unit.position = Vector2(-50, 0)
+	_unit._moving = false
+	gc.tick(0.0)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.DEPOSITING)
+
+	# 5. Deposit — should return to tree_far, not tree_near
+	gc.tick(0.0)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_RESOURCE)
+	assert_bool(gc.gather_target == tree_far).is_true()
+	# Verify move target is towards tree_far (200,0), not tree_near (-20,0)
+	var mu := _unit as MockUnit
+	assert_float(mu._last_move_target.x).is_greater(100.0)
+
+
+func test_full_cycle_finds_nearest_replacement_when_original_depleted() -> void:
+	# When original is depleted, replacement search finds nearest to unit (at drop-off)
+	ResourceManager.init_player(0, {})
+	var gc := _make_component()
+	gc.carry_capacity = 2
+	# tree_original: yield=1 so extracting 1 depletes it
+	var tree_original := _make_resource(Vector2(200, 0), "wood", 1)
+	# tree_near_drop: closer to drop-off position
+	var tree_near_drop := _make_resource(Vector2(-20, 0), "wood", 50)
+	var drop := _make_drop_off(Vector2(-50, 0))
+
+	gc.assign_target(tree_original)
+	_unit.position = Vector2(200, 0)
+	_unit._moving = false
+	gc.tick(0.0)  # transition to GATHERING
+
+	# Gather the 1 remaining yield — tree depletes, villager has carry room left
+	gc.carried_amount = 0
+	gc.gather_accumulator = 0.9
+	gc.tick(0.5)  # accum += 0.4*0.5 = 0.2 → total 1.1 → extract 1 → tree to 0
+	assert_int(tree_original.current_yield).is_equal(0)
+	# Next tick detects depletion and starts drop-off with partial load
+	gc.tick(0.0)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_DROP_OFF)
+
+	# Arrive at drop-off
+	_unit.position = Vector2(-50, 0)
+	_unit._moving = false
+	gc.tick(0.0)  # → DEPOSITING
+	gc.tick(0.0)  # deposit tick → original depleted → replacement search
+
+	# Should find replacement (tree_near_drop) since original is depleted
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_RESOURCE)
+	assert_bool(gc.gather_target == tree_near_drop).is_true()
+
+
+# ---------------------------------------------------------------------------
 # gather_offset
 # ---------------------------------------------------------------------------
 
