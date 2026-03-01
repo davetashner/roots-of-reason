@@ -684,6 +684,17 @@ func _cancel_gather() -> void:
 	_gatherer.cancel()
 
 
+func cancel_all_tasks() -> void:
+	## Cancel every active task — used by the input handler when the player
+	## issues a manual move command so the unit doesn't resume old work.
+	_cancel_gather()
+	_cancel_combat()
+	_cancel_feed()
+	_cancel_explore()
+	_build_target = null
+	_pending_build_target_name = ""
+
+
 func _die() -> void:
 	if _is_dead:
 		return

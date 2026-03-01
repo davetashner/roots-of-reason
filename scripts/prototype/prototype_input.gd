@@ -326,10 +326,10 @@ func _move_selected(world_pos: Vector2) -> void:
 	selected = _filter_barges(selected)
 	if selected.is_empty():
 		return
-	# Cancel explore on manual move
+	# Cancel all active tasks on manual move
 	for unit in selected:
-		if unit.has_method("_cancel_explore"):
-			unit._cancel_explore()
+		if unit.has_method("cancel_all_tasks"):
+			unit.cancel_all_tasks()
 	_show_click_marker(world_pos)
 	# Compute formation offsets
 	var first_pos: Vector2 = (selected[0] as Node2D).global_position
