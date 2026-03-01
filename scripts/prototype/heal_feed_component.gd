@@ -28,10 +28,9 @@ func tick(game_delta: float) -> void:
 
 
 func _tick_feed(game_delta: float) -> void:
-	if feed_target == null:
-		return
 	if not is_instance_valid(feed_target):
-		_clear_feed_state()
+		if is_feeding:
+			_clear_feed_state()
 		return
 	var wolf_ai: Node = feed_target.get_node_or_null("WolfAI")
 	if wolf_ai == null:
