@@ -118,6 +118,17 @@ func _tick_depositing() -> void:
 	var res_enum: Variant = _resource_type_to_enum(gather_type)
 	if res_enum != null:
 		ResourceManager.add_resource(_unit.owner_id, res_enum, carried_amount)
+	var drop_name: String = ""
+	if drop_off_target != null and "building_name" in drop_off_target:
+		drop_name = str(drop_off_target.building_name)
+	var rate: float = float(gather_rates.get(gather_type, 0.0))
+	var log_extras := {
+		"drop_off_building": drop_name,
+		"carry_capacity": carry_capacity,
+		"gather_rate": rate,
+		"gather_multiplier": gather_rate_multiplier,
+	}
+	EconomyLogger.log_deposit(_unit, _unit.owner_id, gather_type, carried_amount, log_extras)
 	carried_amount = 0
 	drop_off_target = null
 	# Return to resource or find replacement
