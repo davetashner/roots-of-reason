@@ -222,6 +222,8 @@ func _on_command_pressed(command: Dictionary) -> void:
 			_issue_unload()
 		"ungarrison":
 			_issue_ungarrison()
+		"produce":
+			_execute_production(command)
 
 
 func _issue_stop() -> void:
@@ -288,12 +290,52 @@ func _execute_trade(command: Dictionary) -> void:
 	_trade_manager.execute_exchange(_player_id, sell_resource, sell_amount)
 
 
+func _execute_production(command: Dictionary) -> void:
+	if _input_handler == null:
+		return
+	var unit_type: String = command.get("unit", "")
+	if unit_type == "":
+		return
+	var selected: Array = _input_handler._get_selected_units()
+	for building in selected:
+		if not is_instance_valid(building):
+			continue
+		var pq: Node = building.get_node_or_null("ProductionQueue")
+		if pq != null and pq.has_method("add_to_queue"):
+			pq.add_to_queue(unit_type)
+
+
+func _check_produce_affordability(command: Dictionary) -> bool:
+	var unit_type: String = command.get("unit", "")
+	if unit_type == "":
+		return true
+	var stats: Dictionary = _load_unit_stats(unit_type)
+	if stats.is_empty():
+		return true
+	var raw_costs: Dictionary = stats.get("train_cost", {})
+	var costs: Dictionary = _parse_costs(raw_costs)
+	return ResourceManager.can_afford(_player_id, costs)
+
+
+func _load_unit_stats(unit_type: String) -> Dictionary:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_unit_stats(unit_type)
+	var dl: Node = null
+	if is_instance_valid(Engine.get_main_loop()):
+		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+	if dl != null and dl.has_method("get_unit_stats"):
+		return dl.get_unit_stats(unit_type)
+	return {}
+
+
 func _check_affordability(command: Dictionary) -> bool:
 	var action: String = command.get("action", "")
 	if action == "build":
 		return _check_build_affordability(command)
 	if action == "trade":
 		return _check_trade_affordability(command)
+	if action == "produce":
+		return _check_produce_affordability(command)
 	return true
 
 

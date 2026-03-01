@@ -1,9 +1,15 @@
 {
   "name": "Ziggurat",
   "hp": 800,
-  "footprint": [2, 2],
+  "footprint": [
+    2,
+    2
+  ],
   "build_time": 40,
-  "build_cost": { "wood": 150, "gold": 50 },
+  "build_cost": {
+    "wood": 150,
+    "gold": 50
+  },
   "population_bonus": 0,
   "garrison_capacity": 0,
   "is_drop_off": false,
@@ -11,5 +17,6 @@
   "units_produced": [],
   "age_required": 2,
   "placement_constraint": "",
-  "knowledge_rate": 0.75
+  "knowledge_rate": 0.75,
+  "defense": 0
 }

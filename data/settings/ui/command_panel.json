@@ -27,6 +27,9 @@
       {"id": "sell_wood", "label": "Sell Wood", "tooltip": "Sell 100 Wood for Gold", "action": "trade", "sell_resource": "wood", "sell_amount": 100},
       {"id": "sell_stone", "label": "Sell Stone", "tooltip": "Sell 100 Stone for Gold", "action": "trade", "sell_resource": "stone", "sell_amount": 100}
     ],
+    "town_center": [
+      {"id": "produce_villager", "label": "Villager", "tooltip": "Train Villager (50 Food, 20s)", "action": "produce", "unit": "villager"}
+    ],
     "factory": [
       {"id": "produce_tank", "label": "Tank", "tooltip": "Train Tank (200 Gold, 100 Stone)", "action": "produce", "unit": "tank"},
       {"id": "produce_artillery", "label": "Artillery", "tooltip": "Train Artillery (150 Wood, 250 Gold)", "action": "produce", "unit": "artillery"}

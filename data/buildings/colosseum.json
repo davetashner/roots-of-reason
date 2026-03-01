@@ -1,14 +1,21 @@
 {
   "name": "Colosseum",
   "hp": 1000,
-  "footprint": [3, 3],
+  "footprint": [
+    3,
+    3
+  ],
   "build_time": 45,
-  "build_cost": { "wood": 175 },
+  "build_cost": {
+    "wood": 175
+  },
   "population_bonus": 0,
   "garrison_capacity": 0,
   "is_drop_off": false,
   "drop_off_types": [],
-  "units_produced": ["trade_cart"],
+  "units_produced": [
+    "trade_cart"
+  ],
   "age_required": 1,
   "placement_constraint": "",
   "trade_rates": {
@@ -19,5 +26,6 @@
   },
   "morale_aura": true,
   "morale_aura_radius": 6,
-  "morale_speed_bonus": 0.05
+  "morale_speed_bonus": 0.05,
+  "defense": 0
 }
