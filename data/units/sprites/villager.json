@@ -17,7 +17,7 @@
     },
     "villager_woman": {
       "idle": ["idle"],
-      "walk": ["walk_a", "walk_b", "walk_c"],
+      "walk": ["walk_a", "walk_b", "walk_c", "walk_d"],
       "gather": ["gather"],
       "chop": ["chop"],
       "attack": ["gather"],
