@@ -912,6 +912,20 @@ cmd_validate_assets() {
     return $exit_code
 }
 
+# ==================== validate-sprites ====================
+cmd_validate_sprites() {
+    cd "$PROJECT_ROOT"
+    info "Validating rendered unit sprites ..."
+    python3 "$SCRIPT_DIR/validate_sprites.py" "$@"
+    local exit_code=$?
+    if [[ $exit_code -eq 0 ]]; then
+        ok "Sprite validation passed"
+    else
+        err "Sprite validation failed"
+    fi
+    return $exit_code
+}
+
 # ==================== data-check ====================
 cmd_data_check() {
     cd "$PROJECT_ROOT"
@@ -2149,6 +2163,10 @@ ${BOLD}COMMANDS${RESET}
   validate-assets [-v] Validate assets against ADR-008 rules (alias: va)
                         ror validate-assets         — check all assets
                         ror validate-assets -v      — verbose output
+  validate-sprites [opts]  Validate rendered unit sprite sets (alias: vs)
+                        ror validate-sprites            — check all units
+                        ror validate-sprites --unit archer  — check one unit
+                        ror validate-sprites -v         — verbose output
   data-check [opts]   Validate JSON data files against schemas
                         ror data-check              — check all data files
                         ror data-check --verbose    — show per-file detail
@@ -2262,6 +2280,7 @@ case "${1:-help}" in
     gen-sprites)        shift; cmd_gen_sprites "$@" ;;
     scene-tree)         shift; cmd_scene_tree "$@" ;;
     validate-assets|va) shift; cmd_validate_assets "$@" ;;
+    validate-sprites|vs) shift; cmd_validate_sprites "$@" ;;
     process-sprite)     shift; cmd_process_sprite "$@" ;;
     blender-render)     shift; cmd_blender_render "$@" ;;
     blender-archer)     shift; cmd_blender_archer "$@" ;;
