@@ -1,0 +1,26 @@
+# combat_resolution.scenario — Verify unit combat outcomes.
+# Tests target-detection→engagement→damage-resolution→death-cleanup chain.
+# Archers get 1.5x bonus vs cavalry, so 3 archers should beat 1 cavalry.
+
+speed 5
+
+# Spawn 3 player archers grouped together
+spawn archer 30 30 0
+spawn archer 30 31 0
+spawn archer 31 30 0
+
+# Spawn 1 enemy cavalry nearby (within aggro range of 6 tiles)
+spawn cavalry 33 30 1
+
+# Wait for combat to resolve. Cavalry HP=50, archers deal 5*1.5=7.5 per hit
+# at 2.0s cooldown. 3 archers = ~11 dmg/s. Should die in ~5 game-seconds.
+# At 5x speed that's ~1 real second, but give generous margin for pathfinding.
+sleep 8
+
+# Verify the enemy cavalry is dead (no enemy units remain)
+assert-count --owner 1 == 0
+
+# Verify at least 2 of 3 archers survived (cavalry deals 8 dmg, 1.2s cooldown)
+assert-count --owner 0 --type archer >= 2
+
+screenshot combat_resolution_done --annotate

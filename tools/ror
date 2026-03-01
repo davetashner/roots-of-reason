@@ -1686,12 +1686,33 @@ _run_scenario_step() {
         assert)
             _scenario_assert "$args_str"
             ;;
+        set-resources)
+            # set-resources food=500 wood=300 gold=200 stone=100
+            if [[ -z "$args_str" ]]; then
+                err "set-resources requires key=value pairs (e.g. set-resources food=500 wood=300)"
+                return 1
+            fi
+            local -a sr_args=("set-resources")
+            for word in $args_str; do
+                sr_args+=("$word")
+            done
+            cmd_game_cmd "${sr_args[@]}"
+            ;;
+        save)
+            local save_slot="${args_str:-debug_scenario}"
+            cmd_game_cmd "save" "slot=$save_slot"
+            ;;
+        load)
+            local load_slot="${args_str:-debug_scenario}"
+            cmd_game_cmd "load" "slot=$load_slot"
+            ;;
         *)
             err "Unknown scenario command: $cmd"
             echo "  Available: select-all, gather X Y, right-click X Y, camera-to X Y,"
             echo "  speed N, pause, unpause, screenshot [NAME], wait CONDITION,"
             echo "  sleep N, status, entities, spawn TYPE X Y [OWNER], teleport X Y,"
             echo "  place-building NAME X Y [OWNER] [--under-construction], stop,"
+            echo "  set-resources KEY=VAL ..., save [SLOT], load [SLOT],"
             echo "  assert CONDITION, assert-count FILTERS OP VALUE,"
             echo "  assert-no-idle, assert-building-at NAME X Y, assert-entity-hp FILTER OP VALUE"
             return 1

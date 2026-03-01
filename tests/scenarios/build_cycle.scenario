@@ -1,0 +1,27 @@
+# build_cycle.scenario — Place and construct a building.
+# Tests villager→build-assignment→construction-progress→completion chain.
+
+speed 5
+
+# Ensure we have enough resources for a house (25 wood)
+set-resources wood=500
+
+# Place a house under construction at a clear grid position
+place-building house 25 25 0 --under-construction
+
+# Spawn a villager near the house
+spawn villager 25 23 0
+
+# Select the villager and assign to build (right-click the building)
+select-all
+right-click 25 25
+
+# Wait for construction to complete. House build_time=25s, at 5x speed ~5s real.
+# Give extra margin for pathfinding.
+sleep 12
+
+# Verify the building exists and is fully built (HP should equal max_hp=550)
+assert-building-at house 25 25
+assert-entity-hp --type house >= 550
+
+screenshot build_cycle_done --annotate
