@@ -886,6 +886,12 @@ cmd_pack_sprites() {
     python3 "$SCRIPT_DIR/spritesheet_packer.py" "$@"
 }
 
+# ==================== asset-pipeline ====================
+cmd_asset_pipeline() {
+    cd "$PROJECT_ROOT"
+    python3 "$SCRIPT_DIR/asset_pipeline.py" "$@"
+}
+
 # ==================== animate ====================
 cmd_animate() {
     cd "$PROJECT_ROOT"
@@ -2158,6 +2164,11 @@ ${BOLD}COMMANDS${RESET}
                         ror blender-render villager --type unit --directions s n
   blender-archer        Render geometric archer (full pipeline: Blender → downscale → manifest)
                         Produces 192 frames (4 anims × 8 dirs × variable frame counts)
+  asset-pipeline <subject> [opts]  (alias: pipeline)
+                      Run full 3D-to-2D asset pipeline (render → manifest → pack → validate)
+                        ror asset-pipeline archer --type unit
+                        ror pipeline archer --skip-render   — reprocess existing renders
+                        ror pipeline house --type building --footprint 2
   pack-sprites <subject> [opts]
                       Pack individual sprite PNGs into atlas spritesheets
                         ror pack-sprites villager            — pack villager sprites
@@ -2256,6 +2267,7 @@ case "${1:-help}" in
     blender-archer)     shift; cmd_blender_archer "$@" ;;
     sprite-sheet)       shift; cmd_sprite_sheet "$@" ;;
     pack-sprites)       shift; cmd_pack_sprites "$@" ;;
+    asset-pipeline|pipeline) shift; cmd_asset_pipeline "$@" ;;
     animate)            shift; cmd_animate "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
     split-sprites)      shift; cmd_split_sprites "$@" ;;
