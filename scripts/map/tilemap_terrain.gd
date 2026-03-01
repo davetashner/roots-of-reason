@@ -334,7 +334,13 @@ func _generate_map() -> void:
 	if smoothing_passes > 0:
 		TerrainMapperScript.smooth_terrain(_tile_grid, _map_width, _map_height, smoothing_passes)
 
-	# 4++. Blend biome borders for softer transitions
+	# 4++. Add clearings in forest zones for micro-variation
+	var clearing_chance: float = float(_map_gen_config.get("clearing_chance", 0.0))
+	if clearing_chance > 0.0:
+		var clearing_seed: int = _seed_value + int(_map_gen_config.get("clearing_seed_offset", 7000))
+		TerrainMapperScript.add_forest_clearings(_tile_grid, _map_width, _map_height, clearing_seed, clearing_chance)
+
+	# 4+++. Blend biome borders for softer transitions
 	var blend_chance: float = float(_map_gen_config.get("border_blend_chance", 0.0))
 	if blend_chance > 0.0:
 		TerrainMapperScript.blend_borders(_tile_grid, _map_width, _map_height, _seed_value, blend_chance)

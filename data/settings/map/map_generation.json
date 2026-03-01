@@ -40,6 +40,8 @@
   },
   "terrain_smoothing_passes": 2,
   "border_blend_chance": 0.3,
+  "clearing_chance": 0.15,
+  "clearing_seed_offset": 7000,
   "forest_moisture_threshold": 0.55,
   "dirt_moisture_threshold": 0.30,
   "desert_moisture_threshold": 0.25,

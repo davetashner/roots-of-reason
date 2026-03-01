@@ -133,6 +133,29 @@ static func smooth_terrain(
 			tile_grid[pos] = changes[pos]
 
 
+static func add_forest_clearings(
+	tile_grid: Dictionary,
+	map_width: int,
+	map_height: int,
+	base_seed: int,
+	clearing_chance: float = 0.15,
+) -> void:
+	## Converts a fraction of "forest" tiles to "grass" to create natural
+	## meadow clearings. Uses deterministic per-position hashing.
+	var changes: Dictionary = {}
+	for y in map_height:
+		for x in map_width:
+			var pos := Vector2i(x, y)
+			if tile_grid.get(pos, "") != "forest":
+				continue
+			var hash_val: int = absi(base_seed + x * 6271 + y * 91813)
+			var roll: float = float(hash_val % 1000) / 1000.0
+			if roll < clearing_chance:
+				changes[pos] = "grass"
+	for pos: Vector2i in changes:
+		tile_grid[pos] = changes[pos]
+
+
 static func blend_borders(
 	tile_grid: Dictionary,
 	map_width: int,
