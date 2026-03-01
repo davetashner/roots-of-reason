@@ -477,6 +477,50 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
+func _find_build_destination(building: Node2D) -> Vector2:
+	## Find the nearest passable cell adjacent to the building footprint.
+	if not ("grid_pos" in building and "footprint" in building) or _pathfinder == null:
+		return building.global_position
+	var footprint_set: Dictionary = {}
+	var cells: Array[Vector2i] = BuildingValidator.get_footprint_cells(building.grid_pos, building.footprint)
+	for cell: Vector2i in cells:
+		footprint_set[cell] = true
+	var origin_screen := IsoUtils.grid_to_screen(Vector2(building.grid_pos))
+	var best_pos := building.global_position
+	var best_dist := INF
+	for cell: Vector2i in cells:
+		for dx in range(-1, 2):
+			for dy in range(-1, 2):
+				if dx == 0 and dy == 0:
+					continue
+				var neighbor := cell + Vector2i(dx, dy)
+				if footprint_set.has(neighbor):
+					continue
+				if _pathfinder.has_method("is_cell_solid") and _pathfinder.is_cell_solid(neighbor):
+					continue
+				var nb_pos := building.global_position + IsoUtils.grid_to_screen(Vector2(neighbor)) - origin_screen
+				var d := position.distance_to(nb_pos)
+				if d < best_dist:
+					best_dist = d
+					best_pos = nb_pos
+	return best_pos
+
+
+func _nearest_footprint_pos(building: Node2D) -> Vector2:
+	if not ("grid_pos" in building and "footprint" in building):
+		return building.global_position
+	var origin_screen := IsoUtils.grid_to_screen(Vector2(building.grid_pos))
+	var best_pos := building.global_position
+	var best_dist := INF
+	for cell: Vector2i in BuildingValidator.get_footprint_cells(building.grid_pos, building.footprint):
+		var cell_pos := building.global_position + IsoUtils.grid_to_screen(Vector2(cell)) - origin_screen
+		var d := position.distance_to(cell_pos)
+		if d < best_dist:
+			best_dist = d
+			best_pos = cell_pos
+	return best_pos
+
+
 func _tick_build(game_delta: float) -> void:
 	if _build_target == null:
 		return
@@ -486,7 +530,7 @@ func _tick_build(game_delta: float) -> void:
 	if not _build_target.under_construction:
 		_build_target = null
 		return
-	var dist: float = position.distance_to(_build_target.global_position)
+	var dist: float = position.distance_to(_nearest_footprint_pos(_build_target))
 	if dist > _build_reach:
 		return
 	# Stop moving — we're in range
@@ -554,7 +598,13 @@ func assign_build_target(building: Node2D) -> void:
 	_cancel_feed()
 	_cancel_explore()
 	_build_target = building
-	move_to(building.global_position)
+	var dest := _find_build_destination(building)
+	if _pathfinder and _pathfinder.has_method("find_path_world"):
+		var path: Array[Vector2] = _pathfinder.find_path_world(position, dest)
+		if path.size() > 0:
+			follow_path(path)
+			return
+	move_to(dest)
 
 
 func is_idle() -> bool:
