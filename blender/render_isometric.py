@@ -9,6 +9,7 @@ Usage (called via Blender):
 
 Or via the CLI wrapper:
     ./tools/ror blender-render --poc
+    ./tools/ror blender-archer
 """
 
 import argparse
@@ -39,6 +40,12 @@ CANVAS_2X = {
     4: (1024, 640),
     5: (1280, 768),
 }
+
+# 2x canvas for unit rendering (256x256 → downscaled to 128x128)
+UNIT_CANVAS_2X = (256, 256)
+
+# Ortho scale for units — tuned so ~1.8m figure is ~52-56px on 128x128 canvas
+UNIT_ORTHO_SCALE = 2.8
 
 # 8 direction azimuths (degrees, clockwise from camera's perspective)
 # S is the default "front" view for isometric sprites
@@ -92,11 +99,14 @@ def clear_scene():
             bpy.data.cameras.remove(block)
 
 
-def setup_camera(azimuth_deg, footprint):
+def setup_camera(azimuth_deg, footprint=None, asset_type="building"):
     """Create an orthographic camera at isometric angle."""
     cam_data = bpy.data.cameras.new("IsoCam")
     cam_data.type = "ORTHO"
-    cam_data.ortho_scale = ORTHO_SCALE[footprint]
+    if asset_type == "unit":
+        cam_data.ortho_scale = UNIT_ORTHO_SCALE
+    else:
+        cam_data.ortho_scale = ORTHO_SCALE[footprint]
 
     cam_obj = bpy.data.objects.new("IsoCam", cam_data)
     bpy.context.scene.collection.objects.link(cam_obj)
@@ -157,7 +167,7 @@ def setup_lighting():
 # Render config
 # ---------------------------------------------------------------------------
 
-def setup_render(footprint):
+def setup_render(footprint=None, asset_type="building"):
     """Configure render settings for transparent isometric output."""
     scene = bpy.context.scene
     render = scene.render
@@ -169,7 +179,10 @@ def setup_render(footprint):
         scene.render.engine = "BLENDER_EEVEE"
 
     # Resolution at 2x canvas
-    w, h = CANVAS_2X[footprint]
+    if asset_type == "unit":
+        w, h = UNIT_CANVAS_2X
+    else:
+        w, h = CANVAS_2X[footprint]
     render.resolution_x = w
     render.resolution_y = h
     render.resolution_percentage = 100
@@ -219,26 +232,25 @@ def _create_magenta_material():
     return mat
 
 
-def _create_wall_material():
-    """Simple diffuse material for house walls."""
-    mat = bpy.data.materials.new("HouseWall")
+def _create_diffuse_material(name, color):
+    """Create a simple Principled BSDF material with a given base color."""
+    mat = bpy.data.materials.new(name)
     if _NEEDS_USE_NODES:
         mat.use_nodes = True
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
     if bsdf:
-        bsdf.inputs["Base Color"].default_value = (0.6, 0.5, 0.35, 1.0)
+        bsdf.inputs["Base Color"].default_value = color
     return mat
+
+
+def _create_wall_material():
+    """Simple diffuse material for house walls."""
+    return _create_diffuse_material("HouseWall", (0.6, 0.5, 0.35, 1.0))
 
 
 def _create_roof_material():
     """Simple diffuse material for house roof."""
-    mat = bpy.data.materials.new("HouseRoof")
-    if _NEEDS_USE_NODES:
-        mat.use_nodes = True
-    bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    if bsdf:
-        bsdf.inputs["Base Color"].default_value = (0.7, 0.2, 0.15, 1.0)
-    return mat
+    return _create_diffuse_material("HouseRoof", (0.7, 0.2, 0.15, 1.0))
 
 
 def build_poc_house():
@@ -285,7 +297,198 @@ def build_poc_house():
 
 
 # ---------------------------------------------------------------------------
-# Render loop
+# Geometric archer model
+# ---------------------------------------------------------------------------
+
+def build_geometric_archer():
+    """Build a geometric archer: cylinder body, sphere head, cone hat, stick bow.
+
+    All parts are parented to an empty at the origin for easy posing.
+    Returns the root empty object.
+    """
+    magenta_mat = _create_magenta_material()
+    body_mat = _create_diffuse_material("ArcherBody", (0.35, 0.25, 0.18, 1.0))
+    skin_mat = _create_diffuse_material("ArcherSkin", (0.85, 0.65, 0.50, 1.0))
+    hat_mat = _create_diffuse_material("ArcherHat", (0.15, 0.35, 0.15, 1.0))
+    bow_mat = _create_diffuse_material("ArcherBow", (0.45, 0.30, 0.15, 1.0))
+
+    # Root empty — all parts parented here
+    bpy.ops.object.empty_add(type="PLAIN_AXES", location=(0, 0, 0))
+    root = bpy.context.active_object
+    root.name = "ArcherRoot"
+
+    # Torso — cylinder
+    bpy.ops.mesh.primitive_cylinder_add(
+        radius=0.2, depth=0.6, location=(0, 0, 0.55)
+    )
+    torso = bpy.context.active_object
+    torso.name = "ArcherTorso"
+    torso.data.materials.append(body_mat)
+    torso.parent = root
+
+    # Magenta sash/belt — thin cylinder around waist
+    bpy.ops.mesh.primitive_cylinder_add(
+        radius=0.22, depth=0.08, location=(0, 0, 0.30)
+    )
+    sash = bpy.context.active_object
+    sash.name = "ArcherSash"
+    sash.data.materials.append(magenta_mat)
+    sash.parent = root
+
+    # Legs — two thin cylinders
+    for side, x_off in [("L", -0.08), ("R", 0.08)]:
+        bpy.ops.mesh.primitive_cylinder_add(
+            radius=0.07, depth=0.5, location=(x_off, 0, 0.12)
+        )
+        leg = bpy.context.active_object
+        leg.name = f"ArcherLeg{side}"
+        leg.data.materials.append(body_mat)
+        leg.parent = root
+
+    # Head — sphere
+    bpy.ops.mesh.primitive_uv_sphere_add(
+        radius=0.18, location=(0, 0, 1.0)
+    )
+    head = bpy.context.active_object
+    head.name = "ArcherHead"
+    head.data.materials.append(skin_mat)
+    head.parent = root
+
+    # Hat/helmet — cone on top of head
+    bpy.ops.mesh.primitive_cone_add(
+        radius1=0.2, depth=0.25, location=(0, 0, 1.22)
+    )
+    hat = bpy.context.active_object
+    hat.name = "ArcherHat"
+    hat.data.materials.append(hat_mat)
+    hat.parent = root
+
+    # Bow arm — small cylinder extending left
+    bpy.ops.mesh.primitive_cylinder_add(
+        radius=0.04, depth=0.35, location=(-0.35, 0, 0.65)
+    )
+    arm = bpy.context.active_object
+    arm.name = "ArcherBowArm"
+    arm.rotation_euler = (0, math.radians(90), 0)
+    bpy.ops.object.transform_apply(rotation=True)
+    arm.data.materials.append(skin_mat)
+    arm.parent = root
+
+    # Bow — torus arc (half-ring)
+    bpy.ops.mesh.primitive_torus_add(
+        major_radius=0.3, minor_radius=0.02,
+        location=(-0.5, 0, 0.65)
+    )
+    bow = bpy.context.active_object
+    bow.name = "ArcherBow"
+    bow.rotation_euler = (math.radians(90), 0, 0)
+    bow.scale = (1.0, 1.0, 0.6)
+    bpy.ops.object.transform_apply(rotation=True, scale=True)
+    bow.data.materials.append(bow_mat)
+    bow.parent = root
+
+    print("  Built geometric archer model")
+    return root
+
+
+# ---------------------------------------------------------------------------
+# Archer animation poses
+# ---------------------------------------------------------------------------
+
+def animate_archer(root, animation, frame, total_frames):
+    """Set the archer pose for a given animation frame.
+
+    Applies transforms directly to the root empty and child objects.
+    Each call sets a discrete pose — no Blender keyframe interpolation.
+    """
+    # Normalize frame progress [0, 1)
+    t = frame / total_frames
+
+    # Reset root transform
+    root.location = (0, 0, 0)
+    root.rotation_euler = (0, 0, 0)
+
+    # Find child objects by name
+    children = {obj.name: obj for obj in root.children}
+    bow = children.get("ArcherBow")
+    bow_arm = children.get("ArcherBowArm")
+
+    if animation == "idle":
+        # Subtle body sway: rotate torso ±3° around Y
+        sway = math.sin(t * 2 * math.pi) * math.radians(3)
+        root.rotation_euler = (0, sway, 0)
+
+    elif animation == "walk":
+        # Bob up/down + lean forward cyclically
+        bob = abs(math.sin(t * 2 * math.pi)) * 0.05
+        lean = math.sin(t * 2 * math.pi) * math.radians(5)
+        root.location = (0, 0, bob)
+        root.rotation_euler = (lean, 0, 0)
+
+    elif animation == "attack":
+        # Bow arm pulls back then releases
+        if t < 0.5:
+            # Draw phase — lean back, arm pulls
+            pull = t * 2  # 0→1
+            root.rotation_euler = (math.radians(-5 * pull), 0, 0)
+            if bow_arm:
+                bow_arm.location.y = 0.1 * pull
+        else:
+            # Release phase — snap forward
+            release = (t - 0.5) * 2  # 0→1
+            root.rotation_euler = (math.radians(5 * (1 - release)), 0, 0)
+            if bow_arm:
+                bow_arm.location.y = 0.1 * (1 - release)
+
+    elif animation == "death":
+        # Tilt entire model backward toward ground
+        tilt = t * math.radians(80)
+        drop = t * 0.3
+        root.rotation_euler = (-tilt, 0, 0)
+        root.location = (0, 0, -drop)
+
+    # Force scene update so transforms take effect before render
+    bpy.context.view_layer.update()
+
+
+# ---------------------------------------------------------------------------
+# Animated unit render loop
+# ---------------------------------------------------------------------------
+
+def render_animated_unit(cam_obj, directions, animations, frames_per_anim,
+                         output_dir, subject, root):
+    """Render animated unit: all frames x directions x animations.
+
+    Output naming: {subject}_{animation}_{direction}_{frame:02d}.png
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    total_rendered = 0
+
+    for anim, n_frames in zip(animations, frames_per_anim):
+        for frame_idx in range(n_frames):
+            # Set pose for this animation frame
+            animate_archer(root, anim, frame_idx, n_frames)
+
+            for dir_name in directions:
+                azimuth = DIRECTIONS[dir_name]
+                _position_camera(cam_obj, azimuth)
+
+                # 1-indexed frame number in filename
+                fname = f"{subject}_{anim}_{dir_name}_{frame_idx + 1:02d}.png"
+                filepath = os.path.join(output_dir, fname)
+                bpy.context.scene.render.filepath = filepath
+                bpy.ops.render.render(write_still=True)
+                total_rendered += 1
+
+        print(f"  {anim}: {n_frames} frames x {len(directions)} dirs = "
+              f"{n_frames * len(directions)} renders")
+
+    print(f"  Total: {total_rendered} frames rendered")
+    return total_rendered
+
+
+# ---------------------------------------------------------------------------
+# Render loop (buildings / static)
 # ---------------------------------------------------------------------------
 
 def render_directions(cam_obj, directions, output_dir, subject):
@@ -347,6 +550,14 @@ def parse_args():
         "--blend-file", default=None,
         help="Path to a .blend file to load instead of building procedurally"
     )
+    parser.add_argument(
+        "--animations", type=str, default=None,
+        help="Comma-separated animation names (e.g., idle,walk,attack,death)"
+    )
+    parser.add_argument(
+        "--frames-per-anim", type=str, default=None,
+        help="Comma-separated frame counts per animation (e.g., 4,8,6,6)"
+    )
 
     return parser.parse_args(argv)
 
@@ -363,24 +574,56 @@ def main():
         args.footprint = 2
         args.directions = list(DIRECTIONS.keys())
 
+    # For units, default to all 8 directions
+    asset_type = getattr(args, "type", "building")
+    if asset_type == "unit" and args.directions == ["s"]:
+        args.directions = list(DIRECTIONS.keys())
+
     output_dir = args.output_dir or os.path.join(
         project_root, "blender", "renders", args.subject
     )
 
-    print(f"=== Blender Isometric Render ===")
+    # Parse animation parameters
+    animations = None
+    frames_per_anim = None
+    if args.animations:
+        animations = [a.strip() for a in args.animations.split(",")]
+        if args.frames_per_anim:
+            frames_per_anim = [int(n) for n in args.frames_per_anim.split(",")]
+        else:
+            # Default: 4 frames per animation
+            frames_per_anim = [4] * len(animations)
+        if len(animations) != len(frames_per_anim):
+            print("ERROR: --animations and --frames-per-anim must have same count",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    total_frames = sum(f * len(args.directions) for f in frames_per_anim) if frames_per_anim else len(args.directions)
+
+    print("=== Blender Isometric Render ===")
     print(f"  Subject:    {args.subject}")
-    print(f"  Footprint:  {args.footprint}")
-    print(f"  Canvas 2x:  {CANVAS_2X[args.footprint]}")
+    print(f"  Type:       {asset_type}")
+    if asset_type == "unit":
+        print(f"  Canvas 2x:  {UNIT_CANVAS_2X}")
+    else:
+        print(f"  Footprint:  {args.footprint}")
+        print(f"  Canvas 2x:  {CANVAS_2X[args.footprint]}")
     print(f"  Directions: {', '.join(args.directions)}")
+    if animations:
+        print(f"  Animations: {', '.join(animations)}")
+        print(f"  Frames:     {', '.join(str(f) for f in frames_per_anim)}")
+    print(f"  Total:      {total_frames} renders")
     print(f"  Output:     {output_dir}")
 
     # Scene setup
     clear_scene()
     setup_lighting()
-    cam = setup_camera(DIRECTIONS[args.directions[0]], args.footprint)
-    setup_render(args.footprint)
+    cam = setup_camera(DIRECTIONS[args.directions[0]],
+                       footprint=args.footprint, asset_type=asset_type)
+    setup_render(footprint=args.footprint, asset_type=asset_type)
 
     # Build or load model
+    archer_root = None
     if args.blend_file:
         # Append all objects from the blend file's Scene collection
         with bpy.data.libraries.load(args.blend_file) as (data_from, data_to):
@@ -392,6 +635,8 @@ def main():
     elif args.subject == "poc_house" or args.poc:
         build_poc_house()
         print("  Built PoC house model")
+    elif args.subject == "archer" and asset_type == "unit":
+        archer_root = build_geometric_archer()
     else:
         # Try loading a .blend file from blender/models/
         blend_path = os.path.join(project_root, "blender", "models",
@@ -409,8 +654,14 @@ def main():
             print(f"  Rendering empty scene.")
 
     # Render
-    render_directions(cam, args.directions, output_dir, args.subject)
-    print(f"=== Done: {len(args.directions)} direction(s) rendered ===")
+    if animations and archer_root:
+        render_animated_unit(cam, args.directions, animations,
+                             frames_per_anim, output_dir, args.subject,
+                             archer_root)
+    else:
+        render_directions(cam, args.directions, output_dir, args.subject)
+
+    print(f"=== Done: {total_frames} render(s) complete ===")
 
 
 if __name__ == "__main__":
