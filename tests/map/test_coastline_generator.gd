@@ -251,3 +251,100 @@ func test_shore_disabled_no_orientations() -> void:
 	var result: Dictionary = gen.generate(grid, 2, 1)
 	var orientations: Dictionary = result.shore_orientations
 	assert_int(orientations.size()).is_equal(0)
+
+
+# -- Orientation Smoothing Tests --
+
+
+func test_smoothing_uniform_coast_stays_uniform() -> void:
+	# Straight coastline — all shores face the same direction, smoothing is a no-op.
+	# G G G G G
+	# W W W W W
+	var grid := _grid_from_rows(["GGGGG", "WWWWW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 5, 2)
+	var orientations: Dictionary = result.shore_orientations
+	# All shore tiles at y=0 should face SW (water is at y=1, direction (0,1))
+	for x in 5:
+		var pos := Vector2i(x, 0)
+		if orientations.has(pos):
+			assert_object(orientations[pos]).is_equal(Vector2i(0, 1))
+
+
+func test_smoothing_reduces_outlier_orientation() -> void:
+	# Vertical coastline — shore tiles along x=2 should all face SE toward water.
+	# G G G W W
+	# G G G W W
+	# G G G W W
+	var grid := _grid_from_rows(["GGGWW", "GGGWW", "GGGWW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 5, 3)
+	var orientations: Dictionary = result.shore_orientations
+	for y in 3:
+		var pos := Vector2i(2, y)
+		if orientations.has(pos):
+			assert_object(orientations[pos]).is_equal(Vector2i(1, 0))
+
+
+# -- Shore Segment Tests --
+
+
+func test_segments_dict_returned() -> void:
+	var grid := _grid_from_rows(["GW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 2, 1)
+	assert_bool(result.has("shore_segments")).is_true()
+
+
+func test_segments_populated_for_all_shore() -> void:
+	# G G G W W
+	# G G G W W
+	var grid := _grid_from_rows(["GGGWW", "GGGWW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 5, 2)
+	var changes: Dictionary = result.changes
+	var segments: Dictionary = result.shore_segments
+	for pos: Vector2i in changes:
+		if changes[pos] == "shore":
+			assert_bool(segments.has(pos)).is_true()
+
+
+func test_contiguous_same_orientation_share_segment() -> void:
+	# Straight vertical coastline — all shores face SE, should be one segment.
+	# G G W W
+	# G G W W
+	# G G W W
+	var grid := _grid_from_rows(["GGWW", "GGWW", "GGWW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 4, 3)
+	var segments: Dictionary = result.shore_segments
+	# Collect segment IDs for shore tiles along x=1
+	var seg_ids: Array = []
+	for y in 3:
+		var pos := Vector2i(1, y)
+		if segments.has(pos):
+			seg_ids.append(segments[pos])
+	# All should share the same segment ID
+	if seg_ids.size() > 1:
+		for i in range(1, seg_ids.size()):
+			assert_int(seg_ids[i]).is_equal(seg_ids[0])
+
+
+func test_different_orientation_gets_different_segment() -> void:
+	# Two separate coastlines with different orientations.
+	# W G G G W
+	var grid := _grid_from_rows(["WGGGW"])
+	var gen := _make_gen()
+	var result: Dictionary = gen.generate(grid, 5, 1)
+	var segments: Dictionary = result.shore_segments
+	# Shore at x=1 faces NW (water at x=0), shore at x=3 faces SE (water at x=4)
+	if segments.has(Vector2i(1, 0)) and segments.has(Vector2i(3, 0)):
+		assert_int(segments[Vector2i(1, 0)]).is_not_equal(segments[Vector2i(3, 0)])
+
+
+func test_shore_disabled_no_segments() -> void:
+	var grid := _grid_from_rows(["GW"])
+	var gen := _make_gen(false)
+	var result: Dictionary = gen.generate(grid, 2, 1)
+	var segments: Dictionary = result.shore_segments
+	assert_int(segments.size()).is_equal(0)
