@@ -7,6 +7,7 @@ const GameFlowControllerScript := preload("res://scripts/prototype/game_flow_con
 const SceneSaveHandlerScript := preload("res://scripts/prototype/scene_save_handler.gd")
 const EntityRegistryScript := preload("res://scripts/prototype/entity_registry.gd")
 const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen.gd")
+const BuildingValidator := preload("res://scripts/prototype/building_validator.gd")
 const FOG_UPDATE_INTERVAL: float = 0.2  # Update fog every 200ms
 
 var _camera: Camera2D
@@ -231,15 +232,22 @@ func _update_fog_of_war() -> void:
 	if _visibility_manager == null or _entity_registry == null:
 		return
 	var player_units: Array = []
+	var pinned_tiles: Array[Vector2i] = []
 	for entity in _entity_registry.get_by_owner(0):
 		if "hp" in entity and entity.hp <= 0:
 			continue
+		# Collect tiles occupied by this entity so fog never covers own assets
+		if "grid_pos" in entity and "footprint" in entity:
+			var cells := BuildingValidator.get_footprint_cells(entity.grid_pos, entity.footprint)
+			pinned_tiles.append_array(cells)
+		elif entity is Node2D:
+			pinned_tiles.append(_visibility_manager._screen_to_grid(entity.global_position))
 		if entity.has_method("get_los") and entity.get_los() > 0:
 			player_units.append(entity)
 			continue
 		if entity.has_method("get_stat"):
 			player_units.append(entity)
-	_visibility_manager.update_visibility(0, player_units)
+	_visibility_manager.update_visibility(0, player_units, pinned_tiles)
 
 
 func _on_visibility_changed(player_id: int) -> void:
