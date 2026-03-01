@@ -3,8 +3,10 @@ extends GdUnitTestSuite
 ## deposit, replacement search, save/load.
 
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
-const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
 const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
+const UnitFactory := preload("res://tests/helpers/unit_factory.gd")
+const ResourceFactory := preload("res://tests/helpers/resource_factory.gd")
+const BuildingFactory := preload("res://tests/helpers/building_factory.gd")
 
 var _root: Node2D
 
@@ -16,17 +18,7 @@ func before_test() -> void:
 
 
 func _create_unit(pos: Vector2 = Vector2.ZERO) -> Node2D:
-	var u := Node2D.new()
-	u.set_script(UnitScript)
-	u.unit_type = "villager"
-	u.position = pos
-	u._build_speed = 1.0
-	u._build_reach = 80.0
-	u._carry_capacity = 10
-	u._gather_rates = {"food": 0.4, "wood": 0.4, "stone": 0.35, "gold": 0.35}
-	u._gather_reach = 80.0
-	u._drop_off_reach = 80.0
-	u._scene_root = _root
+	var u := UnitFactory.create_villager({position = pos, scene_root = _root})
 	_root.add_child(u)
 	auto_free(u)
 	return u
@@ -37,13 +29,7 @@ func _create_resource(
 	res_type: String = "food",
 	yield_amt: int = 150,
 ) -> Node2D:
-	var n := Node2D.new()
-	n.set_script(ResourceNodeScript)
-	n.resource_name = "berry_bush"
-	n.resource_type = res_type
-	n.total_yield = yield_amt
-	n.current_yield = yield_amt
-	n.position = pos
+	var n := ResourceFactory.create_resource_node({position = pos, resource_type = res_type, total_yield = yield_amt})
 	_root.add_child(n)
 	auto_free(n)
 	return n
@@ -53,18 +39,7 @@ func _create_drop_off(
 	pos: Vector2 = Vector2(-50, 0),
 	types: Array[String] = ["food", "wood", "stone", "gold"],
 ) -> Node2D:
-	var b := Node2D.new()
-	b.set_script(BuildingScript)
-	b.building_name = "town_center"
-	b.is_drop_off = true
-	b.drop_off_types = types
-	b.under_construction = false
-	b.build_progress = 1.0
-	b.max_hp = 2400
-	b.hp = 2400
-	b.footprint = Vector2i(3, 3)
-	b.grid_pos = Vector2i(4, 4)
-	b.position = pos
+	var b := BuildingFactory.create_drop_off({position = pos, drop_off_types = types})
 	_root.add_child(b)
 	auto_free(b)
 	return b
@@ -94,13 +69,7 @@ func test_assign_build_cancels_gather() -> void:
 	var u := _create_unit()
 	var res := _create_resource()
 	u.assign_gather_target(res)
-	var b := Node2D.new()
-	b.set_script(BuildingScript)
-	b.under_construction = true
-	b._build_time = 25.0
-	b.max_hp = 100
-	b.hp = 0
-	b.position = Vector2(30, 0)
+	var b := BuildingFactory.create_construction({position = Vector2(30, 0)})
 	_root.add_child(b)
 	auto_free(b)
 	u.assign_build_target(b)

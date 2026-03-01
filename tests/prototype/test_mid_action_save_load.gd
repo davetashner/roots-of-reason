@@ -5,10 +5,10 @@ extends GdUnitTestSuite
 ## after load_state + resolve_target.
 
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
-const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
-const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 const CombatantScript := preload("res://scripts/prototype/combatant_component.gd")
 const GathererScript := preload("res://scripts/prototype/gatherer_component.gd")
+const UnitFactory := preload("res://tests/helpers/unit_factory.gd")
+const ResourceFactory := preload("res://tests/helpers/resource_factory.gd")
 
 var _root: Node2D
 
@@ -25,36 +25,27 @@ func _create_unit(
 	utype: String = "villager",
 	pos: Vector2 = Vector2.ZERO,
 ) -> Node2D:
-	var u := Node2D.new()
-	u.name = uname
-	u.set_script(UnitScript)
-	u.unit_type = utype
-	u.owner_id = 0
-	u.position = pos
-	u._build_speed = 1.0
-	u._build_reach = 80.0
-	u._carry_capacity = 10
-	u._gather_rates = {"food": 0.4, "wood": 0.4, "stone": 0.35, "gold": 0.35}
-	u._gather_reach = 80.0
-	u._drop_off_reach = 80.0
-	u.hp = 25
-	u.max_hp = 25
-	u._scene_root = _root
+	var u := UnitFactory.create_villager({name = uname, unit_type = utype, position = pos, scene_root = _root})
 	_root.add_child(u)
 	auto_free(u)
 	return u
 
 
 func _create_enemy(uname: String = "Enemy_0", pos: Vector2 = Vector2(200, 0)) -> Node2D:
-	var u := Node2D.new()
-	u.name = uname
-	u.set_script(UnitScript)
-	u.unit_type = "land"
-	u.owner_id = 1
-	u.position = pos
-	u.hp = 50
-	u.max_hp = 50
-	u._scene_root = _root
+	var u := (
+		UnitFactory
+		. create_villager(
+			{
+				name = uname,
+				unit_type = "land",
+				owner_id = 1,
+				position = pos,
+				hp = 50,
+				max_hp = 50,
+				scene_root = _root,
+			}
+		)
+	)
 	_root.add_child(u)
 	auto_free(u)
 	return u
@@ -66,14 +57,9 @@ func _create_resource(
 	res_type: String = "food",
 	yield_amt: int = 150,
 ) -> Node2D:
-	var n := Node2D.new()
-	n.name = rname
-	n.set_script(ResourceNodeScript)
-	n.resource_name = "berry_bush"
-	n.resource_type = res_type
-	n.total_yield = yield_amt
-	n.current_yield = yield_amt
-	n.position = pos
+	var n := ResourceFactory.create_resource_node(
+		{name = rname, position = pos, resource_type = res_type, total_yield = yield_amt}
+	)
 	_root.add_child(n)
 	auto_free(n)
 	return n
