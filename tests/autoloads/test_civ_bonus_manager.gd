@@ -1,29 +1,22 @@
 extends GdUnitTestSuite
 ## Tests for CivBonusManager autoload.
 
-var _original_active_civs: Dictionary
-var _original_civ_cache: Dictionary
-var _original_stockpiles: Dictionary
-var _original_gather_multipliers: Dictionary
-var _original_corruption_rates: Dictionary
+const RMGuard := preload("res://tests/helpers/resource_manager_guard.gd")
+const CBMGuard := preload("res://tests/helpers/civ_bonus_manager_guard.gd")
+
+var _rm_guard: RefCounted
+var _cbm_guard: RefCounted
 
 
 func before_test() -> void:
-	_original_active_civs = CivBonusManager._active_civs.duplicate(true)
-	_original_civ_cache = CivBonusManager._civ_cache.duplicate(true)
-	_original_stockpiles = ResourceManager._stockpiles.duplicate(true)
-	_original_gather_multipliers = ResourceManager._gather_multipliers.duplicate(true)
-	_original_corruption_rates = ResourceManager._corruption_rates.duplicate(true)
-	CivBonusManager._active_civs.clear()
-	CivBonusManager._civ_cache.clear()
+	_rm_guard = RMGuard.new()
+	_cbm_guard = CBMGuard.new()
+	CivBonusManager.reset()
 
 
 func after_test() -> void:
-	CivBonusManager._active_civs = _original_active_civs.duplicate(true)
-	CivBonusManager._civ_cache = _original_civ_cache.duplicate(true)
-	ResourceManager._stockpiles = _original_stockpiles.duplicate(true)
-	ResourceManager._gather_multipliers = _original_gather_multipliers.duplicate(true)
-	ResourceManager._corruption_rates = _original_corruption_rates.duplicate(true)
+	_cbm_guard.dispose()
+	_rm_guard.dispose()
 
 
 # --- Data Loading ---
@@ -205,7 +198,7 @@ func test_save_load_round_trip() -> void:
 	CivBonusManager.apply_civ_bonuses(0, "mesopotamia")
 	CivBonusManager.apply_civ_bonuses(1, "rome")
 	var state: Dictionary = CivBonusManager.save_state()
-	CivBonusManager._active_civs.clear()
+	CivBonusManager.reset()
 	CivBonusManager.load_state(state)
 	assert_str(CivBonusManager.get_active_civ(0)).is_equal("mesopotamia")
 	assert_str(CivBonusManager.get_active_civ(1)).is_equal("rome")

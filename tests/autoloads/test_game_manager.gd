@@ -1,34 +1,23 @@
 extends GdUnitTestSuite
 ## Tests for GameManager autoload.
 
-var _original_state: Dictionary
+const GMGuard := preload("res://tests/helpers/game_manager_guard.gd")
+
+var _gm_guard: RefCounted
 
 
 func before_test() -> void:
-	_original_state = {
-		"is_paused": GameManager.is_paused,
-		"game_speed": GameManager.game_speed,
-		"game_time": GameManager.game_time,
-		"current_age": GameManager.current_age,
-		"speed_index": GameManager._speed_index,
-		"player_difficulty": GameManager.player_difficulty,
-	}
+	_gm_guard = GMGuard.new()
 	# Reset to clean defaults so tests don't depend on execution order
 	GameManager.is_paused = false
-	GameManager.game_speed = 1.0
 	GameManager.game_time = 0.0
 	GameManager.current_age = 0
-	GameManager._speed_index = 1
 	GameManager.player_difficulty = "normal"
+	GameManager.set_speed(1.0)
 
 
 func after_test() -> void:
-	GameManager.is_paused = _original_state["is_paused"]
-	GameManager.game_speed = _original_state["game_speed"]
-	GameManager.game_time = _original_state["game_time"]
-	GameManager.current_age = _original_state["current_age"]
-	GameManager._speed_index = _original_state["speed_index"]
-	GameManager.player_difficulty = _original_state["player_difficulty"]
+	_gm_guard.dispose()
 
 
 # --- Age tests ---
@@ -118,34 +107,30 @@ func test_toggle_pause() -> void:
 
 
 func test_step_speed_up() -> void:
-	GameManager._speed_index = 0
-	GameManager.game_speed = GameManager._speed_steps[0]
+	GameManager.set_speed(GameManager.get_speed_steps()[0])
 	GameManager.step_speed(1)
-	assert_float(GameManager.game_speed).is_equal(GameManager._speed_steps[1])
+	assert_float(GameManager.game_speed).is_equal(GameManager.get_speed_steps()[1])
 
 
 func test_step_speed_down() -> void:
-	GameManager._speed_index = 1
-	GameManager.game_speed = GameManager._speed_steps[1]
+	GameManager.set_speed(GameManager.get_speed_steps()[1])
 	GameManager.step_speed(-1)
-	assert_float(GameManager.game_speed).is_equal(GameManager._speed_steps[0])
+	assert_float(GameManager.game_speed).is_equal(GameManager.get_speed_steps()[0])
 
 
 func test_step_speed_clamps_max() -> void:
-	var max_index := GameManager._speed_steps.size() - 1
-	GameManager._speed_index = max_index
-	GameManager.game_speed = GameManager._speed_steps[max_index]
+	var max_index := GameManager.get_speed_steps().size() - 1
+	GameManager.set_speed(GameManager.get_speed_steps()[max_index])
 	GameManager.step_speed(1)
-	assert_int(GameManager._speed_index).is_equal(max_index)
-	assert_float(GameManager.game_speed).is_equal(GameManager._speed_steps[max_index])
+	assert_int(GameManager.get_speed_index()).is_equal(max_index)
+	assert_float(GameManager.game_speed).is_equal(GameManager.get_speed_steps()[max_index])
 
 
 func test_step_speed_clamps_min() -> void:
-	GameManager._speed_index = 0
-	GameManager.game_speed = GameManager._speed_steps[0]
+	GameManager.set_speed(GameManager.get_speed_steps()[0])
 	GameManager.step_speed(-1)
-	assert_int(GameManager._speed_index).is_equal(0)
-	assert_float(GameManager.game_speed).is_equal(GameManager._speed_steps[0])
+	assert_int(GameManager.get_speed_index()).is_equal(0)
+	assert_float(GameManager.game_speed).is_equal(GameManager.get_speed_steps()[0])
 
 
 # --- Clock display tests ---
@@ -189,22 +174,20 @@ func test_speed_display_decimal() -> void:
 
 func test_save_load_roundtrip() -> void:
 	GameManager.game_time = 123.4
-	GameManager.game_speed = 2.0
-	GameManager._speed_index = 2
+	GameManager.set_speed(2.0)
 	GameManager.is_paused = true
 	GameManager.current_age = 3
 	var state := GameManager.save_state()
 	# Reset
 	GameManager.game_time = 0.0
-	GameManager.game_speed = 1.0
-	GameManager._speed_index = 0
+	GameManager.set_speed(1.0)
 	GameManager.is_paused = false
 	GameManager.current_age = 0
 	# Load
 	GameManager.load_state(state)
 	assert_float(GameManager.game_time).is_equal_approx(123.4, 0.01)
 	assert_float(GameManager.game_speed).is_equal(2.0)
-	assert_int(GameManager._speed_index).is_equal(2)
+	assert_int(GameManager.get_speed_index()).is_equal(2)
 	assert_bool(GameManager.is_paused).is_true()
 	assert_int(GameManager.current_age).is_equal(3)
 

@@ -7,32 +7,25 @@ const AITechScript := preload("res://scripts/ai/ai_tech.gd")
 const TechManagerScript := preload("res://scripts/prototype/tech_manager.gd")
 const PopManagerScript := preload("res://scripts/prototype/population_manager.gd")
 
-var _original_stockpiles: Dictionary
-var _original_multipliers: Dictionary
-var _original_ai_difficulty: String
-var _original_game_time: float
-var _original_age: int
+const RMGuard := preload("res://tests/helpers/resource_manager_guard.gd")
+const GMGuard := preload("res://tests/helpers/game_manager_guard.gd")
+
+var _rm_guard: RefCounted
+var _gm_guard: RefCounted
 
 
 func before_test() -> void:
-	_original_stockpiles = ResourceManager._stockpiles.duplicate(true)
-	_original_multipliers = ResourceManager._gather_multipliers.duplicate(true)
-	_original_ai_difficulty = GameManager.ai_difficulty
-	_original_game_time = GameManager.game_time
-	_original_age = GameManager.current_age
-	ResourceManager._stockpiles.clear()
-	ResourceManager._gather_multipliers.clear()
+	_rm_guard = RMGuard.new()
+	_gm_guard = GMGuard.new()
+	ResourceManager.reset()
 	GameManager.ai_difficulty = "normal"
 	GameManager.game_time = 0.0
 	GameManager.current_age = 0
 
 
 func after_test() -> void:
-	ResourceManager._stockpiles = _original_stockpiles
-	ResourceManager._gather_multipliers = _original_multipliers
-	GameManager.ai_difficulty = _original_ai_difficulty
-	GameManager.game_time = _original_game_time
-	GameManager.current_age = _original_age
+	_gm_guard.dispose()
+	_rm_guard.dispose()
 
 
 # --- Helpers ---

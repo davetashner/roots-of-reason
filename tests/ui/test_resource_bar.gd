@@ -3,18 +3,21 @@ extends GdUnitTestSuite
 
 const ResourceBarScript := preload("res://scripts/ui/resource_bar.gd")
 
-var _original_age: int
-var _original_stockpiles: Dictionary
+const RMGuard := preload("res://tests/helpers/resource_manager_guard.gd")
+const GMGuard := preload("res://tests/helpers/game_manager_guard.gd")
+
+var _rm_guard: RefCounted
+var _gm_guard: RefCounted
 
 
 func before_test() -> void:
-	_original_age = GameManager.current_age
-	_original_stockpiles = ResourceManager._stockpiles.duplicate(true)
+	_rm_guard = RMGuard.new()
+	_gm_guard = GMGuard.new()
 
 
 func after_test() -> void:
-	GameManager.current_age = _original_age
-	ResourceManager._stockpiles = _original_stockpiles
+	_gm_guard.dispose()
+	_rm_guard.dispose()
 
 
 # --- format_amount tests ---

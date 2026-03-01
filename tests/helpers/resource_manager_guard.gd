@@ -12,20 +12,15 @@
 ##       _rm_guard.dispose()
 extends RefCounted
 
-var _saved_stockpiles: Dictionary
-var _saved_corruption_rates: Dictionary
+var _saved_state: Dictionary
 
 
 func _init() -> void:
-	_saved_stockpiles = ResourceManager._stockpiles.duplicate(true)
-	if "_corruption_rates" in ResourceManager:
-		_saved_corruption_rates = ResourceManager._corruption_rates.duplicate(true)
+	_saved_state = ResourceManager.save_state()
 
 
 func dispose() -> void:
-	ResourceManager._stockpiles = _saved_stockpiles.duplicate(true)
-	if "_corruption_rates" in ResourceManager:
-		ResourceManager._corruption_rates = _saved_corruption_rates.duplicate(true)
+	ResourceManager.load_state(_saved_state)
 
 
 ## Convenience: init player with specific resource amounts.
