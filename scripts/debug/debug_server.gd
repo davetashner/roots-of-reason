@@ -95,6 +95,12 @@ func _handle_connection(peer: StreamPeerTCP) -> void:
 		_handle_economy(peer, query_string)
 	elif method == "GET" and base_path == "/entities":
 		_handle_entities(peer, query_string)
+	elif method == "GET" and base_path == "/pathfinding":
+		_handle_pathfinding(peer, query_string)
+	elif method == "GET" and base_path == "/perf":
+		_handle_perf(peer)
+	elif method == "GET" and base_path == "/fow":
+		_handle_fow(peer, query_string)
 	elif method == "POST" and base_path == "/command":
 		_handle_command(peer, body_text)
 	else:
@@ -245,59 +251,47 @@ func _add_entity_annotations(
 	var is_unit := "unit_category" in entity and str(entity.unit_category) != ""
 	var is_building := "building_name" in entity and str(entity.building_name) != ""
 	var is_resource := cat == "resource_node"
-	# Selection highlight (bright outline for selected units/buildings)
-	var is_selected := bool(entity.selected) if "selected" in entity else false
-	if is_selected:
-		var highlight := ColorRect.new()
-		highlight.color = Color(0, 1, 0, 0.3)
-		highlight.size = Vector2(60, 60)
-		highlight.position = screen_pos - Vector2(30, 50)
-		layer.add_child(highlight)
-	# Name label
+	if bool(entity.selected) if "selected" in entity else false:
+		var hl := ColorRect.new()
+		hl.color = Color(0, 1, 0, 0.3)
+		hl.size = Vector2(60, 60)
+		hl.position = screen_pos - Vector2(30, 50)
+		layer.add_child(hl)
 	var name_text := entity.name
 	if is_building:
 		name_text = str(entity.building_name)
 	elif is_resource:
 		name_text = str(entity.resource_name) if "resource_name" in entity else entity.name
 	layer.add_child(_make_label(name_text, screen_pos - Vector2(30, 55), font, font_size, Color.WHITE))
-	# Health bar (units and buildings)
 	if (is_unit or is_building) and "hp" in entity and "max_hp" in entity:
-		var hp: int = int(entity.hp)
-		var max_hp: int = int(entity.max_hp)
-		if max_hp > 0:
-			var bar_width: float = 50.0
-			var bar_height: float = 4.0
-			var hp_ratio: float = clampf(float(hp) / float(max_hp), 0.0, 1.0)
-			# Background (dark)
+		var hp_val: int = int(entity.hp)
+		var max_val: int = int(entity.max_hp)
+		if max_val > 0:
+			var ratio: float = clampf(float(hp_val) / float(max_val), 0.0, 1.0)
 			var bg := ColorRect.new()
 			bg.color = Color(0.2, 0.2, 0.2, 0.8)
-			bg.size = Vector2(bar_width, bar_height)
+			bg.size = Vector2(50, 4)
 			bg.position = screen_pos - Vector2(25, 40)
 			layer.add_child(bg)
-			# Foreground (green→yellow→red)
 			var fg := ColorRect.new()
-			if hp_ratio > 0.6:
+			if ratio > 0.6:
 				fg.color = Color(0, 0.8, 0, 0.9)
-			elif hp_ratio > 0.3:
+			elif ratio > 0.3:
 				fg.color = Color(0.9, 0.8, 0, 0.9)
 			else:
 				fg.color = Color(0.9, 0.1, 0, 0.9)
-			fg.size = Vector2(bar_width * hp_ratio, bar_height)
+			fg.size = Vector2(50.0 * ratio, 4)
 			fg.position = screen_pos - Vector2(25, 40)
 			layer.add_child(fg)
-	# State text (units only)
 	if is_unit:
-		var state_text := _get_unit_action(entity)
-		# Add gather detail if gathering
-		var gather_type: String = str(entity._gather_type) if "_gather_type" in entity else ""
-		if gather_type != "" and state_text in ["gathering", "moving_to_resource"]:
-			state_text += " " + gather_type
-		# Add carry info
+		var st := _get_unit_action(entity)
+		var gtype: String = str(entity._gather_type) if "_gather_type" in entity else ""
+		if gtype != "" and st in ["gathering", "moving_to_resource"]:
+			st += " " + gtype
 		var carried: int = int(entity._carried_amount) if "_carried_amount" in entity else 0
 		if carried > 0:
-			state_text += " (carrying %d %s)" % [carried, gather_type]
-		layer.add_child(_make_label(state_text, screen_pos - Vector2(30, 30), font, 10, Color(0.9, 0.9, 0.5)))
-	# Resource yield text
+			st += " (carrying %d %s)" % [carried, gtype]
+		layer.add_child(_make_label(st, screen_pos - Vector2(30, 30), font, 10, Color(0.9, 0.9, 0.5)))
 	if is_resource and "current_yield" in entity and "total_yield" in entity:
 		var yt := "%d/%d" % [int(entity.current_yield), int(entity.total_yield)]
 		layer.add_child(_make_label(yt, screen_pos - Vector2(20, 30), font, 10, Color(0.5, 0.9, 0.9)))
@@ -306,7 +300,7 @@ func _add_entity_annotations(
 func _handle_status(peer: StreamPeerTCP) -> void:
 	var gm: Node = _get_manager("GameManager")
 	var rm: Node = _get_manager("ResourceManager")
-	var cam_data := _get_camera_data()
+	var cd := _get_camera_data()
 	_send_json(
 		peer,
 		200,
@@ -317,27 +311,25 @@ func _handle_status(peer: StreamPeerTCP) -> void:
 			"current_age": int(gm.current_age) if gm != null else 0,
 			"player_resources": _get_player_resources(rm),
 			"unit_count": _get_unit_counts(),
-			"camera_position": cam_data["position"],
-			"camera_zoom": cam_data["zoom"],
+			"camera_position": cd["position"],
+			"camera_zoom": cd["zoom"],
 		}
 	)
 
 
 func _handle_combat_log(peer: StreamPeerTCP, query_string: String) -> void:
 	var params := parse_query_string(query_string)
-	var limit: int = int(params.get("limit", "50"))
-	var events := CombatLogger.get_events(limit)
+	var evts := CombatLogger.get_events(int(params.get("limit", "50")))
 	var gm: Node = _get_manager("GameManager")
-	var game_time: float = float(gm.game_time) if gm != null else 0.0
 	_send_json(
 		peer,
 		200,
 		{
-			"events": events,
-			"count": events.size(),
+			"events": evts,
+			"count": evts.size(),
 			"capacity": CombatLogger.get_capacity(),
 			"total_logged": CombatLogger.get_total_logged(),
-			"game_time": game_time,
+			"game_time": float(gm.game_time) if gm != null else 0.0,
 		}
 	)
 
@@ -419,14 +411,13 @@ func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
 
 
 func _cmd_select_all(peer: StreamPeerTCP) -> void:
-	var units := _get_player_units(0)
 	var count := 0
-	for unit: Node2D in units:
-		if unit.has_method("select"):
-			unit.select()
+	for u: Node2D in _get_player_units(0):
+		if u.has_method("select"):
+			u.select()
 			count += 1
-		elif "selected" in unit:
-			unit.selected = true
+		elif "selected" in u:
+			u.selected = true
 			count += 1
 	_send_json(peer, 200, {"action": "select-all", "selected": count})
 
@@ -435,48 +426,39 @@ func _cmd_right_click(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if not body.has("grid_x") or not body.has("grid_y"):
 		_send_json(peer, 400, {"error": "right-click requires grid_x and grid_y"})
 		return
-	var grid_x: float = float(body["grid_x"])
-	var grid_y: float = float(body["grid_y"])
-	var world_pos := IsoUtils.grid_to_screen(Vector2(grid_x, grid_y))
-	var units := _get_player_units(0)
+	var gx: float = float(body["grid_x"])
+	var gy: float = float(body["grid_y"])
+	var wp := IsoUtils.grid_to_screen(Vector2(gx, gy))
 	var moved := 0
-	for unit: Node2D in units:
-		if "selected" in unit and unit.selected and unit.has_method("move_to"):
-			unit.move_to(world_pos)
+	for u: Node2D in _get_player_units(0):
+		if "selected" in u and u.selected and u.has_method("move_to"):
+			u.move_to(wp)
 			moved += 1
-	_send_json(
-		peer,
-		200,
-		{"action": "right-click", "grid_x": grid_x, "grid_y": grid_y, "moved": moved},
-	)
+	_send_json(peer, 200, {"action": "right-click", "grid_x": gx, "grid_y": gy, "moved": moved})
 
 
 func _cmd_camera_to(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if not body.has("grid_x") or not body.has("grid_y"):
 		_send_json(peer, 400, {"error": "camera-to requires grid_x and grid_y"})
 		return
-	var grid_x: float = float(body["grid_x"])
-	var grid_y: float = float(body["grid_y"])
-	var world_pos := IsoUtils.grid_to_screen(Vector2(grid_x, grid_y))
+	var gx: float = float(body["grid_x"])
+	var gy: float = float(body["grid_y"])
+	var wp := IsoUtils.grid_to_screen(Vector2(gx, gy))
 	var camera := _get_camera()
 	if camera != null:
-		camera.global_position = world_pos
-	_send_json(
-		peer,
-		200,
-		{"action": "camera-to", "grid_x": grid_x, "grid_y": grid_y},
-	)
+		camera.global_position = wp
+	_send_json(peer, 200, {"action": "camera-to", "grid_x": gx, "grid_y": gy})
 
 
 func _cmd_speed(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if not body.has("value"):
 		_send_json(peer, 400, {"error": "speed requires value"})
 		return
-	var speed_value: float = float(body["value"])
+	var sv: float = float(body["value"])
 	var gm: Node = _get_manager("GameManager")
 	if gm != null:
-		gm.game_speed = speed_value
-	_send_json(peer, 200, {"action": "speed", "value": speed_value})
+		gm.game_speed = sv
+	_send_json(peer, 200, {"action": "speed", "value": sv})
 
 
 func _cmd_pause(peer: StreamPeerTCP) -> void:
@@ -497,29 +479,19 @@ func _cmd_gather(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if not body.has("grid_x") or not body.has("grid_y"):
 		_send_json(peer, 400, {"error": "gather requires grid_x and grid_y"})
 		return
-	var grid_x: float = float(body["grid_x"])
-	var grid_y: float = float(body["grid_y"])
-	var world_pos := IsoUtils.grid_to_screen(Vector2(grid_x, grid_y))
-	var target: Node2D = _find_nearest_resource(world_pos)
+	var wp := IsoUtils.grid_to_screen(Vector2(float(body["grid_x"]), float(body["grid_y"])))
+	var target: Node2D = _find_nearest_resource(wp)
 	if target == null:
 		_send_json(peer, 200, {"action": "gather", "error": "no resource node found near position"})
 		return
-	var units := _get_player_units(0)
 	var gatherers: Array[Node2D] = []
-	for unit: Node2D in units:
-		if "selected" in unit and unit.selected and unit.has_method("assign_gather_target"):
-			gatherers.append(unit)
+	for u: Node2D in _get_player_units(0):
+		if "selected" in u and u.selected and u.has_method("assign_gather_target"):
+			gatherers.append(u)
 	var offsets: Array[Vector2] = _gather_offsets(target, gatherers.size())
-	var count := 0
 	for i in gatherers.size():
-		var offset: Vector2 = offsets[i] if i < offsets.size() else Vector2.ZERO
-		gatherers[i].assign_gather_target(target, offset)
-		count += 1
-	_send_json(
-		peer,
-		200,
-		{"action": "gather", "target": str(target.name), "gathering": count},
-	)
+		gatherers[i].assign_gather_target(target, offsets[i] if i < offsets.size() else Vector2.ZERO)
+	_send_json(peer, 200, {"action": "gather", "target": str(target.name), "gathering": gatherers.size()})
 
 
 func _find_nearest_resource(world_pos: Vector2) -> Node2D:
@@ -625,11 +597,10 @@ func _get_player_units(player_id: int) -> Array[Node2D]:
 
 
 func _get_camera_data() -> Dictionary:
-	var camera := _get_camera()
-	if camera != null:
+	var c := _get_camera()
+	if c != null:
 		return {
-			"position": {"x": camera.global_position.x, "y": camera.global_position.y},
-			"zoom": {"x": camera.zoom.x, "y": camera.zoom.y},
+			"position": {"x": c.global_position.x, "y": c.global_position.y}, "zoom": {"x": c.zoom.x, "y": c.zoom.y}
 		}
 	return {"position": {"x": 0.0, "y": 0.0}, "zoom": {"x": 1.0, "y": 1.0}}
 
@@ -670,6 +641,7 @@ static func _send_json(peer: StreamPeerTCP, status_code: int, data: Dictionary) 
 
 func _handle_entities(peer: StreamPeerTCP, query_string: String) -> void:
 	var params := parse_query_string(query_string)
+	var verbose: bool = str(params.get("verbose", "false")) == "true"
 	var entities: Array[Dictionary] = []
 	var root := get_tree().current_scene
 	if root != null:
@@ -678,7 +650,11 @@ func _handle_entities(peer: StreamPeerTCP, query_string: String) -> void:
 				continue
 			if "entity_category" not in child:
 				continue
-			var data := serialize_entity(child as Node2D)
+			var data: Dictionary
+			if verbose:
+				data = serialize_entity_verbose(child as Node2D)
+			else:
+				data = serialize_entity(child as Node2D)
 			if data.is_empty():
 				continue
 			if not _matches_filters(data, params):
@@ -725,57 +701,47 @@ static func serialize_entity(entity: Node2D) -> Dictionary:
 	var cat: String = _infer_entity_category(entity)
 	if cat == "":
 		return {}
-	var result: Dictionary = {
+	var r: Dictionary = {
 		"name": entity.name,
 		"entity_category": cat,
-		"position":
-		{
-			"x": entity.global_position.x,
-			"y": entity.global_position.y,
-		},
+		"position": {"x": entity.global_position.x, "y": entity.global_position.y},
 	}
 	if "owner_id" in entity:
-		result["owner_id"] = int(entity.owner_id)
-	# Unit-specific fields
+		r["owner_id"] = int(entity.owner_id)
 	if "unit_category" in entity and str(entity.unit_category) != "":
-		result["unit_category"] = str(entity.unit_category)
-		result["unit_type"] = str(entity.get("unit_type")) if "unit_type" in entity else "land"
-		result["hp"] = int(entity.hp) if "hp" in entity else 0
-		result["max_hp"] = int(entity.max_hp) if "max_hp" in entity else 0
-		result["selected"] = bool(entity.selected) if "selected" in entity else false
-		# Gather state
-		result["gather_state"] = int(entity._gather_state) if "_gather_state" in entity else 0
-		result["gather_type"] = str(entity._gather_type) if "_gather_type" in entity else ""
-		result["carried_amount"] = int(entity._carried_amount) if "_carried_amount" in entity else 0
-		result["carry_capacity"] = int(entity._carry_capacity) if "_carry_capacity" in entity else 0
-		# Combat state
-		result["combat_state"] = int(entity._combat_state) if "_combat_state" in entity else 0
-		# Current action summary
-		result["action"] = _get_unit_action(entity)
-	# Building-specific fields
+		r["unit_category"] = str(entity.unit_category)
+		r["unit_type"] = str(entity.get("unit_type")) if "unit_type" in entity else "land"
+		r["hp"] = int(entity.hp) if "hp" in entity else 0
+		r["max_hp"] = int(entity.max_hp) if "max_hp" in entity else 0
+		r["selected"] = bool(entity.selected) if "selected" in entity else false
+		r["gather_state"] = int(entity._gather_state) if "_gather_state" in entity else 0
+		r["gather_type"] = str(entity._gather_type) if "_gather_type" in entity else ""
+		r["carried_amount"] = int(entity._carried_amount) if "_carried_amount" in entity else 0
+		r["carry_capacity"] = int(entity._carry_capacity) if "_carry_capacity" in entity else 0
+		r["combat_state"] = int(entity._combat_state) if "_combat_state" in entity else 0
+		r["action"] = _get_unit_action(entity)
 	if "building_name" in entity and str(entity.building_name) != "":
-		result["building_name"] = str(entity.building_name)
-		result["hp"] = int(entity.hp) if "hp" in entity else 0
-		result["max_hp"] = int(entity.max_hp) if "max_hp" in entity else 0
-		result["is_drop_off"] = bool(entity.is_drop_off) if "is_drop_off" in entity else false
+		r["building_name"] = str(entity.building_name)
+		r["hp"] = int(entity.hp) if "hp" in entity else 0
+		r["max_hp"] = int(entity.max_hp) if "max_hp" in entity else 0
+		r["is_drop_off"] = bool(entity.is_drop_off) if "is_drop_off" in entity else false
 		if "drop_off_types" in entity:
 			var types: Array[String] = []
 			for t: Variant in entity.drop_off_types:
 				types.append(str(t))
-			result["drop_off_types"] = types
+			r["drop_off_types"] = types
 		if "grid_pos" in entity:
-			result["grid_position"] = {"x": entity.grid_pos.x, "y": entity.grid_pos.y}
-		result["under_construction"] = bool(entity.under_construction) if "under_construction" in entity else false
-		result["selected"] = bool(entity.selected) if "selected" in entity else false
-	# Resource node-specific fields
+			r["grid_position"] = {"x": entity.grid_pos.x, "y": entity.grid_pos.y}
+		r["under_construction"] = bool(entity.under_construction) if "under_construction" in entity else false
+		r["selected"] = bool(entity.selected) if "selected" in entity else false
 	if cat == "resource_node":
-		result["resource_type"] = str(entity.resource_type) if "resource_type" in entity else ""
-		result["resource_name"] = str(entity.resource_name) if "resource_name" in entity else ""
-		result["current_yield"] = int(entity.current_yield) if "current_yield" in entity else 0
-		result["total_yield"] = int(entity.total_yield) if "total_yield" in entity else 0
+		r["resource_type"] = str(entity.resource_type) if "resource_type" in entity else ""
+		r["resource_name"] = str(entity.resource_name) if "resource_name" in entity else ""
+		r["current_yield"] = int(entity.current_yield) if "current_yield" in entity else 0
+		r["total_yield"] = int(entity.total_yield) if "total_yield" in entity else 0
 		if "grid_position" in entity:
-			result["grid_position"] = {"x": entity.grid_position.x, "y": entity.grid_position.y}
-	return result
+			r["grid_position"] = {"x": entity.grid_position.x, "y": entity.grid_position.y}
+	return r
 
 
 static func _get_unit_action(entity: Node2D) -> String:
@@ -831,17 +797,16 @@ func _cmd_spawn(peer: StreamPeerTCP, body: Dictionary) -> void:
 		_send_json(peer, 400, {"error": "spawn requires grid_x and grid_y"})
 		return
 	var spawn_type: String = str(body["type"])
-	var grid_x: float = float(body["grid_x"])
-	var grid_y: float = float(body["grid_y"])
-	var grid_pos := Vector2i(int(grid_x), int(grid_y))
-	var world_pos := IsoUtils.grid_to_screen(Vector2(grid_x, grid_y))
+	var gx: float = float(body["grid_x"])
+	var gy: float = float(body["grid_y"])
+	var gp := Vector2i(int(gx), int(gy))
+	var wp := IsoUtils.grid_to_screen(Vector2(gx, gy))
 	var root := get_tree().current_scene
 	if root == null:
 		_send_json(peer, 500, {"error": "no active scene"})
 		return
-	# Determine if this is a resource or a unit
 	if spawn_type in RESOURCE_NAMES:
-		var node := _spawn_resource(root, spawn_type, grid_pos, world_pos)
+		var node := _spawn_resource(root, spawn_type, gp, wp)
 		if node == null:
 			_send_json(peer, 500, {"error": "failed to spawn resource", "type": spawn_type})
 			return
@@ -853,13 +818,13 @@ func _cmd_spawn(peer: StreamPeerTCP, body: Dictionary) -> void:
 				"entity": "resource",
 				"type": spawn_type,
 				"name": node.name,
-				"grid_x": grid_x,
-				"grid_y": grid_y,
-			},
+				"grid_x": gx,
+				"grid_y": gy,
+			}
 		)
 	else:
-		var owner_id: int = int(body.get("owner", 0))
-		var node := _spawn_unit(root, spawn_type, owner_id, grid_pos, world_pos)
+		var oid: int = int(body.get("owner", 0))
+		var node := _spawn_unit(root, spawn_type, oid, gp, wp)
 		if node == null:
 			_send_json(peer, 500, {"error": "failed to spawn unit", "type": spawn_type})
 			return
@@ -871,96 +836,88 @@ func _cmd_spawn(peer: StreamPeerTCP, body: Dictionary) -> void:
 				"entity": "unit",
 				"type": spawn_type,
 				"name": node.name,
-				"owner": owner_id,
-				"grid_x": grid_x,
-				"grid_y": grid_y,
-			},
+				"owner": oid,
+				"grid_x": gx,
+				"grid_y": gy,
+			}
 		)
 
 
-func _spawn_unit(root: Node, unit_type: String, owner_id: int, _grid_pos: Vector2i, world_pos: Vector2) -> Node2D:
-	var unit := Node2D.new()
-	var count := root.get_child_count()
-	unit.name = "DebugUnit_%d" % count
-	unit.set_script(UnitScript)
-	unit.unit_type = unit_type
-	unit.owner_id = owner_id
-	unit.position = world_pos
-	if owner_id == 1:
-		unit.unit_color = Color(0.9, 0.2, 0.2)
-	root.add_child(unit)
-	unit._scene_root = root
+func _spawn_unit(root: Node, unit_type: String, oid: int, _grid_pos: Vector2i, wp: Vector2) -> Node2D:
+	var u := Node2D.new()
+	u.name = "DebugUnit_%d" % root.get_child_count()
+	u.set_script(UnitScript)
+	u.unit_type = unit_type
+	u.owner_id = oid
+	u.position = wp
+	if oid == 1:
+		u.unit_color = Color(0.9, 0.2, 0.2)
+	root.add_child(u)
+	u._scene_root = root
 	if "_pathfinder" in root:
-		unit._pathfinder = root._pathfinder
+		u._pathfinder = root._pathfinder
 	if "_visibility_manager" in root and root._visibility_manager != null:
-		unit._visibility_manager = root._visibility_manager
+		u._visibility_manager = root._visibility_manager
 	if "_war_survival" in root and root._war_survival != null:
-		unit._war_survival = root._war_survival
+		u._war_survival = root._war_survival
 	if "_input_handler" in root and root._input_handler != null:
 		if root._input_handler.has_method("register_unit"):
-			root._input_handler.register_unit(unit)
+			root._input_handler.register_unit(u)
 	if "_target_detector" in root and root._target_detector != null:
-		root._target_detector.register_entity(unit)
+		root._target_detector.register_entity(u)
 	if "_population_manager" in root and root._population_manager != null:
-		root._population_manager.register_unit(unit, owner_id)
+		root._population_manager.register_unit(u, oid)
 	if "_entity_registry" in root:
-		root._entity_registry.register(unit)
-	if unit.has_signal("unit_died") and root.has_method("_on_unit_died"):
-		unit.unit_died.connect(root._on_unit_died)
-	return unit
+		root._entity_registry.register(u)
+	if u.has_signal("unit_died") and root.has_method("_on_unit_died"):
+		u.unit_died.connect(root._on_unit_died)
+	return u
 
 
-func _spawn_resource(root: Node, res_name: String, grid_pos: Vector2i, world_pos: Vector2) -> Node2D:
-	var res_node := Node2D.new()
-	var count := root.get_child_count()
-	res_node.name = "DebugResource_%s_%d" % [res_name, count]
-	res_node.set_script(ResourceNodeScript)
-	res_node.position = world_pos
-	res_node.grid_position = grid_pos
-	res_node.z_index = 2
-	root.add_child(res_node)
-	res_node.setup(res_name)
-	if res_node.has_signal("depleted") and root.has_method("_on_resource_depleted"):
-		res_node.depleted.connect(root._on_resource_depleted)
+func _spawn_resource(root: Node, res_name: String, gp: Vector2i, wp: Vector2) -> Node2D:
+	var rn := Node2D.new()
+	rn.name = "DebugResource_%s_%d" % [res_name, root.get_child_count()]
+	rn.set_script(ResourceNodeScript)
+	rn.position = wp
+	rn.grid_position = gp
+	rn.z_index = 2
+	root.add_child(rn)
+	rn.setup(res_name)
+	if rn.has_signal("depleted") and root.has_method("_on_resource_depleted"):
+		rn.depleted.connect(root._on_resource_depleted)
 	if "_target_detector" in root and root._target_detector != null:
-		root._target_detector.register_entity(res_node)
-	return res_node
+		root._target_detector.register_entity(rn)
+	return rn
 
 
 func _cmd_teleport(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if not body.has("grid_x") or not body.has("grid_y"):
 		_send_json(peer, 400, {"error": "teleport requires grid_x and grid_y"})
 		return
-	var grid_x: float = float(body["grid_x"])
-	var grid_y: float = float(body["grid_y"])
-	var world_pos := IsoUtils.grid_to_screen(Vector2(grid_x, grid_y))
-	var units := _get_player_units(0)
+	var gx: float = float(body["grid_x"])
+	var gy: float = float(body["grid_y"])
+	var wp := IsoUtils.grid_to_screen(Vector2(gx, gy))
 	var moved := 0
-	for unit: Node2D in units:
-		if "selected" in unit and unit.selected:
-			unit.global_position = world_pos
-			# Stop any current movement/pathfinding
-			if "_moving" in unit:
-				unit._moving = false
-			if "_path" in unit:
-				unit._path.clear()
+	for u: Node2D in _get_player_units(0):
+		if "selected" in u and u.selected:
+			u.global_position = wp
+			if "_moving" in u:
+				u._moving = false
+			if "_path" in u:
+				u._path.clear()
 			moved += 1
-	_send_json(
-		peer,
-		200,
-		{"action": "teleport", "grid_x": grid_x, "grid_y": grid_y, "moved": moved},
-	)
+	_send_json(peer, 200, {"action": "teleport", "grid_x": gx, "grid_y": gy, "moved": moved})
 
 
 func _cmd_zoom(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if not body.has("value"):
 		_send_json(peer, 400, {"error": "zoom requires value"})
 		return
-	var zoom_val: float = float(body["value"])
-	var camera := _get_camera()
-	if camera != null:
-		camera.zoom = Vector2(zoom_val, zoom_val)
-	_send_json(peer, 200, {"action": "zoom", "value": zoom_val})
+	var zv: float = float(body["value"])
+	var cam := _get_camera()
+	if cam != null:
+		cam.zoom = Vector2(zv, zv)
+	_send_json(peer, 200, {"action": "zoom", "value": zv})
 
 
 func _cmd_place_building(peer: StreamPeerTCP, body: Dictionary) -> void:
@@ -970,106 +927,98 @@ func _cmd_place_building(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if not body.has("grid_x") or not body.has("grid_y"):
 		_send_json(peer, 400, {"error": "place-building requires grid_x and grid_y"})
 		return
-	var bname: String = str(body["building_name"])
-	var grid_x: int = int(body["grid_x"])
-	var grid_y: int = int(body["grid_y"])
-	var grid_pos := Vector2i(grid_x, grid_y)
-	var owner_id: int = int(body.get("owner", 0))
+	var bn: String = str(body["building_name"])
+	var gx: int = int(body["grid_x"])
+	var gy: int = int(body["grid_y"])
+	var gp := Vector2i(gx, gy)
+	var oid: int = int(body.get("owner", 0))
 	var built: bool = str(body.get("built", "true")) != "false"
 	var root := get_tree().current_scene
 	if root == null:
 		_send_json(peer, 500, {"error": "no active scene"})
 		return
-	var stats: Dictionary = DataLoader.get_building_stats(bname)
-	if stats.is_empty():
-		_send_json(peer, 400, {"error": "unknown building", "building_name": bname})
+	var st: Dictionary = DataLoader.get_building_stats(bn)
+	if st.is_empty():
+		_send_json(peer, 400, {"error": "unknown building", "building_name": bn})
 		return
-	var max_hp: int = int(stats.get("hp", 100))
-	var fp_arr: Array = stats.get("footprint", [1, 1])
-	var footprint := Vector2i(int(fp_arr[0]), int(fp_arr[1]))
-	var building := Node2D.new()
-	building.name = "Building_%s_%d_%d" % [bname, grid_x, grid_y]
-	building.set_script(BuildingScript)
-	building.position = IsoUtils.grid_to_screen(Vector2(grid_pos))
-	building.owner_id = owner_id
-	building.building_name = bname
-	building.footprint = footprint
-	building.grid_pos = grid_pos
-	building.max_hp = max_hp
-	building.entity_category = "own_building" if owner_id == 0 else "enemy_building"
+	var mhp: int = int(st.get("hp", 100))
+	var fp_arr: Array = st.get("footprint", [1, 1])
+	var fp := Vector2i(int(fp_arr[0]), int(fp_arr[1]))
+	var b := Node2D.new()
+	b.name = "Building_%s_%d_%d" % [bn, gx, gy]
+	b.set_script(BuildingScript)
+	b.position = IsoUtils.grid_to_screen(Vector2(gp))
+	b.owner_id = oid
+	b.building_name = bn
+	b.footprint = fp
+	b.grid_pos = gp
+	b.max_hp = mhp
+	b.entity_category = "own_building" if oid == 0 else "enemy_building"
 	if built:
-		building.hp = max_hp
-		building.under_construction = false
-		building.build_progress = 1.0
+		b.hp = mhp
+		b.under_construction = false
+		b.build_progress = 1.0
 	else:
-		building.hp = 0
-		building.under_construction = true
-		building.build_progress = 0.0
-		building._build_time = float(stats.get("build_time", 25))
-	root.add_child(building)
+		b.hp = 0
+		b.under_construction = true
+		b.build_progress = 0.0
+		b._build_time = float(st.get("build_time", 25))
+	root.add_child(b)
 	if "_target_detector" in root and root._target_detector != null:
-		root._target_detector.register_entity(building)
+		root._target_detector.register_entity(b)
 	if "_population_manager" in root and root._population_manager != null:
-		root._population_manager.register_building(building, owner_id)
+		root._population_manager.register_building(b, oid)
 	if "_entity_registry" in root:
-		root._entity_registry.register(building)
-	if building.has_signal("building_destroyed") and root.has_method("_on_building_destroyed"):
-		building.building_destroyed.connect(root._on_building_destroyed)
+		root._entity_registry.register(b)
+	if b.has_signal("building_destroyed") and root.has_method("_on_building_destroyed"):
+		b.building_destroyed.connect(root._on_building_destroyed)
 	if "_pathfinder" in root and root._pathfinder != null:
-		var cells: Array = BuildingValidator.get_footprint_cells(grid_pos, footprint)
-		for cell: Vector2i in cells:
+		for cell: Vector2i in BuildingValidator.get_footprint_cells(gp, fp):
 			root._pathfinder.set_cell_solid(cell, true)
 	_send_json(
 		peer,
 		200,
 		{
 			"action": "place-building",
-			"building_name": bname,
-			"grid_x": grid_x,
-			"grid_y": grid_y,
-			"owner": owner_id,
+			"building_name": bn,
+			"grid_x": gx,
+			"grid_y": gy,
+			"owner": oid,
 			"built": built,
-		},
+		}
 	)
 
 
 func _cmd_stop(peer: StreamPeerTCP, body: Dictionary) -> void:
-	var unit_ids: Array = body.get("unit_ids", []) as Array
+	var ids: Array = body.get("unit_ids", []) as Array
 	var units: Array[Node2D] = []
-	if unit_ids.is_empty():
-		# Stop all selected player 0 units
-		for unit: Node2D in _get_player_units(0):
-			if "selected" in unit and unit.selected:
-				units.append(unit)
+	if ids.is_empty():
+		for u: Node2D in _get_player_units(0):
+			if "selected" in u and u.selected:
+				units.append(u)
 	else:
-		# Stop specific units by name
 		var root := get_tree().current_scene
 		if root != null:
-			for uid: Variant in unit_ids:
-				var node := root.get_node_or_null(NodePath(str(uid)))
-				if node is Node2D:
-					units.append(node as Node2D)
+			for uid: Variant in ids:
+				var n := root.get_node_or_null(NodePath(str(uid)))
+				if n is Node2D:
+					units.append(n as Node2D)
 	var stopped := 0
-	for unit: Node2D in units:
-		# Cancel combat
-		if unit.has_method("_cancel_combat"):
-			unit._cancel_combat()
-		# Cancel gathering
-		if unit.has_method("_cancel_gather"):
-			unit._cancel_gather()
-		# Cancel feeding
-		if unit.has_method("_cancel_feed"):
-			unit._cancel_feed()
-		# Stop movement
-		if "_moving" in unit:
-			unit._moving = false
-		if "_path" in unit:
-			unit._path.clear()
-		# Clear build target
-		if "_build_target" in unit:
-			unit._build_target = null
-		if "_pending_build_target_name" in unit:
-			unit._pending_build_target_name = ""
+	for u: Node2D in units:
+		if u.has_method("_cancel_combat"):
+			u._cancel_combat()
+		if u.has_method("_cancel_gather"):
+			u._cancel_gather()
+		if u.has_method("_cancel_feed"):
+			u._cancel_feed()
+		if "_moving" in u:
+			u._moving = false
+		if "_path" in u:
+			u._path.clear()
+		if "_build_target" in u:
+			u._build_target = null
+		if "_pending_build_target_name" in u:
+			u._pending_build_target_name = ""
 		stopped += 1
 	_send_json(peer, 200, {"action": "stop", "stopped": stopped})
 
@@ -1084,20 +1033,16 @@ func _cmd_set_resources(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if rm == null:
 		_send_json(peer, 500, {"error": "ResourceManager not available"})
 		return
-	var resource_keys: Dictionary = rm.RESOURCE_KEYS
-	# Build reverse map: string key -> ResourceType enum
-	var key_to_type: Dictionary = {}
-	for res_type: Variant in resource_keys:
-		key_to_type[resource_keys[res_type]] = res_type
+	var ktt: Dictionary = {}
+	for rt: Variant in rm.RESOURCE_KEYS:
+		ktt[rm.RESOURCE_KEYS[rt]] = rt
 	var updated: Dictionary = {}
-	for key: String in key_to_type:
+	for key: String in ktt:
 		if body.has(key):
-			var amount: int = int(body[key])
-			rm.set_resource(0, key_to_type[key], amount)
-			updated[key] = amount
-	# Return final resource values
-	var final_resources := _get_player_resources(rm)
-	_send_json(peer, 200, {"action": "set-resources", "resources": final_resources, "updated": updated})
+			var amt: int = int(body[key])
+			rm.set_resource(0, ktt[key], amt)
+			updated[key] = amt
+	_send_json(peer, 200, {"action": "set-resources", "resources": _get_player_resources(rm), "updated": updated})
 
 
 func _cmd_save(peer: StreamPeerTCP, body: Dictionary) -> void:
@@ -1106,7 +1051,7 @@ func _cmd_save(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if sm == null:
 		_send_json(peer, 500, {"error": "SaveManager not available"})
 		return
-	var save_path := "user://saves/debug_%s.json" % slot
+	var sp := "user://saves/debug_%s.json" % slot
 	sm._ensure_save_dir()
 	var data := {
 		"version": sm.SAVE_VERSION,
@@ -1117,14 +1062,13 @@ func _cmd_save(peer: StreamPeerTCP, body: Dictionary) -> void:
 	}
 	if sm._scene_provider != null and sm._scene_provider.has_method("save_state"):
 		data["scene"] = sm._scene_provider.save_state()
-	var json_str := JSON.stringify(data, "\t")
-	var file := FileAccess.open(save_path, FileAccess.WRITE)
-	if file == null:
-		_send_json(peer, 500, {"error": "failed to write save file", "path": save_path})
+	var f := FileAccess.open(sp, FileAccess.WRITE)
+	if f == null:
+		_send_json(peer, 500, {"error": "failed to write save file", "path": sp})
 		return
-	file.store_string(json_str)
-	file.close()
-	_send_json(peer, 200, {"action": "save", "slot": slot, "path": save_path})
+	f.store_string(JSON.stringify(data, "\t"))
+	f.close()
+	_send_json(peer, 200, {"action": "save", "slot": slot, "path": sp})
 
 
 func _cmd_load(peer: StreamPeerTCP, body: Dictionary) -> void:
@@ -1133,24 +1077,163 @@ func _cmd_load(peer: StreamPeerTCP, body: Dictionary) -> void:
 	if sm == null:
 		_send_json(peer, 500, {"error": "SaveManager not available"})
 		return
-	var save_path := "user://saves/debug_%s.json" % slot
-	if not FileAccess.file_exists(save_path):
-		_send_json(peer, 400, {"error": "save file not found", "slot": slot, "path": save_path})
+	var sp := "user://saves/debug_%s.json" % slot
+	if not FileAccess.file_exists(sp):
+		_send_json(peer, 400, {"error": "save file not found", "slot": slot, "path": sp})
 		return
-	var file := FileAccess.open(save_path, FileAccess.READ)
-	if file == null:
-		_send_json(peer, 500, {"error": "failed to read save file", "path": save_path})
+	var f := FileAccess.open(sp, FileAccess.READ)
+	if f == null:
+		_send_json(peer, 500, {"error": "failed to read save file", "path": sp})
 		return
-	var json_str := file.get_as_text()
-	file.close()
-	var parsed: Variant = JSON.parse_string(json_str)
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
 	if parsed == null or not (parsed is Dictionary):
-		_send_json(peer, 500, {"error": "failed to parse save file", "path": save_path})
+		_send_json(peer, 500, {"error": "failed to parse save file", "path": sp})
 		return
-	var data: Dictionary = parsed as Dictionary
 	_send_json(peer, 200, {"action": "load", "slot": slot, "status": "loading"})
-	# Defer the state application like reset, since it may reload the scene
-	sm.call_deferred("apply_loaded_state", data)
+	sm.call_deferred("apply_loaded_state", parsed as Dictionary)
+
+
+func _handle_pathfinding(peer: StreamPeerTCP, query_string: String) -> void:
+	var root := get_tree().current_scene
+	if root == null or "_pathfinder" not in root or root._pathfinder == null:
+		_send_json(peer, 200, {"error": "pathfinder not available"})
+		return
+	var pf: Node = root._pathfinder
+	var ms: int = int(pf._map_size)
+	var solid_cells: Array[Dictionary] = []
+	if pf._astar != null:
+		for x in ms:
+			for y in ms:
+				if pf._astar.is_point_solid(Vector2i(x, y)):
+					solid_cells.append({"x": x, "y": y})
+	var result: Dictionary = {
+		"map_size": ms,
+		"solid_cell_count": solid_cells.size(),
+		"solid_cells": solid_cells,
+	}
+	var params := parse_query_string(query_string)
+	if params.has("unit"):
+		var un: String = params["unit"]
+		var node: Node = root.get_node_or_null(NodePath(un))
+		if node != null and "_path" in node:
+			var wps: Array[Dictionary] = []
+			for wp: Vector2 in node._path:
+				wps.append({"x": wp.x, "y": wp.y})
+			result["unit_path"] = {"name": un, "waypoints": wps}
+		else:
+			result["unit_path"] = {"name": un, "error": "not found or no path"}
+	_send_json(peer, 200, result)
+
+
+func _handle_perf(peer: StreamPeerTCP) -> void:
+	var ec: Dictionary = {"unit": 0, "building": 0, "resource_node": 0}
+	var root := get_tree().current_scene
+	if root != null:
+		for child: Node in root.get_children():
+			if "entity_category" not in child:
+				continue
+			var cat: String = str(child.entity_category)
+			if "unit" in cat or ("unit_category" in child and str(child.unit_category) != ""):
+				ec["unit"] = int(ec["unit"]) + 1
+			elif "building" in cat:
+				ec["building"] = int(ec["building"]) + 1
+			elif cat == "resource_node":
+				ec["resource_node"] = int(ec["resource_node"]) + 1
+	var pm := Performance.get_monitor
+	_send_json(
+		peer,
+		200,
+		{
+			"fps": pm.call(Performance.TIME_FPS),
+			"frame_time_ms": pm.call(Performance.TIME_PROCESS) * 1000.0,
+			"physics_time_ms": pm.call(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+			"memory_static_bytes": int(pm.call(Performance.MEMORY_STATIC)),
+			"orphan_node_count": int(pm.call(Performance.OBJECT_ORPHAN_NODE_COUNT)),
+			"total_node_count": int(pm.call(Performance.OBJECT_NODE_COUNT)),
+			"entity_counts": ec,
+		}
+	)
+
+
+func _handle_fow(peer: StreamPeerTCP, query_string: String) -> void:
+	var root := get_tree().current_scene
+	if root == null or "_visibility_manager" not in root or root._visibility_manager == null:
+		_send_json(peer, 200, {"error": "visibility_manager not available"})
+		return
+	var vm: Node = root._visibility_manager
+	var params := parse_query_string(query_string)
+	var pid: int = int(params.get("player", "0"))
+	var map_w: int = int(vm._map_width)
+	var map_h: int = int(vm._map_height)
+	var total: int = map_w * map_h
+	var vis: Dictionary = vm.get_visible_tiles(pid)
+	var exp: Dictionary = vm.get_explored_tiles(pid)
+	var pv: float = (float(vis.size()) / float(total) * 100.0) if total > 0 else 0.0
+	var pe: float = (float(exp.size()) / float(total) * 100.0) if total > 0 else 0.0
+	var los_src: Array[Dictionary] = []
+	for child: Node in root.get_children():
+		if not (child is Node2D):
+			continue
+		if "owner_id" not in child or int(child.owner_id) != pid:
+			continue
+		if ("unit_category" in child and str(child.unit_category) != "") or child.has_method("move_to"):
+			var pos := (child as Node2D).global_position
+			los_src.append({"name": child.name, "position": {"x": pos.x, "y": pos.y}})
+	_send_json(
+		peer,
+		200,
+		{
+			"player_id": pid,
+			"map_width": map_w,
+			"map_height": map_h,
+			"total_tiles": total,
+			"visible_tile_count": vis.size(),
+			"explored_tile_count": exp.size(),
+			"percent_visible": snapped(pv, 0.01),
+			"percent_explored": snapped(pe, 0.01),
+			"los_source_count": los_src.size(),
+			"los_sources": los_src,
+		}
+	)
+
+
+static func serialize_entity_verbose(entity: Node2D) -> Dictionary:
+	## Extended entity serialization with component state detail.
+	var base := serialize_entity(entity)
+	if base.is_empty():
+		return base
+	if not ("unit_category" in entity and str(entity.unit_category) != ""):
+		return base
+	# Gather detail
+	var gd: Dictionary = {}
+	var gt: Node2D = entity._gather_target if "_gather_target" in entity else null
+	if gt != null and is_instance_valid(gt):
+		gd["target_name"] = gt.name
+		gd["target_position"] = {"x": gt.global_position.x, "y": gt.global_position.y}
+	gd["gather_rate_multiplier"] = float(entity._gather_rate_multiplier) if "_gather_rate_multiplier" in entity else 1.0
+	gd["gather_reach"] = float(entity._gather_reach) if "_gather_reach" in entity else 80.0
+	gd["drop_off_reach"] = float(entity._drop_off_reach) if "_drop_off_reach" in entity else 80.0
+	var dot: Node2D = entity._drop_off_target if "_drop_off_target" in entity else null
+	if dot != null and is_instance_valid(dot):
+		gd["drop_off_target_name"] = dot.name
+	base["gather_detail"] = gd
+	# Combat detail
+	var cd: Dictionary = {}
+	cd["stance"] = int(entity._stance) if "_stance" in entity else 0
+	var ct: Node2D = entity._combat_target if "_combat_target" in entity else null
+	if ct != null and is_instance_valid(ct):
+		cd["target_name"] = ct.name
+		cd["target_position"] = {"x": ct.global_position.x, "y": ct.global_position.y}
+	cd["attack_cooldown"] = float(entity._attack_cooldown) if "_attack_cooldown" in entity else 0.0
+	base["combat_detail"] = cd
+	var bt: Node2D = entity._build_target if "_build_target" in entity else null
+	if bt != null and is_instance_valid(bt):
+		base["build_target"] = bt.name
+	if "_path" in entity:
+		base["path_length"] = entity._path.size()
+	base["is_dead"] = bool(entity._is_dead) if "_is_dead" in entity else false
+	return base
 
 
 func _exit_tree() -> void:

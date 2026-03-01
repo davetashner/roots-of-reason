@@ -889,6 +889,26 @@ cmd_economy() {
     curl -s "http://127.0.0.1:9222/economy?limit=${limit}" | python3 -m json.tool
 }
 
+# ==================== pathfinding ====================
+cmd_pathfinding() {
+    local query=""
+    if [[ $# -gt 0 ]]; then
+        query="?unit=$1"
+    fi
+    curl -s "http://127.0.0.1:9222/pathfinding${query}" | python3 -m json.tool
+}
+
+# ==================== perf ====================
+cmd_perf() {
+    curl -s "http://127.0.0.1:9222/perf" | python3 -m json.tool
+}
+
+# ==================== fow ====================
+cmd_fow() {
+    local player="${1:-0}"
+    curl -s "http://127.0.0.1:9222/fow?player=${player}" | python3 -m json.tool
+}
+
 # ==================== stop ====================
 cmd_stop() {
     # Send stop command to cancel all actions on selected units (or specific unit IDs)
@@ -2160,6 +2180,9 @@ case "${1:-help}" in
     game-status)        shift; cmd_game_status "$@" ;;
     combat-log)         shift; cmd_combat_log "$@" ;;
     economy)            shift; cmd_economy "$@" ;;
+    pathfinding)        shift; cmd_pathfinding "$@" ;;
+    perf)               shift; cmd_perf "$@" ;;
+    fow)                shift; cmd_fow "$@" ;;
     stop)               shift; cmd_stop "$@" ;;
     reset)              shift; cmd_reset "$@" ;;
     game-cmd)           shift; cmd_game_cmd "$@" ;;
