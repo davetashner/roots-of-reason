@@ -320,10 +320,10 @@ func test_build_step_places_building() -> void:
 func test_house_built_when_near_pop_cap() -> void:
 	_init_ai_resources(1000, 1000, 1000, 1000)
 	var pop_mgr := _create_pop_manager(0)
-	# TC adds pop_bonus=5, so cap=5. Register 3 units: cap-current=2 <= buffer(3)
+	# TC adds pop_bonus=10, so cap=10. Register 8 units: cap-current=2 <= buffer(3)
 	var tc := _create_town_center(1, Vector2i(10, 10), false, pop_mgr)
 	pop_mgr.register_building(tc, 1)
-	for i in 3:
+	for i in 8:
 		var dummy := Node2D.new()
 		add_child(dummy)
 		auto_free(dummy)

@@ -280,9 +280,9 @@ func test_training_blocked_by_pop_ratio() -> void:
 	var tc := _create_town_center(1, Vector2i(50, 50), pop_mgr)
 	var barracks := _create_barracks(1, Vector2i(45, 50), pop_mgr)
 	var ai := _create_ai_military(self, pop_mgr)
-	# Pop cap = 0 (starting) + 5 (TC bonus) = 5
-	# With max_military_pop_ratio=0.50, 3+ military should block (3/5=0.60 >= 0.50)
-	for i in 3:
+	# Pop cap = 0 (starting) + 10 (TC bonus) = 10
+	# With max_military_pop_ratio=0.50, 6+ military should block (6/10=0.60 >= 0.50)
+	for i in 6:
 		var unit := _create_military_unit(1, "infantry", Vector2(i * 10, 0))
 		pop_mgr.register_unit(unit, 1)
 	ai._refresh_entity_lists()
