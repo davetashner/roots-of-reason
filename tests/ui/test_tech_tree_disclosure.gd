@@ -4,15 +4,16 @@ extends GdUnitTestSuite
 const TechTreeViewerScript := preload("res://scripts/ui/tech_tree_viewer.gd")
 const TechManagerScript := preload("res://scripts/prototype/tech_manager.gd")
 
-var _original_age: int
-var _original_stockpiles: Dictionary
-var _original_civs: Dictionary
+const RMGuard := preload("res://tests/helpers/resource_manager_guard.gd")
+const GMGuard := preload("res://tests/helpers/game_manager_guard.gd")
+
+var _rm_guard: RefCounted
+var _gm_guard: RefCounted
 
 
 func before_test() -> void:
-	_original_age = GameManager.current_age
-	_original_stockpiles = ResourceManager._stockpiles.duplicate(true)
-	_original_civs = GameManager.player_civilizations.duplicate()
+	_rm_guard = RMGuard.new()
+	_gm_guard = GMGuard.new()
 	GameManager.current_age = 6
 	GameManager.is_paused = false
 	GameManager.game_speed = 1.0
@@ -20,11 +21,8 @@ func before_test() -> void:
 
 
 func after_test() -> void:
-	GameManager.current_age = _original_age
-	GameManager.is_paused = false
-	GameManager.game_speed = 1.0
-	ResourceManager._stockpiles = _original_stockpiles
-	GameManager.player_civilizations = _original_civs
+	_gm_guard.dispose()
+	_rm_guard.dispose()
 
 
 func _give_resources(

@@ -109,6 +109,14 @@ func set_speed(speed: float) -> void:
 	push_warning("GameManager: speed %.1f not in speed_steps, ignoring" % speed)
 
 
+func get_speed_steps() -> Array:
+	return _speed_steps
+
+
+func get_speed_index() -> int:
+	return _speed_index
+
+
 func get_clock_display() -> String:
 	var total_seconds: int = int(game_time)
 	@warning_ignore("integer_division")

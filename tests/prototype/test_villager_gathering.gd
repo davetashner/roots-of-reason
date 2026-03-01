@@ -7,14 +7,21 @@ const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 const UnitFactory := preload("res://tests/helpers/unit_factory.gd")
 const ResourceFactory := preload("res://tests/helpers/resource_factory.gd")
 const BuildingFactory := preload("res://tests/helpers/building_factory.gd")
+const RMGuard := preload("res://tests/helpers/resource_manager_guard.gd")
 
 var _root: Node2D
+var _rm_guard: RefCounted
 
 
 func before_test() -> void:
+	_rm_guard = RMGuard.new()
 	_root = Node2D.new()
 	add_child(_root)
 	auto_free(_root)
+
+
+func after_test() -> void:
+	_rm_guard.dispose()
 
 
 func _create_unit(pos: Vector2 = Vector2.ZERO) -> Node2D:
@@ -162,7 +169,6 @@ func test_deposit_adds_to_resource_manager() -> void:
 	var food := ResourceManager.get_amount(0, ResourceManager.ResourceType.FOOD)
 	assert_int(food).is_equal(10)
 	# Cleanup
-	ResourceManager._stockpiles.clear()
 
 
 func test_deposit_returns_to_resource() -> void:
@@ -179,7 +185,6 @@ func test_deposit_returns_to_resource() -> void:
 	u._tick_gather(0.0)
 	assert_int(u._gather_state).is_equal(UnitScript.GatherState.MOVING_TO_RESOURCE)
 	assert_bool(u._moving).is_true()
-	ResourceManager._stockpiles.clear()
 
 
 # -- depletion / replacement --
@@ -355,4 +360,3 @@ func test_integration_gather_100_food() -> void:
 		if total_deposited >= 100:
 			break
 	assert_int(total_deposited).is_greater_equal(100)
-	ResourceManager._stockpiles.clear()

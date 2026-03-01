@@ -6,9 +6,11 @@ extends GdUnitTestSuite
 const GathererComponentScript := preload("res://scripts/prototype/gatherer_component.gd")
 const ResourceFactory := preload("res://tests/helpers/resource_factory.gd")
 const BuildingFactory := preload("res://tests/helpers/building_factory.gd")
+const RMGuard := preload("res://tests/helpers/resource_manager_guard.gd")
 
 var _root: Node2D
 var _unit: Node2D
+var _rm_guard: RefCounted
 
 
 ## Minimal Node2D that satisfies the interface GathererComponent reads from _unit.
@@ -28,6 +30,7 @@ class MockUnit:
 
 
 func before_test() -> void:
+	_rm_guard = RMGuard.new()
 	_root = Node2D.new()
 	add_child(_root)
 	auto_free(_root)
@@ -36,6 +39,10 @@ func before_test() -> void:
 	_unit.position = Vector2.ZERO
 	_root.add_child(_unit)
 	auto_free(_unit)
+
+
+func after_test() -> void:
+	_rm_guard.dispose()
 
 
 func _make_component() -> GathererComponentScript:
@@ -300,7 +307,6 @@ func test_depositing_adds_resources_to_manager() -> void:
 	gc.tick(0.0)
 	var food: int = ResourceManager.get_amount(0, ResourceManager.ResourceType.FOOD)
 	assert_int(food).is_equal(8)
-	ResourceManager._stockpiles.clear()
 
 
 func test_depositing_resets_carried_amount() -> void:
@@ -315,7 +321,6 @@ func test_depositing_resets_carried_amount() -> void:
 	gc.carried_amount = 5
 	gc.tick(0.0)
 	assert_int(gc.carried_amount).is_equal(0)
-	ResourceManager._stockpiles.clear()
 
 
 func test_depositing_returns_to_moving_to_resource_when_target_valid() -> void:
@@ -331,7 +336,6 @@ func test_depositing_returns_to_moving_to_resource_when_target_valid() -> void:
 	gc.tick(0.0)
 	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_RESOURCE)
 	assert_bool(_unit._moving).is_true()
-	ResourceManager._stockpiles.clear()
 
 
 func test_depositing_unknown_type_does_not_crash() -> void:
@@ -347,7 +351,6 @@ func test_depositing_unknown_type_does_not_crash() -> void:
 	# Should not error — _resource_type_to_enum returns null for unknown types
 	gc.tick(0.0)
 	assert_int(gc.carried_amount).is_equal(0)
-	ResourceManager._stockpiles.clear()
 
 
 # ---------------------------------------------------------------------------

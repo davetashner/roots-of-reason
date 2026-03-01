@@ -1,17 +1,18 @@
 extends GdUnitTestSuite
 ## Tests for ResourceManager autoload.
 
-var _original_stockpiles: Dictionary
+const RMGuard := preload("res://tests/helpers/resource_manager_guard.gd")
+
+var _rm_guard: RefCounted
 var _signal_args: Array = []
 
 
 func before_test() -> void:
-	_original_stockpiles = ResourceManager._stockpiles.duplicate(true)
+	_rm_guard = RMGuard.new()
 
 
 func after_test() -> void:
-	ResourceManager._stockpiles = _original_stockpiles.duplicate(true)
-	ResourceManager._corruption_rates.clear()
+	_rm_guard.dispose()
 
 
 # --- init_player tests ---

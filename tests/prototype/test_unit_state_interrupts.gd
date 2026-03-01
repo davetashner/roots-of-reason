@@ -10,11 +10,14 @@ extends GdUnitTestSuite
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
 const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
+const RMGuard := preload("res://tests/helpers/resource_manager_guard.gd")
 
 var _root: Node2D
+var _rm_guard: RefCounted
 
 
 func before_test() -> void:
+	_rm_guard = RMGuard.new()
 	_root = Node2D.new()
 	add_child(_root)
 	auto_free(_root)
@@ -23,7 +26,7 @@ func before_test() -> void:
 
 
 func after_test() -> void:
-	ResourceManager._stockpiles.clear()
+	_rm_guard.dispose()
 
 
 # ---------------------------------------------------------------------------
