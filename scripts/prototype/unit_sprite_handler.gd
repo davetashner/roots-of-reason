@@ -23,16 +23,16 @@ var _config: Dictionary = {}
 var _has_death_anim: bool = false
 
 
-func _init(unit: Node2D, variant: String, player_color: Color) -> void:
+func _init(unit: Node2D, variant: String, player_color: Color, config_path: String = "") -> void:
 	_unit = unit
 	_variant = variant
-	_load_config()
+	_load_config(config_path)
 	_create_sprite(player_color)
 	_load_textures()
 
 
-func _load_config() -> void:
-	var path := "res://data/units/sprites/villager.json"
+func _load_config(config_path: String = "") -> void:
+	var path := config_path if config_path != "" else "res://data/units/sprites/villager.json"
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return

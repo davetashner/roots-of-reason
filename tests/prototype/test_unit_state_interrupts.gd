@@ -119,6 +119,9 @@ func _create_wolf(pos: Vector2 = Vector2(120, 0)) -> Node2D:
 class _MinimalWolfAI:
 	extends Node
 
+	enum WolfState { PATROL, ATTACK, FLEE, BEING_FED, DOMESTICATED }
+	var _state: int = WolfState.PATROL
+	var _is_moving: bool = false
 	var _registered: Array = []
 
 	func register_pending_feeder(_feeder: Node2D) -> void:
