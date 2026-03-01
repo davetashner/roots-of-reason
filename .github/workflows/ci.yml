@@ -83,6 +83,24 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: python3 tools/check_pr_beads.py
 
+  pr-title:
+    name: PR Title Convention
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title format
+        continue-on-error: true
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if ! echo "$PR_TITLE" | grep -qE '^(feat|fix|test|chore|refactor|docs|ci|style|perf|build|revert)(\(.+\))?!?: '; then
+            echo "::warning::PR title doesn't follow conventional commit format: $PR_TITLE"
+            echo "Expected format: type(scope): description"
+            echo "Types: feat, fix, test, chore, refactor, docs, ci, style, perf, build, revert"
+          else
+            echo "PR title follows conventional commit format"
+          fi
+
   python-tests:
     name: Python Tool Tests
     runs-on: ubuntu-latest
