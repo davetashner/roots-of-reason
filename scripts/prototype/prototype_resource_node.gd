@@ -26,6 +26,7 @@ var _is_regrowing: bool = false
 var _node_color: Color = Color(0.2, 0.8, 0.2)
 var _sprite: Sprite2D = null
 var _sprite_textures: Dictionary = {}  # state_name -> Texture2D
+var _sprite_scales: Dictionary = {}  # state_name -> float (per-state scale override)
 var _half_threshold: float = 0.5
 var _sprite_offset_y: float = 0.0
 
@@ -73,6 +74,9 @@ func _setup_sprite(cfg: Dictionary) -> void:
 		return
 	_half_threshold = float(sprite_cfg.get("half_threshold", 0.5))
 	_sprite_offset_y = float(sprite_cfg.get("offset_y", 0.0))
+	var scales: Dictionary = sprite_cfg.get("scales", {})
+	for state_name_s: String in scales:
+		_sprite_scales[state_name_s] = float(scales[state_name_s])
 	_sprite = Sprite2D.new()
 	_sprite.name = "Sprite"
 	_sprite.position.y = _sprite_offset_y
@@ -92,6 +96,8 @@ func _update_sprite() -> void:
 		_sprite.texture = _sprite_textures[state]
 	elif _sprite_textures.has("full"):
 		_sprite.texture = _sprite_textures["full"]
+	var s: float = _sprite_scales.get(state, 1.0)
+	_sprite.scale = Vector2(s, s)
 
 
 func _load_resource_config(res_name: String) -> Dictionary:

@@ -8,6 +8,7 @@ const BIND_HOST: String = "127.0.0.1"
 const MAX_REQUEST_SIZE: int = 4096
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
 const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
+const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
 ## Known resource names that map to data/resources/*.json configs.
 const RESOURCE_NAMES: Array[String] = [
 	"tree",
@@ -369,6 +370,10 @@ func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
 			_cmd_spawn(peer, body)
 		"teleport":
 			_cmd_teleport(peer, body)
+		"place-building":
+			_cmd_place_building(peer, body)
+		"zoom":
+			_cmd_zoom(peer, body)
 		_:
 			_send_json(peer, 400, {"error": "unknown action", "action": action})
 
@@ -872,6 +877,87 @@ func _cmd_teleport(peer: StreamPeerTCP, body: Dictionary) -> void:
 		peer,
 		200,
 		{"action": "teleport", "grid_x": grid_x, "grid_y": grid_y, "moved": moved},
+	)
+
+
+func _cmd_zoom(peer: StreamPeerTCP, body: Dictionary) -> void:
+	if not body.has("value"):
+		_send_json(peer, 400, {"error": "zoom requires value"})
+		return
+	var zoom_val: float = float(body["value"])
+	var camera := _get_camera()
+	if camera != null:
+		camera.zoom = Vector2(zoom_val, zoom_val)
+	_send_json(peer, 200, {"action": "zoom", "value": zoom_val})
+
+
+func _cmd_place_building(peer: StreamPeerTCP, body: Dictionary) -> void:
+	if not body.has("building_name"):
+		_send_json(peer, 400, {"error": "place-building requires building_name"})
+		return
+	if not body.has("grid_x") or not body.has("grid_y"):
+		_send_json(peer, 400, {"error": "place-building requires grid_x and grid_y"})
+		return
+	var bname: String = str(body["building_name"])
+	var grid_x: int = int(body["grid_x"])
+	var grid_y: int = int(body["grid_y"])
+	var grid_pos := Vector2i(grid_x, grid_y)
+	var owner_id: int = int(body.get("owner", 0))
+	var built: bool = str(body.get("built", "true")) != "false"
+	var root := get_tree().current_scene
+	if root == null:
+		_send_json(peer, 500, {"error": "no active scene"})
+		return
+	var stats: Dictionary = DataLoader.get_building_stats(bname)
+	if stats.is_empty():
+		_send_json(peer, 400, {"error": "unknown building", "building_name": bname})
+		return
+	var max_hp: int = int(stats.get("hp", 100))
+	var fp_arr: Array = stats.get("footprint", [1, 1])
+	var footprint := Vector2i(int(fp_arr[0]), int(fp_arr[1]))
+	var building := Node2D.new()
+	building.name = "Building_%s_%d_%d" % [bname, grid_x, grid_y]
+	building.set_script(BuildingScript)
+	building.position = IsoUtils.grid_to_screen(Vector2(grid_pos))
+	building.owner_id = owner_id
+	building.building_name = bname
+	building.footprint = footprint
+	building.grid_pos = grid_pos
+	building.max_hp = max_hp
+	building.entity_category = "own_building" if owner_id == 0 else "enemy_building"
+	if built:
+		building.hp = max_hp
+		building.under_construction = false
+		building.build_progress = 1.0
+	else:
+		building.hp = 0
+		building.under_construction = true
+		building.build_progress = 0.0
+		building._build_time = float(stats.get("build_time", 25))
+	root.add_child(building)
+	if "_target_detector" in root and root._target_detector != null:
+		root._target_detector.register_entity(building)
+	if "_population_manager" in root and root._population_manager != null:
+		root._population_manager.register_building(building, owner_id)
+	if "_entity_registry" in root:
+		root._entity_registry.register(building)
+	if building.has_signal("building_destroyed") and root.has_method("_on_building_destroyed"):
+		building.building_destroyed.connect(root._on_building_destroyed)
+	if "_pathfinder" in root and root._pathfinder != null:
+		var cells: Array = BuildingValidator.get_footprint_cells(grid_pos, footprint)
+		for cell: Vector2i in cells:
+			root._pathfinder.set_cell_solid(cell, true)
+	_send_json(
+		peer,
+		200,
+		{
+			"action": "place-building",
+			"building_name": bname,
+			"grid_x": grid_x,
+			"grid_y": grid_y,
+			"owner": owner_id,
+			"built": built,
+		},
 	)
 
 

@@ -13,6 +13,9 @@
       "stump": ["tree_stump_01.png", "tree_stump_02.png", "tree_stump_03.png", "tree_stump_04.png"]
     },
     "half_threshold": 0.5,
-    "offset_y": -20.0
+    "offset_y": -20.0,
+    "scales": {
+      "stump": 0.5
+    }
   }
 }

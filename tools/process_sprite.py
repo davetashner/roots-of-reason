@@ -125,6 +125,55 @@ def restore_magenta(img: Image.Image) -> tuple[Image.Image, int]:
     return img, restored
 
 
+def _remove_background(img: Image.Image, tolerance: int = 30) -> Image.Image:
+    """Remove near-white/gray backgrounds via flood-fill from corners.
+
+    AI-generated source sprites often have opaque light backgrounds.
+    This flood-fills from each corner, marking reachable near-white
+    pixels as transparent.
+    """
+    img = img.copy()
+    w, h = img.size
+    pixels = img.load()
+
+    # Seed from all four corners
+    seeds = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]
+    visited = set()
+    queue = []
+
+    for sx, sy in seeds:
+        r, g, b, a = pixels[sx, sy]
+        if a == 0:
+            continue  # already transparent
+        # Only seed if the corner is light (near-white/gray)
+        if min(r, g, b) < 180:
+            continue
+        queue.append((sx, sy))
+
+    while queue:
+        x, y = queue.pop()
+        if (x, y) in visited:
+            continue
+        if x < 0 or x >= w or y < 0 or y >= h:
+            continue
+        visited.add((x, y))
+        r, g, b, a = pixels[x, y]
+        if a == 0:
+            continue
+        # Check if this pixel is close to white/light gray
+        if min(r, g, b) < 180 or max(r, g, b) - min(r, g, b) > tolerance:
+            continue
+        # Make transparent
+        pixels[x, y] = (r, g, b, 0)
+        # Expand to neighbors
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in visited:
+                queue.append((nx, ny))
+
+    return img
+
+
 def process_sprite(
     source_path: Path,
     output_path: Path,
@@ -138,6 +187,9 @@ def process_sprite(
     _require_pil()
     img = Image.open(source_path).convert("RGBA")
     src_w, src_h = img.size
+
+    # Remove opaque backgrounds (AI-generated sources often have light gray bg)
+    img = _remove_background(img)
 
     target_w, target_h = canvas_size
 
