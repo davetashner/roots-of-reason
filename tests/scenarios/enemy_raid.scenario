@@ -1,0 +1,34 @@
+# enemy_raid.scenario — Military defends base from enemy attack.
+# Tests LOS-detection→auto-engage→combat-resolution→building-survival chain.
+
+speed 5
+
+# Place a player town center and house
+place-building town_center 30 30 0
+place-building house 33 30 0
+
+# Spawn 3 player swordsmen near base (defensive stance by default for military)
+spawn infantry 29 28 0
+spawn infantry 30 28 0
+spawn infantry 31 28 0
+
+# Spawn 2 enemy swordsmen approaching from nearby
+# They should be within aggro scan radius (6 tiles = 384px)
+spawn infantry 30 24 1
+spawn infantry 31 24 1
+
+# Wait for combat to resolve. Infantry HP=40, attack=6, cooldown=1.5s.
+# 3v2 fight should resolve in ~15 game-seconds. At 5x that's ~3s real.
+sleep 10
+
+# Verify enemy units are dead (raid repelled)
+assert-count --owner 1 == 0
+
+# Verify at least 2 player swordsmen survived
+assert-count --owner 0 --type infantry >= 2
+
+# Verify buildings survived
+assert-building-at town_center 30 30
+assert-building-at house 33 30
+
+screenshot enemy_raid_done --annotate

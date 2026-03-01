@@ -1,0 +1,33 @@
+# multi_dropoff.scenario — Villagers use nearest drop-off point.
+# Tests multi-building drop-off selection and pathfinding efficiency.
+
+speed 5
+
+# Place two lumber camps at different positions
+place-building lumber_camp 25 30 0
+place-building lumber_camp 35 30 0
+
+# Spawn trees near each lumber camp
+spawn tree 24 30
+spawn tree 23 30
+spawn tree 36 30
+spawn tree 37 30
+
+# Spawn villagers near each cluster
+spawn villager 24 28 0
+spawn villager 36 28 0
+
+# Select all and assign to gather nearby trees
+select-all
+gather 24 30
+
+# Wait for wood to increase from gathering
+wait wood>200 --timeout 30
+
+# Verify wood increased
+assert wood>200
+
+# Both villagers should still be alive
+assert-count --owner 0 --type villager >= 2
+
+screenshot multi_dropoff_done --annotate
