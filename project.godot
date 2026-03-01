@@ -25,6 +25,7 @@ SaveManager="*res://scripts/autoloads/save_manager.gd"
 SettingsManager="*res://scripts/autoloads/settings_manager.gd"
 EventBus="*res://scripts/autoloads/event_bus.gd"
 DebugServer="*res://scripts/debug/debug_server.gd"
+DebugConsole="*res://scripts/debug/debug_console.gd"
 
 [display]
 
