@@ -40,7 +40,11 @@ func generate(tile_grid: Dictionary, map_width: int, map_height: int) -> Diction
 	var shore_orientations: Dictionary = {}  # Vector2i -> Vector2i
 
 	if not _shore_enabled:
-		return {"changes": changes, "shore_orientations": shore_orientations}
+		return {
+			"changes": changes,
+			"shore_orientations": shore_orientations,
+			"shore_segments": {},
+		}
 
 	# Two-phase collect-then-apply: scan all tiles, then apply changes.
 	# This prevents cascading (e.g. a newly-assigned shore triggering more shore).
@@ -68,7 +72,17 @@ func generate(tile_grid: Dictionary, map_width: int, map_height: int) -> Diction
 		if changes[pos] == "shore":
 			shore_orientations[pos] = _get_water_direction(pos, tile_grid, changes)
 
-	return {"changes": changes, "shore_orientations": shore_orientations}
+	# Smooth orientations so adjacent shore tiles face the same direction.
+	shore_orientations = _smooth_orientations(shore_orientations)
+
+	# Label connected shore segments sharing the same orientation.
+	var shore_segments: Dictionary = _label_shore_segments(shore_orientations)
+
+	return {
+		"changes": changes,
+		"shore_orientations": shore_orientations,
+		"shore_segments": shore_segments,
+	}
 
 
 func _get_water_direction(pos: Vector2i, tile_grid: Dictionary, changes: Dictionary) -> Vector2i:
@@ -116,3 +130,59 @@ func _has_water_neighbor(pos: Vector2i, tile_grid: Dictionary) -> bool:
 		if t == "water":
 			return true
 	return false
+
+
+func _smooth_orientations(orientations: Dictionary) -> Dictionary:
+	## Run 2 smoothing passes so each shore tile matches the majority of its
+	## shore neighbors. Prevents isolated direction flips at coastline bends.
+	var smoothed: Dictionary = orientations.duplicate()
+	for _pass in 2:
+		var next: Dictionary = smoothed.duplicate()
+		for pos: Vector2i in smoothed:
+			var counts: Dictionary = {}  # Vector2i -> int
+			for dir: Vector2i in DIRECTIONS_8:
+				var neighbor := pos + dir
+				if smoothed.has(neighbor):
+					var n_dir: Vector2i = smoothed[neighbor]
+					counts[n_dir] = counts.get(n_dir, 0) + 1
+			if counts.is_empty():
+				continue
+			# Find majority direction among neighbors
+			var best_dir: Vector2i = smoothed[pos]
+			var best_count: int = 0
+			for d: Vector2i in counts:
+				if counts[d] > best_count:
+					best_count = counts[d]
+					best_dir = d
+			next[pos] = best_dir
+		smoothed = next
+	return smoothed
+
+
+func _label_shore_segments(orientations: Dictionary) -> Dictionary:
+	## Flood-fill connected shore tiles that share the same orientation into
+	## numbered segments. Returns Dictionary of Vector2i -> int (segment_id).
+	var segments: Dictionary = {}  # Vector2i -> int
+	var segment_id := 0
+	for pos: Vector2i in orientations:
+		if segments.has(pos):
+			continue
+		# BFS flood-fill from this tile
+		var orientation: Vector2i = orientations[pos]
+		var queue: Array[Vector2i] = [pos]
+		segments[pos] = segment_id
+		var head := 0
+		while head < queue.size():
+			var current: Vector2i = queue[head]
+			head += 1
+			for dir: Vector2i in CARDINAL_DIRS:
+				var neighbor := current + dir
+				if segments.has(neighbor):
+					continue
+				if not orientations.has(neighbor):
+					continue
+				if orientations[neighbor] == orientation:
+					segments[neighbor] = segment_id
+					queue.append(neighbor)
+		segment_id += 1
+	return segments

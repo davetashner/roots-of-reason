@@ -53,6 +53,7 @@ var _fauna_positions: Dictionary = {}  # fauna_name -> Array[Dictionary]
 
 # Shore orientation data
 var _shore_orientations: Dictionary = {}  # Vector2i -> Vector2i (pos -> water direction)
+var _shore_segments: Dictionary = {}  # Vector2i -> int (pos -> segment_id)
 
 
 func _ready() -> void:
@@ -302,6 +303,17 @@ func _pick_variant_sid(terrain: String, pos: Vector2i) -> int:
 	return variants[absi(hash_val) % variants.size()]
 
 
+func _pick_shore_variant_sid(pos: Vector2i) -> int:
+	## Pick a shore variant using the segment ID so all tiles in the same
+	## coastline segment share the same sprite variant.
+	var variants: Array = _variant_ids.get("shore", [])
+	if variants.is_empty():
+		return _source_ids.get("shore", -1)
+	var seg_id: int = _shore_segments.get(pos, 0)
+	var hash_val: int = _seed_value + seg_id * 7919
+	return variants[absi(hash_val) % variants.size()]
+
+
 func _generate_map() -> void:
 	# 1. Generate elevation grid
 	var elev_gen := ElevationGenerator.new()
@@ -351,13 +363,18 @@ func _generate_map() -> void:
 	var coast_result: Dictionary = coast_gen.generate(_tile_grid, _map_width, _map_height)
 	var coast_changes: Dictionary = coast_result.get("changes", {})
 	_shore_orientations = coast_result.get("shore_orientations", {})
+	_shore_segments = coast_result.get("shore_segments", {})
 	for pos: Vector2i in coast_changes:
 		_tile_grid[pos] = coast_changes[pos]
 
 	# 4b. Render all tiles (after coastline reclassification)
 	for pos: Vector2i in _tile_grid:
 		var terrain: String = _tile_grid[pos]
-		var sid: int = _pick_variant_sid(terrain, pos)
+		var sid: int
+		if terrain == "shore" and _shore_segments.has(pos):
+			sid = _pick_shore_variant_sid(pos)
+		else:
+			sid = _pick_variant_sid(terrain, pos)
 		if sid >= 0:
 			var alt_id := 0
 			if terrain == "shore" and _shore_orientations.has(pos):
@@ -575,6 +592,12 @@ func save_state() -> Dictionary:
 		var dir: Vector2i = _shore_orientations[pos]
 		shore_orient_data[key] = "%d,%d" % [dir.x, dir.y]
 
+	# Serialize shore segments
+	var shore_seg_data: Dictionary = {}
+	for pos: Vector2i in _shore_segments:
+		var key := "%d,%d" % [pos.x, pos.y]
+		shore_seg_data[key] = _shore_segments[pos]
+
 	return {
 		"map_width": _map_width,
 		"map_height": _map_height,
@@ -585,6 +608,7 @@ func save_state() -> Dictionary:
 		"starting_positions": start_pos_data,
 		"fauna_positions": fauna_data,
 		"shore_orientations": shore_orient_data,
+		"shore_segments": shore_seg_data,
 	}
 
 
@@ -604,8 +628,9 @@ func load_state(state: Dictionary) -> void:
 	_starting_positions.clear()
 	_fauna_positions.clear()
 	_shore_orientations.clear()
+	_shore_segments.clear()
 
-	# Deserialize shore orientations first (needed for tile placement)
+	# Deserialize shore orientations and segments first (needed for tile placement)
 	var shore_orient_data: Dictionary = state.get("shore_orientations", {})
 	for key: String in shore_orient_data:
 		var parts := key.split(",")
@@ -613,6 +638,13 @@ func load_state(state: Dictionary) -> void:
 		if parts.size() == 2 and dir_parts.size() == 2:
 			var pos := Vector2i(int(parts[0]), int(parts[1]))
 			_shore_orientations[pos] = Vector2i(int(dir_parts[0]), int(dir_parts[1]))
+
+	var shore_seg_data: Dictionary = state.get("shore_segments", {})
+	for key: String in shore_seg_data:
+		var parts := key.split(",")
+		if parts.size() == 2:
+			var pos := Vector2i(int(parts[0]), int(parts[1]))
+			_shore_segments[pos] = int(shore_seg_data[key])
 
 	var grid_data: Dictionary = state.get("tile_grid", {})
 	for key: String in grid_data:
@@ -622,7 +654,11 @@ func load_state(state: Dictionary) -> void:
 		var pos := Vector2i(int(parts[0]), int(parts[1]))
 		var terrain: String = grid_data[key]
 		_tile_grid[pos] = terrain
-		var sid: int = _pick_variant_sid(terrain, pos)
+		var sid: int
+		if terrain == "shore" and _shore_segments.has(pos):
+			sid = _pick_shore_variant_sid(pos)
+		else:
+			sid = _pick_variant_sid(terrain, pos)
 		if sid >= 0:
 			var alt_id := 0
 			if terrain == "shore" and _shore_orientations.has(pos):
