@@ -204,7 +204,7 @@ func _build_tileset() -> void:
 		source_id += 1
 
 	# Register procedurally-placed terrain tiles (not in terrain_weights)
-	var extra_terrains := ["river", "shore", "shallows", "deep_water"]
+	var extra_terrains := ["river", "shore", "shallows", "deep_water", "desert"]
 	for extra_name: String in extra_terrains:
 		if _source_ids.has(extra_name):
 			continue

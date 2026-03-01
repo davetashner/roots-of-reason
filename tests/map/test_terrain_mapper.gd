@@ -30,6 +30,24 @@ func test_sand() -> void:
 	assert_str(mapper.get_terrain(0.35, 0.5)).is_equal("sand")
 
 
+func test_desert_low_moisture_in_sand_band() -> void:
+	var mapper := _create_mapper()
+	# Elevation in sand band (0.30-0.40), very low moisture -> desert
+	assert_str(mapper.get_terrain(0.35, 0.1)).is_equal("desert")
+
+
+func test_sand_not_desert_above_threshold() -> void:
+	var mapper := _create_mapper()
+	# Elevation in sand band, moisture above desert threshold -> sand
+	assert_str(mapper.get_terrain(0.35, 0.3)).is_equal("sand")
+
+
+func test_desert_boundary_at_threshold() -> void:
+	var mapper := _create_mapper()
+	# Exactly at desert threshold (0.25) -> sand (desert is < 0.25)
+	assert_str(mapper.get_terrain(0.35, 0.25)).is_equal("sand")
+
+
 func test_grass() -> void:
 	var mapper := _create_mapper()
 	assert_str(mapper.get_terrain(0.5, 0.4)).is_equal("grass")

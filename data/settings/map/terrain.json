@@ -18,6 +18,7 @@
     "grass":      { "buildable": true,  "blocks_los": false },
     "dirt":       { "buildable": true,  "blocks_los": false },
     "sand":       { "buildable": true,  "blocks_los": false },
+    "desert":     { "buildable": true,  "blocks_los": false },
     "water":      { "buildable": false, "blocks_los": false },
     "forest":     { "buildable": true,  "blocks_los": true  },
     "stone":      { "buildable": true,  "blocks_los": false },
