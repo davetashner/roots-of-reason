@@ -270,12 +270,33 @@ func test_serialize_entity_building() -> void:
 	assert_bool(result.get("under_construction", false)).is_true()
 
 
-func test_serialize_entity_empty_category() -> void:
+func test_serialize_entity_empty_category_with_unit_category() -> void:
 	var unit := MockUnit.new()
 	auto_free(unit)
 	unit.entity_category = ""
+	unit.unit_category = "villager"
+	var result := DebugServerScript.serialize_entity(unit)
+	assert_str(result.get("entity_category", "")).is_equal("own_unit")
+	assert_str(result.get("unit_category", "")).is_equal("villager")
+
+
+func test_serialize_entity_empty_category_no_unit_category() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = ""
+	unit.unit_category = ""
 	var result := DebugServerScript.serialize_entity(unit)
 	assert_dict(result).is_empty()
+
+
+func test_serialize_entity_infers_enemy_unit() -> void:
+	var unit := MockUnit.new()
+	auto_free(unit)
+	unit.entity_category = ""
+	unit.owner_id = 1
+	unit.unit_category = "archer"
+	var result := DebugServerScript.serialize_entity(unit)
+	assert_str(result.get("entity_category", "")).is_equal("enemy_unit")
 
 
 func test_get_unit_action_idle() -> void:
