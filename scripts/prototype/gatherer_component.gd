@@ -16,6 +16,7 @@ var drop_off_reach: float = 80.0
 var gather_accumulator: float = 0.0
 var drop_off_target: Node2D = null
 var pending_gather_target_name: String = ""
+var gather_offset: Vector2 = Vector2.ZERO
 
 var _unit: Node2D = null
 
@@ -67,7 +68,8 @@ func _tick_moving_to_resource() -> void:
 	if not _is_target_harvestable(gather_target):
 		_try_find_replacement_resource()
 		return
-	var dist: float = _unit.position.distance_to(_nav_position(gather_target))
+	var dest: Vector2 = _nav_position(gather_target) + gather_offset
+	var dist: float = _unit.position.distance_to(dest)
 	if dist <= gather_reach and not _unit._moving:
 		gather_state = GatherState.GATHERING
 		gather_accumulator = 0.0
@@ -121,7 +123,7 @@ func _tick_depositing() -> void:
 	# Return to resource or find replacement
 	if gather_target != null and is_instance_valid(gather_target) and _is_target_harvestable(gather_target):
 		gather_state = GatherState.MOVING_TO_RESOURCE
-		_unit.move_to(_nav_position(gather_target))
+		_unit.move_to(_nav_position(gather_target) + gather_offset)
 	else:
 		_try_find_replacement_resource()
 
@@ -211,6 +213,7 @@ func _try_find_replacement_resource() -> void:
 		gather_target = best
 		gather_state = GatherState.MOVING_TO_RESOURCE
 		gather_accumulator = 0.0
+		gather_offset = Vector2.ZERO  # Reset offset for new resource
 		_unit.move_to(_nav_position(best))
 	elif carried_amount > 0:
 		_start_drop_off_trip()
@@ -234,16 +237,18 @@ func cancel() -> void:
 	gather_type = ""
 	gather_accumulator = 0.0
 	drop_off_target = null
+	gather_offset = Vector2.ZERO
 
 
-func assign_target(node: Node2D) -> void:
+func assign_target(node: Node2D, offset: Vector2 = Vector2.ZERO) -> void:
 	gather_target = node
 	gather_type = node.resource_type if "resource_type" in node else ""
 	gather_state = GatherState.MOVING_TO_RESOURCE
 	gather_accumulator = 0.0
 	carried_amount = 0
 	drop_off_target = null
-	_unit.move_to(_nav_position(node))
+	gather_offset = offset
+	_unit.move_to(_nav_position(node) + gather_offset)
 
 
 func resolve_target(scene_root: Node) -> void:
@@ -276,6 +281,8 @@ func save_state() -> Dictionary:
 		"carried_amount": carried_amount,
 		"gather_accumulator": gather_accumulator,
 		"gather_rate_multiplier": gather_rate_multiplier,
+		"gather_offset_x": gather_offset.x,
+		"gather_offset_y": gather_offset.y,
 	}
 	if gather_target != null and is_instance_valid(gather_target):
 		state["gather_target_name"] = str(gather_target.name)
@@ -289,3 +296,7 @@ func load_state(data: Dictionary) -> void:
 	carried_amount = int(data.get("carried_amount", 0))
 	gather_accumulator = float(data.get("gather_accumulator", 0.0))
 	gather_rate_multiplier = float(data.get("gather_rate_multiplier", 1.0))
+	gather_offset = Vector2(
+		float(data.get("gather_offset_x", 0.0)),
+		float(data.get("gather_offset_y", 0.0)),
+	)
