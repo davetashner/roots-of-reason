@@ -103,8 +103,8 @@ func _create_wolf(pos: Vector2 = Vector2(120, 0)) -> Node2D:
 	wolf.unit_type = "wolf"
 	wolf.owner_id = -1
 	wolf.position = pos
-	wolf.hp = 30
-	wolf.max_hp = 30
+	wolf.hp = 18
+	wolf.max_hp = 18
 	_root.add_child(wolf)
 	auto_free(wolf)
 	# Attach a minimal WolfAI stub

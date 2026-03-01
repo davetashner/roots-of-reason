@@ -51,8 +51,8 @@ func _create_wolf(pos: Vector2 = Vector2.ZERO) -> Node2D:
 	unit.owner_id = -1
 	unit.unit_color = Color(0.5, 0.5, 0.5)
 	unit.position = pos
-	unit.hp = 30
-	unit.max_hp = 30
+	unit.hp = 18
+	unit.max_hp = 18
 	add_child(unit)
 	unit._scene_root = self
 	auto_free(unit)
