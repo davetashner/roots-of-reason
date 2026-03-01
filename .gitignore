@@ -28,5 +28,8 @@ reports/
 # assets/sprites/buildings/placeholder/
 # assets/tiles/terrain/generated/
 
+# Blender renders (generated, not committed)
+blender/renders/
+
 # Backlog visualizer (generated, not committed)
 backlog-graph.html
