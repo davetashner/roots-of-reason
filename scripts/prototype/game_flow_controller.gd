@@ -93,6 +93,8 @@ func on_wonder_countdown_cancelled(_player_id: int) -> void:
 
 func on_building_placed(building: Node2D) -> void:
 	_root._entity_registry.register(building)
+	if _root._input_handler != null and _root._input_handler.has_method("register_unit"):
+		_root._input_handler.register_unit(building)
 	if building.has_signal("construction_complete"):
 		building.construction_complete.connect(on_building_construction_complete)
 	if building.has_signal("building_destroyed"):
