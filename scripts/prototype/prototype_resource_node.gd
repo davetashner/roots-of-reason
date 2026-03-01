@@ -84,7 +84,7 @@ func _update_sprite() -> void:
 	if _sprite == null:
 		return
 	var state: String = "full"
-	if current_yield <= 0:
+	if _is_regrowing or current_yield <= 0:
 		state = "stump"
 	elif total_yield > 0 and float(current_yield) / float(total_yield) <= _half_threshold:
 		state = "half"
@@ -104,8 +104,16 @@ func _load_resource_config(res_name: String) -> Dictionary:
 	return {}
 
 
-func apply_gather_work(amount: float) -> int:
+func is_harvestable() -> bool:
 	if current_yield <= 0:
+		return false
+	if _is_regrowing:
+		return false
+	return true
+
+
+func apply_gather_work(amount: float) -> int:
+	if not is_harvestable():
 		return 0
 	var gathered := mini(int(amount), current_yield)
 	current_yield -= gathered
@@ -127,10 +135,7 @@ func _process(delta: float) -> void:
 		return
 	if current_yield >= total_yield:
 		return
-	if not _is_regrowing and current_yield > 0:
-		# Partially gathered but not fully depleted — still regen
-		pass
-	elif not _is_regrowing:
+	if not _is_regrowing:
 		return
 	var game_delta := GameUtils.get_game_delta(delta)
 	if game_delta <= 0.0:
@@ -149,7 +154,7 @@ func _process(delta: float) -> void:
 	if restore > 0:
 		_regen_accum -= float(restore)
 		current_yield = mini(current_yield + restore, total_yield)
-		if current_yield > 0 and _is_regrowing:
+		if current_yield >= total_yield and _is_regrowing:
 			_is_regrowing = false
 		_update_sprite()
 		queue_redraw()
@@ -167,7 +172,7 @@ func _draw() -> void:
 	if _sprite != null:
 		return
 	var color := _node_color
-	if _is_regrowing and current_yield <= 0:
+	if _is_regrowing:
 		# Stump visual — faded outline only
 		var stump_pts := PackedVector2Array(
 			[
