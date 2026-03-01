@@ -371,9 +371,20 @@ func _init_transport() -> void:
 		_transport.config = GameUtils.dl_settings("transport")
 
 
+func _has_sprite_config() -> bool:
+	return FileAccess.file_exists("res://data/units/sprites/" + unit_type + ".json")
+
+
+func _get_sprite_config_path() -> String:
+	var path := "res://data/units/sprites/" + unit_type + ".json"
+	if FileAccess.file_exists(path):
+		return path
+	return "res://data/units/sprites/villager.json"
+
+
 func _init_sprite() -> void:
+	var config_path := _get_sprite_config_path()
 	if _sprite_variant == "":
-		var config_path := "res://data/units/sprites/villager.json"
 		var file := FileAccess.open(config_path, FileAccess.READ)
 		if file == null:
 			return
@@ -384,7 +395,7 @@ func _init_sprite() -> void:
 		if variants.is_empty():
 			return
 		_sprite_variant = variants[randi() % variants.size()]
-	_sprite_handler = UnitSpriteHandlerScript.new(self, _sprite_variant, unit_color)
+	_sprite_handler = UnitSpriteHandlerScript.new(self, _sprite_variant, unit_color, config_path)
 
 
 func _get_visual_state() -> String:
@@ -394,9 +405,16 @@ func _get_visual_state() -> String:
 		return "build"
 	if _gatherer != null and _gatherer.gather_state == GathererComponentScript.GatherState.GATHERING:
 		return "chop" if _gatherer.gather_type == "wood" else "gather"
-	if _combatant != null and _combatant.combat_state == CombatantComponentScript.CombatState.ATTACKING and not _moving:
+	var is_attacking := (
+		_combatant != null and _combatant.combat_state == CombatantComponentScript.CombatState.ATTACKING and not _moving
+	)
+	# Wolf/fauna AI bypasses combatant component and unit movement
+	var wolf_ai := get_node_or_null("WolfAI")
+	if wolf_ai != null:
+		is_attacking = wolf_ai._state == wolf_ai.WolfState.ATTACK and not wolf_ai._is_moving
+	if is_attacking:
 		return "attack"
-	if _moving:
+	if _moving or (wolf_ai != null and wolf_ai._is_moving):
 		return "walk"
 	return "idle"
 
@@ -435,8 +453,8 @@ func _process(delta: float) -> void:
 	_heal_feed.tick(game_delta)
 	if _transport != null:
 		_transport.tick(game_delta, _moving)
-	# Lazy-init sprite handler for villagers (after load_state may have set _sprite_variant)
-	if _sprite_handler == null and unit_type == "villager":
+	# Lazy-init sprite handler (after load_state may have set _sprite_variant)
+	if _sprite_handler == null and _has_sprite_config():
 		_init_sprite()
 	if _sprite_handler != null:
 		_sprite_handler.update(_get_visual_state(), _facing, game_delta)

@@ -1,0 +1,55 @@
+{
+  "canvas_size": [128, 128],
+  "directions": ["s", "se", "e", "ne", "n", "nw", "w", "sw"],
+  "animations": ["attack"],
+  "sprites": [
+    {
+      "filename": "wolf_attack_s_02.png",
+      "animation": "attack",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "wolf_attack_se_02.png",
+      "animation": "attack",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "wolf_attack_e_02.png",
+      "animation": "attack",
+      "direction": "e",
+      "frame": 1
+    },
+    {
+      "filename": "wolf_attack_ne_02.png",
+      "animation": "attack",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "wolf_attack_n_02.png",
+      "animation": "attack",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "wolf_attack_nw_02.png",
+      "animation": "attack",
+      "direction": "nw",
+      "frame": 1
+    },
+    {
+      "filename": "wolf_attack_w_02.png",
+      "animation": "attack",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "wolf_attack_sw_02.png",
+      "animation": "attack",
+      "direction": "sw",
+      "frame": 1
+    }
+  ]
+}
