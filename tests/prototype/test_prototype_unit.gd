@@ -116,6 +116,48 @@ func test_tick_build_clears_target_when_freed() -> void:
 	assert_bool(u._build_target == null).is_true()
 
 
+# -- Full build lifecycle --
+
+
+func test_full_build_lifecycle_foundation_to_complete() -> void:
+	# Place building 50px from villager — within build_reach (80px)
+	var u := _create_unit(Vector2.ZERO)
+	var b := _create_building(Vector2(50, 0), 25.0)
+
+	# Assign build target — villager starts moving toward building
+	u.assign_build_target(b)
+	assert_bool(u._moving).is_true()
+	assert_bool(u._build_target == b).is_true()
+	assert_float(b.build_progress).is_equal_approx(0.0, 0.001)
+	assert_bool(b.under_construction).is_true()
+
+	# Frame 1: villager arrives at building (105px/s > 50px distance)
+	u._process(1.0)
+	assert_bool(u._moving).is_false()
+	# _tick_build fires in same _process — applies 1s of work: 1.0/25.0 = 0.04
+	assert_float(b.build_progress).is_equal_approx(0.04, 0.001)
+	assert_bool(b.under_construction).is_true()
+
+	# Simulate 10 more seconds of building — progress should reach 0.44
+	for i in 10:
+		u._process(1.0)
+	assert_float(b.build_progress).is_equal_approx(0.44, 0.01)
+	assert_bool(b.under_construction).is_true()
+	# HP scales with progress (allow ±1 for float rounding)
+	assert_int(b.hp).is_between(240, 243)
+
+	# Simulate remaining 14 seconds to reach 100% (total 25s)
+	for i in 14:
+		u._process(1.0)
+	assert_float(b.build_progress).is_equal_approx(1.0, 0.01)
+	assert_bool(b.under_construction).is_false()
+	assert_int(b.hp).is_equal(550)
+
+	# Villager should be idle after construction completes
+	assert_bool(u._build_target == null).is_true()
+	assert_bool(u.is_idle()).is_true()
+
+
 # -- is_idle --
 
 
@@ -128,6 +170,34 @@ func test_not_idle_when_moving() -> void:
 	var u := _create_unit()
 	u.move_to(Vector2(100, 100))
 	assert_bool(u.is_idle()).is_false()
+
+
+func test_idle_after_arriving_at_move_target() -> void:
+	var u := _create_unit(Vector2.ZERO)
+	u.move_to(Vector2(50, 0))
+	assert_bool(u._moving).is_true()
+	assert_bool(u.is_idle()).is_false()
+	# Simulate enough frames to arrive (speed=105 px/s, distance=50 px)
+	u._process(1.0)
+	assert_bool(u._moving).is_false()
+	assert_bool(u.is_idle()).is_true()
+
+
+func test_idle_after_following_path() -> void:
+	var u := _create_unit(Vector2.ZERO)
+	var waypoints: Array[Vector2] = [Vector2(30, 0), Vector2(60, 0)]
+	u.follow_path(waypoints)
+	assert_bool(u._moving).is_true()
+	assert_bool(u.is_idle()).is_false()
+	# Frame 1: arrives at waypoint 1, advances to waypoint 2
+	u._process(1.0)
+	assert_bool(u._moving).is_true()
+	assert_vector(u.position).is_equal(Vector2(30, 0))
+	# Frame 2: arrives at waypoint 2, goes idle
+	u._process(1.0)
+	assert_bool(u._moving).is_false()
+	assert_bool(u.is_idle()).is_true()
+	assert_vector(u.position).is_equal(Vector2(60, 0))
 
 
 func test_not_idle_when_building() -> void:

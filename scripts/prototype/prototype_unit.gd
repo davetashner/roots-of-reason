@@ -442,6 +442,11 @@ func _process(delta: float) -> void:
 		return
 	if _moving:
 		var dist := position.distance_to(_target_pos)
+		if dist >= 2.0:
+			var direction := (_target_pos - position).normalized()
+			_facing = direction
+			position = position.move_toward(_target_pos, get_move_speed() * game_delta)
+			dist = position.distance_to(_target_pos)
 		if dist < 2.0:
 			position = _target_pos
 			# Advance to next waypoint if following a path
@@ -453,10 +458,6 @@ func _process(delta: float) -> void:
 				_path.clear()
 				_path_index = 0
 				clear_formation_speed()
-		else:
-			var direction := (_target_pos - position).normalized()
-			_facing = direction
-			position = position.move_toward(_target_pos, get_move_speed() * game_delta)
 		_visual_dirty = true
 	_tick_build(game_delta)
 	_gatherer.tick(game_delta)
