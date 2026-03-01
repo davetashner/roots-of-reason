@@ -1,0 +1,1057 @@
+{
+  "source": "villager_spritesheet.png",
+  "canvas_size": [
+    128,
+    128
+  ],
+  "directions": [
+    "s",
+    "se",
+    "e",
+    "ne",
+    "n",
+    "nw",
+    "w",
+    "sw"
+  ],
+  "animations": [
+    "idle",
+    "walk",
+    "gather",
+    "build_a",
+    "build_b",
+    "death",
+    "chop"
+  ],
+  "sprites": [
+    {
+      "filename": "villager_idle_s_01.png",
+      "animation": "idle",
+      "direction": "s",
+      "frame": 1,
+      "source_bbox": [
+        100,
+        104,
+        171,
+        231
+      ]
+    },
+    {
+      "filename": "villager_idle_s_02.png",
+      "animation": "idle",
+      "direction": "s",
+      "frame": 2,
+      "source_bbox": [
+        232,
+        104,
+        309,
+        231
+      ]
+    },
+    {
+      "filename": "villager_walk_s_01.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 1,
+      "source_bbox": [
+        363,
+        104,
+        432,
+        231
+      ]
+    },
+    {
+      "filename": "villager_walk_s_02.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 2,
+      "source_bbox": [
+        471,
+        104,
+        472,
+        231
+      ]
+    },
+    {
+      "filename": "villager_walk_s_03.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 3,
+      "source_bbox": [
+        475,
+        104,
+        543,
+        231
+      ]
+    },
+    {
+      "filename": "villager_walk_s_04.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 4,
+      "source_bbox": [
+        584,
+        104,
+        655,
+        231
+      ]
+    },
+    {
+      "filename": "villager_gather_s_01.png",
+      "animation": "gather",
+      "direction": "s",
+      "frame": 1,
+      "source_bbox": [
+        714,
+        104,
+        789,
+        231
+      ]
+    },
+    {
+      "filename": "villager_gather_s_02.png",
+      "animation": "gather",
+      "direction": "s",
+      "frame": 2,
+      "source_bbox": [
+        848,
+        104,
+        917,
+        231
+      ]
+    },
+    {
+      "filename": "villager_idle_se_01.png",
+      "animation": "idle",
+      "direction": "se",
+      "frame": 1,
+      "source_bbox": [
+        101,
+        254,
+        171,
+        378
+      ]
+    },
+    {
+      "filename": "villager_idle_se_02.png",
+      "animation": "idle",
+      "direction": "se",
+      "frame": 2,
+      "source_bbox": [
+        229,
+        254,
+        305,
+        378
+      ]
+    },
+    {
+      "filename": "villager_walk_se_01.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 1,
+      "source_bbox": [
+        363,
+        254,
+        430,
+        378
+      ]
+    },
+    {
+      "filename": "villager_walk_se_02.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 2,
+      "source_bbox": [
+        470,
+        254,
+        542,
+        378
+      ]
+    },
+    {
+      "filename": "villager_walk_se_03.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 3,
+      "source_bbox": [
+        579,
+        254,
+        651,
+        378
+      ]
+    },
+    {
+      "filename": "villager_gather_se_01.png",
+      "animation": "gather",
+      "direction": "se",
+      "frame": 1,
+      "source_bbox": [
+        708,
+        254,
+        782,
+        378
+      ]
+    },
+    {
+      "filename": "villager_gather_se_02.png",
+      "animation": "gather",
+      "direction": "se",
+      "frame": 2,
+      "source_bbox": [
+        842,
+        254,
+        915,
+        378
+      ]
+    },
+    {
+      "filename": "villager_idle_e_01.png",
+      "animation": "idle",
+      "direction": "e",
+      "frame": 1,
+      "source_bbox": [
+        96,
+        406,
+        173,
+        527
+      ]
+    },
+    {
+      "filename": "villager_idle_e_02.png",
+      "animation": "idle",
+      "direction": "e",
+      "frame": 2,
+      "source_bbox": [
+        228,
+        406,
+        305,
+        527
+      ]
+    },
+    {
+      "filename": "villager_idle_e_03.png",
+      "animation": "idle",
+      "direction": "e",
+      "frame": 3,
+      "source_bbox": [
+        352,
+        406,
+        427,
+        527
+      ]
+    },
+    {
+      "filename": "villager_walk_e_01.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 1,
+      "source_bbox": [
+        462,
+        406,
+        540,
+        527
+      ]
+    },
+    {
+      "filename": "villager_walk_e_02.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 2,
+      "source_bbox": [
+        572,
+        406,
+        649,
+        527
+      ]
+    },
+    {
+      "filename": "villager_gather_e_01.png",
+      "animation": "gather",
+      "direction": "e",
+      "frame": 1,
+      "source_bbox": [
+        697,
+        406,
+        787,
+        527
+      ]
+    },
+    {
+      "filename": "villager_gather_e_02.png",
+      "animation": "gather",
+      "direction": "e",
+      "frame": 2,
+      "source_bbox": [
+        832,
+        406,
+        922,
+        527
+      ]
+    },
+    {
+      "filename": "villager_idle_ne_01.png",
+      "animation": "idle",
+      "direction": "ne",
+      "frame": 1,
+      "source_bbox": [
+        100,
+        554,
+        183,
+        672
+      ]
+    },
+    {
+      "filename": "villager_idle_ne_02.png",
+      "animation": "idle",
+      "direction": "ne",
+      "frame": 2,
+      "source_bbox": [
+        230,
+        554,
+        313,
+        672
+      ]
+    },
+    {
+      "filename": "villager_idle_ne_03.png",
+      "animation": "idle",
+      "direction": "ne",
+      "frame": 3,
+      "source_bbox": [
+        352,
+        554,
+        427,
+        672
+      ]
+    },
+    {
+      "filename": "villager_walk_ne_01.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 1,
+      "source_bbox": [
+        460,
+        554,
+        544,
+        672
+      ]
+    },
+    {
+      "filename": "villager_walk_ne_02.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 2,
+      "source_bbox": [
+        576,
+        554,
+        660,
+        672
+      ]
+    },
+    {
+      "filename": "villager_gather_ne_01.png",
+      "animation": "gather",
+      "direction": "ne",
+      "frame": 1,
+      "source_bbox": [
+        696,
+        554,
+        795,
+        672
+      ]
+    },
+    {
+      "filename": "villager_gather_ne_02.png",
+      "animation": "gather",
+      "direction": "ne",
+      "frame": 2,
+      "source_bbox": [
+        819,
+        554,
+        929,
+        672
+      ]
+    },
+    {
+      "filename": "villager_build_a_n_01.png",
+      "animation": "build_a",
+      "direction": "n",
+      "frame": 1,
+      "source_bbox": [
+        101,
+        740,
+        188,
+        843
+      ]
+    },
+    {
+      "filename": "villager_build_a_n_02.png",
+      "animation": "build_a",
+      "direction": "n",
+      "frame": 2,
+      "source_bbox": [
+        215,
+        740,
+        297,
+        843
+      ]
+    },
+    {
+      "filename": "villager_build_a_n_03.png",
+      "animation": "build_a",
+      "direction": "n",
+      "frame": 3,
+      "source_bbox": [
+        328,
+        740,
+        413,
+        843
+      ]
+    },
+    {
+      "filename": "villager_build_b_n_01.png",
+      "animation": "build_b",
+      "direction": "n",
+      "frame": 1,
+      "source_bbox": [
+        441,
+        740,
+        528,
+        843
+      ]
+    },
+    {
+      "filename": "villager_build_b_n_02.png",
+      "animation": "build_b",
+      "direction": "n",
+      "frame": 2,
+      "source_bbox": [
+        547,
+        740,
+        649,
+        843
+      ]
+    },
+    {
+      "filename": "villager_death_n_01.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 1,
+      "source_bbox": [
+        667,
+        740,
+        753,
+        843
+      ]
+    },
+    {
+      "filename": "villager_death_n_02.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 2,
+      "source_bbox": [
+        753,
+        740,
+        839,
+        843
+      ]
+    },
+    {
+      "filename": "villager_death_n_03.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 3,
+      "source_bbox": [
+        839,
+        740,
+        927,
+        843
+      ]
+    },
+    {
+      "filename": "villager_build_a_nw_01.png",
+      "animation": "build_a",
+      "direction": "nw",
+      "frame": 1,
+      "source_bbox": [
+        100,
+        868,
+        191,
+        975
+      ]
+    },
+    {
+      "filename": "villager_build_a_nw_02.png",
+      "animation": "build_a",
+      "direction": "nw",
+      "frame": 2,
+      "source_bbox": [
+        221,
+        868,
+        306,
+        975
+      ]
+    },
+    {
+      "filename": "villager_build_a_nw_03.png",
+      "animation": "build_a",
+      "direction": "nw",
+      "frame": 3,
+      "source_bbox": [
+        335,
+        868,
+        430,
+        975
+      ]
+    },
+    {
+      "filename": "villager_build_b_nw_01.png",
+      "animation": "build_b",
+      "direction": "nw",
+      "frame": 1,
+      "source_bbox": [
+        455,
+        868,
+        542,
+        975
+      ]
+    },
+    {
+      "filename": "villager_build_b_nw_02.png",
+      "animation": "build_b",
+      "direction": "nw",
+      "frame": 2,
+      "source_bbox": [
+        568,
+        868,
+        654,
+        975
+      ]
+    },
+    {
+      "filename": "villager_death_nw_01.png",
+      "animation": "death",
+      "direction": "nw",
+      "frame": 1,
+      "source_bbox": [
+        687,
+        868,
+        770,
+        975
+      ]
+    },
+    {
+      "filename": "villager_death_nw_02.png",
+      "animation": "death",
+      "direction": "nw",
+      "frame": 2,
+      "source_bbox": [
+        800,
+        868,
+        935,
+        975
+      ]
+    },
+    {
+      "filename": "villager_build_a_w_01.png",
+      "animation": "build_a",
+      "direction": "w",
+      "frame": 1,
+      "source_bbox": [
+        97,
+        1002,
+        191,
+        1101
+      ]
+    },
+    {
+      "filename": "villager_build_a_w_02.png",
+      "animation": "build_a",
+      "direction": "w",
+      "frame": 2,
+      "source_bbox": [
+        223,
+        1002,
+        307,
+        1101
+      ]
+    },
+    {
+      "filename": "villager_build_a_w_03.png",
+      "animation": "build_a",
+      "direction": "w",
+      "frame": 3,
+      "source_bbox": [
+        337,
+        1002,
+        430,
+        1101
+      ]
+    },
+    {
+      "filename": "villager_build_b_w_01.png",
+      "animation": "build_b",
+      "direction": "w",
+      "frame": 1,
+      "source_bbox": [
+        452,
+        1002,
+        542,
+        1101
+      ]
+    },
+    {
+      "filename": "villager_build_b_w_02.png",
+      "animation": "build_b",
+      "direction": "w",
+      "frame": 2,
+      "source_bbox": [
+        564,
+        1002,
+        653,
+        1101
+      ]
+    },
+    {
+      "filename": "villager_death_w_01.png",
+      "animation": "death",
+      "direction": "w",
+      "frame": 1,
+      "source_bbox": [
+        681,
+        1002,
+        775,
+        1101
+      ]
+    },
+    {
+      "filename": "villager_death_w_02.png",
+      "animation": "death",
+      "direction": "w",
+      "frame": 2,
+      "source_bbox": [
+        806,
+        1002,
+        938,
+        1101
+      ]
+    },
+    {
+      "filename": "villager_build_a_sw_01.png",
+      "animation": "build_a",
+      "direction": "sw",
+      "frame": 1,
+      "source_bbox": [
+        98,
+        1139,
+        204,
+        1203
+      ]
+    },
+    {
+      "filename": "villager_build_a_sw_02.png",
+      "animation": "build_a",
+      "direction": "sw",
+      "frame": 2,
+      "source_bbox": [
+        209,
+        1139,
+        321,
+        1203
+      ]
+    },
+    {
+      "filename": "villager_build_a_sw_03.png",
+      "animation": "build_a",
+      "direction": "sw",
+      "frame": 3,
+      "source_bbox": [
+        328,
+        1139,
+        435,
+        1203
+      ]
+    },
+    {
+      "filename": "villager_build_b_sw_01.png",
+      "animation": "build_b",
+      "direction": "sw",
+      "frame": 1,
+      "source_bbox": [
+        441,
+        1139,
+        556,
+        1203
+      ]
+    },
+    {
+      "filename": "villager_build_b_sw_02.png",
+      "animation": "build_b",
+      "direction": "sw",
+      "frame": 2,
+      "source_bbox": [
+        560,
+        1139,
+        672,
+        1203
+      ]
+    },
+    {
+      "filename": "villager_death_sw_01.png",
+      "animation": "death",
+      "direction": "sw",
+      "frame": 1,
+      "source_bbox": [
+        679,
+        1139,
+        792,
+        1203
+      ]
+    },
+    {
+      "filename": "villager_death_sw_02.png",
+      "animation": "death",
+      "direction": "sw",
+      "frame": 2,
+      "source_bbox": [
+        797,
+        1139,
+        933,
+        1203
+      ]
+    },
+    {
+      "filename": "villager_idle_n_01.png",
+      "animation": "idle",
+      "direction": "n",
+      "frame": 1,
+      "source_bbox": [
+        100,
+        104,
+        171,
+        231
+      ],
+      "mirrored_from": "villager_idle_s_01.png"
+    },
+    {
+      "filename": "villager_walk_n_01.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 1,
+      "source_bbox": [
+        363,
+        104,
+        432,
+        231
+      ],
+      "mirrored_from": "villager_walk_s_01.png"
+    },
+    {
+      "filename": "villager_gather_n_01.png",
+      "animation": "gather",
+      "direction": "n",
+      "frame": 1,
+      "source_bbox": [
+        714,
+        104,
+        789,
+        231
+      ],
+      "mirrored_from": "villager_gather_s_01.png"
+    },
+    {
+      "filename": "villager_build_a_s_01.png",
+      "animation": "build_a",
+      "direction": "s",
+      "frame": 1,
+      "source_bbox": [
+        101,
+        740,
+        188,
+        843
+      ],
+      "mirrored_from": "villager_build_a_n_01.png"
+    },
+    {
+      "filename": "villager_build_b_s_01.png",
+      "animation": "build_b",
+      "direction": "s",
+      "frame": 1,
+      "source_bbox": [
+        441,
+        740,
+        528,
+        843
+      ],
+      "mirrored_from": "villager_build_b_n_01.png"
+    },
+    {
+      "filename": "villager_death_s_01.png",
+      "animation": "death",
+      "direction": "s",
+      "frame": 1,
+      "source_bbox": [
+        667,
+        740,
+        753,
+        843
+      ],
+      "mirrored_from": "villager_death_n_01.png"
+    },
+    {
+      "filename": "villager_idle_nw_01.png",
+      "animation": "idle",
+      "direction": "nw",
+      "frame": 1,
+      "source_bbox": [
+        101,
+        254,
+        171,
+        378
+      ],
+      "mirrored_from": "villager_idle_se_01.png"
+    },
+    {
+      "filename": "villager_walk_nw_01.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 1,
+      "source_bbox": [
+        363,
+        254,
+        430,
+        378
+      ],
+      "mirrored_from": "villager_walk_se_01.png"
+    },
+    {
+      "filename": "villager_gather_nw_01.png",
+      "animation": "gather",
+      "direction": "nw",
+      "frame": 1,
+      "source_bbox": [
+        708,
+        254,
+        782,
+        378
+      ],
+      "mirrored_from": "villager_gather_se_01.png"
+    },
+    {
+      "filename": "villager_build_a_se_01.png",
+      "animation": "build_a",
+      "direction": "se",
+      "frame": 1,
+      "source_bbox": [
+        100,
+        868,
+        191,
+        975
+      ],
+      "mirrored_from": "villager_build_a_nw_01.png"
+    },
+    {
+      "filename": "villager_build_b_se_01.png",
+      "animation": "build_b",
+      "direction": "se",
+      "frame": 1,
+      "source_bbox": [
+        455,
+        868,
+        542,
+        975
+      ],
+      "mirrored_from": "villager_build_b_nw_01.png"
+    },
+    {
+      "filename": "villager_death_se_01.png",
+      "animation": "death",
+      "direction": "se",
+      "frame": 1,
+      "source_bbox": [
+        687,
+        868,
+        770,
+        975
+      ],
+      "mirrored_from": "villager_death_nw_01.png"
+    },
+    {
+      "filename": "villager_idle_w_01.png",
+      "animation": "idle",
+      "direction": "w",
+      "frame": 1,
+      "source_bbox": [
+        96,
+        406,
+        173,
+        527
+      ],
+      "mirrored_from": "villager_idle_e_01.png"
+    },
+    {
+      "filename": "villager_walk_w_01.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 1,
+      "source_bbox": [
+        462,
+        406,
+        540,
+        527
+      ],
+      "mirrored_from": "villager_walk_e_01.png"
+    },
+    {
+      "filename": "villager_gather_w_01.png",
+      "animation": "gather",
+      "direction": "w",
+      "frame": 1,
+      "source_bbox": [
+        697,
+        406,
+        787,
+        527
+      ],
+      "mirrored_from": "villager_gather_e_01.png"
+    },
+    {
+      "filename": "villager_build_a_e_01.png",
+      "animation": "build_a",
+      "direction": "e",
+      "frame": 1,
+      "source_bbox": [
+        97,
+        1002,
+        191,
+        1101
+      ],
+      "mirrored_from": "villager_build_a_w_01.png"
+    },
+    {
+      "filename": "villager_build_b_e_01.png",
+      "animation": "build_b",
+      "direction": "e",
+      "frame": 1,
+      "source_bbox": [
+        452,
+        1002,
+        542,
+        1101
+      ],
+      "mirrored_from": "villager_build_b_w_01.png"
+    },
+    {
+      "filename": "villager_death_e_01.png",
+      "animation": "death",
+      "direction": "e",
+      "frame": 1,
+      "source_bbox": [
+        681,
+        1002,
+        775,
+        1101
+      ],
+      "mirrored_from": "villager_death_w_01.png"
+    },
+    {
+      "filename": "villager_idle_sw_01.png",
+      "animation": "idle",
+      "direction": "sw",
+      "frame": 1,
+      "source_bbox": [
+        100,
+        554,
+        183,
+        672
+      ],
+      "mirrored_from": "villager_idle_ne_01.png"
+    },
+    {
+      "filename": "villager_walk_sw_01.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 1,
+      "source_bbox": [
+        460,
+        554,
+        544,
+        672
+      ],
+      "mirrored_from": "villager_walk_ne_01.png"
+    },
+    {
+      "filename": "villager_gather_sw_01.png",
+      "animation": "gather",
+      "direction": "sw",
+      "frame": 1,
+      "source_bbox": [
+        696,
+        554,
+        795,
+        672
+      ],
+      "mirrored_from": "villager_gather_ne_01.png"
+    },
+    {
+      "filename": "villager_build_a_ne_01.png",
+      "animation": "build_a",
+      "direction": "ne",
+      "frame": 1,
+      "source_bbox": [
+        98,
+        1139,
+        204,
+        1203
+      ],
+      "mirrored_from": "villager_build_a_sw_01.png"
+    },
+    {
+      "filename": "villager_build_b_ne_01.png",
+      "animation": "build_b",
+      "direction": "ne",
+      "frame": 1,
+      "source_bbox": [
+        441,
+        1139,
+        556,
+        1203
+      ],
+      "mirrored_from": "villager_build_b_sw_01.png"
+    },
+    {
+      "filename": "villager_death_ne_01.png",
+      "animation": "death",
+      "direction": "ne",
+      "frame": 1,
+      "source_bbox": [
+        679,
+        1139,
+        792,
+        1203
+      ],
+      "mirrored_from": "villager_death_sw_01.png"
+    },
+    {
+      "filename": "villager_chop_s_01.png",
+      "animation": "chop",
+      "direction": "s",
+      "frame": 1,
+      "source_bbox": [104, 1, 302, 1020]
+    },
+    {
+      "filename": "villager_chop_s_02.png",
+      "animation": "chop",
+      "direction": "s",
+      "frame": 2,
+      "source_bbox": [441, 0, 660, 1022]
+    },
+    {
+      "filename": "villager_chop_s_03.png",
+      "animation": "chop",
+      "direction": "s",
+      "frame": 3,
+      "source_bbox": [776, 1, 1052, 1023]
+    }
+  ]
+}
