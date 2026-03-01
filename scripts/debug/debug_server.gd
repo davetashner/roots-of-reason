@@ -376,6 +376,8 @@ func _handle_command(peer: StreamPeerTCP, body_text: String) -> void:
 			_cmd_zoom(peer, body)
 		"stop":
 			_cmd_stop(peer, body)
+		"reset":
+			_cmd_reset(peer)
 		_:
 			_send_json(peer, 400, {"error": "unknown action", "action": action})
 
@@ -1002,6 +1004,11 @@ func _cmd_stop(peer: StreamPeerTCP, body: Dictionary) -> void:
 			unit._pending_build_target_name = ""
 		stopped += 1
 	_send_json(peer, 200, {"action": "stop", "stopped": stopped})
+
+
+func _cmd_reset(peer: StreamPeerTCP) -> void:
+	_send_json(peer, 200, {"action": "reset", "status": "reloading"})
+	get_tree().call_deferred("reload_current_scene")
 
 
 func _exit_tree() -> void:

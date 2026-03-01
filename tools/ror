@@ -885,6 +885,12 @@ cmd_stop() {
     echo ""
 }
 
+# ==================== reset ====================
+cmd_reset() {
+    curl -s -X POST -H 'Content-Type: application/json' -d '{"action": "reset"}' "http://127.0.0.1:9222/command"
+    echo ""
+}
+
 # ==================== game-cmd ====================
 cmd_game_cmd() {
     if [[ $# -lt 1 ]]; then
@@ -1491,6 +1497,7 @@ case "${1:-help}" in
     scenario)           shift; cmd_scenario "$@" ;;
     game-status)        shift; cmd_game_status "$@" ;;
     stop)               shift; cmd_stop "$@" ;;
+    reset)              shift; cmd_reset "$@" ;;
     game-cmd)           shift; cmd_game_cmd "$@" ;;
     help|--help|-h) cmd_help ;;
     *)

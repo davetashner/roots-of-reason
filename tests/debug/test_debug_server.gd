@@ -456,6 +456,12 @@ func test_parse_command_body_stop_with_unit_ids() -> void:
 	assert_int(ids.size()).is_equal(2)
 
 
+func test_parse_command_body_reset() -> void:
+	var result := DebugServerScript.parse_command_body('{"action": "reset"}')
+	assert_str(result.get("action", "")).is_equal("reset")
+	assert_dict(result).contains_keys(["action", "body"])
+
+
 func test_parse_request_screenshot_with_annotate() -> void:
 	var result := DebugServerScript._parse_request("GET /screenshot?annotate=true HTTP/1.1\r\n\r\n")
 	assert_str(result.get("method", "")).is_equal("GET")
