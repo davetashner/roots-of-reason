@@ -57,6 +57,7 @@ var _has_sprite: bool = false
 var _build_seq_texture: Texture2D = null
 var _build_seq_frame_count: int = 0
 var _build_seq_frame_width: int = 0
+var _finished_texture: Texture2D = null
 
 
 func _ready() -> void:
@@ -139,6 +140,9 @@ func _try_load_sprite() -> void:
 	if ResourceLoader.exists(seq_path):
 		_build_seq_texture = load(seq_path)
 	var path := _SPRITE_BASE_PATH + building_name + ".png"
+	# Load the finished standalone sprite if it exists
+	if ResourceLoader.exists(path):
+		_finished_texture = load(path)
 	# Use the sequence first frame or single sprite for display
 	var display_tex: Texture2D = null
 	if _build_seq_texture != null:
@@ -153,8 +157,8 @@ func _try_load_sprite() -> void:
 			_build_seq_frame_count = 1
 			_build_seq_frame_width = full_w
 		display_tex = _make_atlas_frame(0)
-	elif ResourceLoader.exists(path):
-		display_tex = load(path)
+	elif _finished_texture != null:
+		display_tex = _finished_texture
 	if display_tex == null:
 		return
 	_sprite = Sprite2D.new()
@@ -333,8 +337,9 @@ func _update_sprite_appearance() -> void:
 		else:
 			_sprite.modulate.a = _construction_alpha
 	else:
-		if _build_seq_frame_count > 1:
-			# Show final frame when complete
+		if _finished_texture != null:
+			_sprite.texture = _finished_texture
+		elif _build_seq_frame_count > 1:
 			_sprite.texture = _make_atlas_frame(_build_seq_frame_count - 1)
 		var damage_state := get_damage_state()
 		if damage_state == "critical":
