@@ -142,9 +142,14 @@ func _try_load_sprite() -> void:
 	if _build_seq_texture != null:
 		var full_w: int = _build_seq_texture.get_width()
 		var full_h: int = _build_seq_texture.get_height()
-		# Detect frame count: frames are square-ish, width >= height per frame
-		_build_seq_frame_count = maxi(1, roundi(float(full_w) / float(full_h)))
-		_build_seq_frame_width = full_w / _build_seq_frame_count
+		# Use footprint-based canvas width to detect frames (footprint.x * 128)
+		var expected_frame_w: int = footprint.x * 128
+		if expected_frame_w > 0 and full_w >= expected_frame_w:
+			_build_seq_frame_count = full_w / expected_frame_w
+			_build_seq_frame_width = expected_frame_w
+		else:
+			_build_seq_frame_count = 1
+			_build_seq_frame_width = full_w
 		display_tex = _make_atlas_frame(0)
 	elif ResourceLoader.exists(path):
 		display_tex = load(path)
