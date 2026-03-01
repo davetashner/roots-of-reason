@@ -260,6 +260,105 @@ func test_only_highest_tier_applies() -> void:
 	unit.queue_free()
 
 
+# -- Save/load round-trip --
+
+
+func test_save_load_unit_cooldowns_round_trip() -> void:
+	_tech_manager_mock.researched = ["modern_medicine"]
+	_war_survival._tiers = [
+		{"tech_id": "modern_medicine", "chance": 1.0, "hp_percent": 0.10, "hp_flat": 0},
+	]
+	GameManager.game_time = 50.0
+	var unit := _make_unit(5, 100)
+	_war_survival.roll_survival(unit, 10)
+	# Cooldown should be recorded
+	var uid: int = unit.get_instance_id()
+	assert_float(_war_survival._unit_cooldowns.get(uid, -1.0)).is_equal(50.0)
+
+	# Save state
+	var state: Dictionary = _war_survival.save_state()
+	# Simulate JSON round-trip (keys become strings, values become floats)
+	var json_str: String = JSON.stringify(state)
+	var parsed: Dictionary = JSON.parse_string(json_str)
+
+	# Load into a fresh WarSurvival
+	var ws2 := WarSurvival.new()
+	add_child(ws2)
+	ws2.load_state(parsed)
+
+	# Verify int key survived the JSON round-trip
+	assert_bool(ws2._unit_cooldowns.has(uid)).is_true()
+	assert_float(ws2._unit_cooldowns[uid]).is_equal(50.0)
+
+	# Verify the key is actually an int, not a string
+	for key: Variant in ws2._unit_cooldowns:
+		assert_int(typeof(key)).is_equal(TYPE_INT)
+
+	ws2.queue_free()
+	unit.queue_free()
+
+
+func test_save_load_empty_cooldowns() -> void:
+	# No cooldowns recorded
+	var state: Dictionary = _war_survival.save_state()
+	var json_str: String = JSON.stringify(state)
+	var parsed: Dictionary = JSON.parse_string(json_str)
+
+	var ws2 := WarSurvival.new()
+	add_child(ws2)
+	ws2.load_state(parsed)
+
+	assert_int(ws2._unit_cooldowns.size()).is_equal(0)
+	ws2.queue_free()
+
+
+func test_save_load_multiple_cooldowns() -> void:
+	_tech_manager_mock.researched = ["modern_medicine"]
+	_war_survival._tiers = [
+		{"tech_id": "modern_medicine", "chance": 1.0, "hp_percent": 0.10, "hp_flat": 0},
+	]
+
+	# Create multiple units and trigger survival at different game times
+	GameManager.game_time = 10.0
+	var unit_a := _make_unit(5, 100)
+	_war_survival.roll_survival(unit_a, 10)
+	var uid_a: int = unit_a.get_instance_id()
+
+	GameManager.game_time = 20.0
+	var unit_b := _make_unit(5, 100)
+	_war_survival.roll_survival(unit_b, 10)
+	var uid_b: int = unit_b.get_instance_id()
+
+	GameManager.game_time = 30.0
+	var unit_c := _make_unit(5, 100)
+	_war_survival.roll_survival(unit_c, 10)
+	var uid_c: int = unit_c.get_instance_id()
+
+	# Save, JSON round-trip, load
+	var state: Dictionary = _war_survival.save_state()
+	var json_str: String = JSON.stringify(state)
+	var parsed: Dictionary = JSON.parse_string(json_str)
+
+	var ws2 := WarSurvival.new()
+	add_child(ws2)
+	ws2.load_state(parsed)
+
+	# Verify all three entries survived
+	assert_int(ws2._unit_cooldowns.size()).is_equal(3)
+	assert_float(ws2._unit_cooldowns[uid_a]).is_equal(10.0)
+	assert_float(ws2._unit_cooldowns[uid_b]).is_equal(20.0)
+	assert_float(ws2._unit_cooldowns[uid_c]).is_equal(30.0)
+
+	# Verify all keys are ints
+	for key: Variant in ws2._unit_cooldowns:
+		assert_int(typeof(key)).is_equal(TYPE_INT)
+
+	ws2.queue_free()
+	unit_a.queue_free()
+	unit_b.queue_free()
+	unit_c.queue_free()
+
+
 # -- Mock TechManager --
 
 
