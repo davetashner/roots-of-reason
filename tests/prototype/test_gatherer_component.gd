@@ -4,8 +4,8 @@ extends GdUnitTestSuite
 ## spinning up a full prototype_unit scene.
 
 const GathererComponentScript := preload("res://scripts/prototype/gatherer_component.gd")
-const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
-const BuildingScript := preload("res://scripts/prototype/prototype_building.gd")
+const ResourceFactory := preload("res://tests/helpers/resource_factory.gd")
+const BuildingFactory := preload("res://tests/helpers/building_factory.gd")
 
 var _root: Node2D
 var _unit: Node2D
@@ -52,13 +52,7 @@ func _make_resource(
 	res_type: String = "food",
 	yield_amt: int = 150,
 ) -> Node2D:
-	var n := Node2D.new()
-	n.set_script(ResourceNodeScript)
-	n.resource_name = "berry_bush"
-	n.resource_type = res_type
-	n.total_yield = yield_amt
-	n.current_yield = yield_amt
-	n.position = pos
+	var n := ResourceFactory.create_resource_node({position = pos, resource_type = res_type, total_yield = yield_amt})
 	_root.add_child(n)
 	auto_free(n)
 	return n
@@ -68,18 +62,7 @@ func _make_drop_off(
 	pos: Vector2 = Vector2(-50, 0),
 	types: Array[String] = ["food", "wood", "stone", "gold"],
 ) -> Node2D:
-	var b := Node2D.new()
-	b.set_script(BuildingScript)
-	b.building_name = "town_center"
-	b.is_drop_off = true
-	b.drop_off_types = types
-	b.under_construction = false
-	b.build_progress = 1.0
-	b.max_hp = 2400
-	b.hp = 2400
-	b.footprint = Vector2i(3, 3)
-	b.grid_pos = Vector2i(4, 4)
-	b.position = pos
+	var b := BuildingFactory.create_drop_off({position = pos, drop_off_types = types})
 	_root.add_child(b)
 	auto_free(b)
 	return b

@@ -7,8 +7,9 @@ const VictoryManagerScript := preload("res://scripts/prototype/victory_manager.g
 const AIEconomyScript := preload("res://scripts/ai/ai_economy.gd")
 const GathererComponentScript := preload("res://scripts/prototype/gatherer_component.gd")
 const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
-const ResourceNodeScript := preload("res://scripts/prototype/prototype_resource_node.gd")
 const PopManagerScript := preload("res://scripts/prototype/population_manager.gd")
+const MockMap := preload("res://tests/helpers/mock_map.gd")
+const MockPathfinder := preload("res://tests/helpers/mock_pathfinder.gd")
 
 # --- Lifecycle ---
 
@@ -28,7 +29,8 @@ func after_test() -> void:
 # --- Helpers ---
 
 
-class MockUnit:
+## Minimal mock unit for GathererComponent tests — satisfies the move_to interface.
+class _MockUnit:
 	extends Node2D
 
 	var owner_id: int = 0
@@ -41,29 +43,6 @@ class MockUnit:
 	func move_to(pos: Vector2) -> void:
 		_last_move_target = pos
 		_moving = true
-
-
-class _MockMap:
-	extends Node
-
-	func get_map_size() -> int:
-		return 64
-
-	func is_buildable(cell: Vector2i) -> bool:
-		return cell.x >= 0 and cell.x < 64 and cell.y >= 0 and cell.y < 64
-
-	func get_terrain_at(_cell: Vector2i) -> String:
-		return "grass"
-
-
-class _MockPathfinder:
-	extends Node
-
-	func is_cell_solid(_cell: Vector2i) -> bool:
-		return false
-
-	func set_cell_solid(_cell: Vector2i, _solid: bool) -> void:
-		pass
 
 
 # --- Victory manager nomadic grace round-trip ---
@@ -155,7 +134,7 @@ func test_gatherer_waiting_state_survives_save_load() -> void:
 	var root := Node2D.new()
 	add_child(root)
 	auto_free(root)
-	var unit := MockUnit.new()
+	var unit := _MockUnit.new()
 	unit._scene_root = root
 	root.add_child(unit)
 	auto_free(unit)
@@ -295,10 +274,10 @@ func test_ai_places_tc_near_spawn_after_load() -> void:
 	pop_mgr.set_script(PopManagerScript)
 	add_child(pop_mgr)
 	auto_free(pop_mgr)
-	var map_mock := _MockMap.new()
+	var map_mock := MockMap.new()
 	add_child(map_mock)
 	auto_free(map_mock)
-	var pf_mock := _MockPathfinder.new()
+	var pf_mock := MockPathfinder.new()
 	add_child(pf_mock)
 	auto_free(pf_mock)
 	# Create original AI economy with spawn_position
