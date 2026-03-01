@@ -45,6 +45,9 @@ var _build_target: Node2D = null
 var _build_speed: float = 1.0
 var _build_reach: float = 80.0
 var _pending_build_target_name: String = ""
+var _auto_build_radius: float = 640.0  # 10 tiles * 64
+var _auto_build_interval: float = 1.0
+var _auto_build_timer: float = 0.0
 
 var _scene_root: Node = null
 var _pathfinder: Node = null
@@ -354,6 +357,9 @@ func _load_build_config() -> void:
 	var con_cfg := GameUtils.dl_settings("construction")
 	if not con_cfg.is_empty():
 		_build_reach = float(con_cfg.get("build_reach", _build_reach))
+		var radius_tiles := float(con_cfg.get("auto_build_search_radius_tiles", 10))
+		_auto_build_radius = radius_tiles * TILE_SIZE
+		_auto_build_interval = float(con_cfg.get("auto_build_check_interval", _auto_build_interval))
 
 
 func _load_gather_config() -> void:
@@ -459,6 +465,7 @@ func _process(delta: float) -> void:
 	_explorer.tick(game_delta)
 	if _transport != null:
 		_transport.tick(game_delta, _moving)
+	_tick_auto_build(game_delta)
 	# Lazy-init sprite handler (after load_state may have set _sprite_variant)
 	if _sprite_handler == null and _has_sprite_config():
 		_init_sprite()
@@ -493,6 +500,42 @@ func _tick_build(game_delta: float) -> void:
 	# Check if construction completed
 	if not _build_target.under_construction:
 		_build_target = null
+
+
+func _tick_auto_build(game_delta: float) -> void:
+	if unit_type != "villager":
+		return
+	if not is_idle():
+		_auto_build_timer = 0.0
+		return
+	_auto_build_timer += game_delta
+	if _auto_build_timer < _auto_build_interval:
+		return
+	_auto_build_timer = 0.0
+	var site := _find_nearest_construction_site()
+	if site != null:
+		assign_build_target(site)
+
+
+func _find_nearest_construction_site() -> Node2D:
+	if _scene_root == null:
+		return null
+	var best: Node2D = null
+	var best_dist := INF
+	for child in _scene_root.get_children():
+		if child == self:
+			continue
+		if not ("under_construction" in child and child.under_construction):
+			continue
+		if "owner_id" in child and child.owner_id != owner_id:
+			continue
+		var dist: float = position.distance_to(child.global_position)
+		if dist > _auto_build_radius:
+			continue
+		if dist < best_dist:
+			best_dist = dist
+			best = child
+	return best
 
 
 func assign_gather_target(node: Node2D, gather_offset: Vector2 = Vector2.ZERO) -> void:

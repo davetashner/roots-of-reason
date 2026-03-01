@@ -351,3 +351,133 @@ func test_building_destruction_at_zero_hp() -> void:
 	b.building_destroyed.connect(func(_bld: Node2D) -> void: result[0] = true)
 	b.take_damage(10, null)
 	assert_bool(result[0]).is_true()
+
+
+# -- Auto-build idle villagers --
+
+
+func test_auto_build_assigns_nearby_construction_site() -> void:
+	var root := Node2D.new()
+	add_child(root)
+	auto_free(root)
+	var u := Node2D.new()
+	u.set_script(UnitScript)
+	u.unit_type = "villager"
+	u.position = Vector2(50, 0)
+	root.add_child(u)
+	auto_free(u)
+	# Set after add_child so _ready() config doesn't overwrite
+	u._auto_build_radius = 640.0
+	u._auto_build_interval = 0.0
+	u._scene_root = root
+	var b := Node2D.new()
+	b.set_script(BuildingScript)
+	b.building_name = "house"
+	b.max_hp = 550
+	b.hp = 0
+	b.under_construction = true
+	b.build_progress = 0.0
+	b._build_time = 25.0
+	b.footprint = Vector2i(2, 2)
+	b.grid_pos = Vector2i(5, 5)
+	b.owner_id = 0
+	b.position = Vector2(100, 0)
+	root.add_child(b)
+	auto_free(b)
+	# Villager should be idle — trigger auto-build check
+	u._tick_auto_build(0.1)
+	assert_bool(u._build_target == b).is_true()
+
+
+func test_auto_build_ignores_enemy_construction() -> void:
+	var root := Node2D.new()
+	add_child(root)
+	auto_free(root)
+	var u := Node2D.new()
+	u.set_script(UnitScript)
+	u.unit_type = "villager"
+	u.owner_id = 0
+	u.position = Vector2.ZERO
+	root.add_child(u)
+	auto_free(u)
+	u._auto_build_radius = 640.0
+	u._auto_build_interval = 0.0
+	u._scene_root = root
+	var b := Node2D.new()
+	b.set_script(BuildingScript)
+	b.building_name = "house"
+	b.max_hp = 550
+	b.hp = 0
+	b.under_construction = true
+	b.build_progress = 0.0
+	b._build_time = 25.0
+	b.footprint = Vector2i(2, 2)
+	b.grid_pos = Vector2i(5, 5)
+	b.owner_id = 1  # Enemy building
+	b.position = Vector2(100, 0)
+	root.add_child(b)
+	auto_free(b)
+	u._tick_auto_build(0.1)
+	assert_bool(u._build_target == null).is_true()
+
+
+func test_auto_build_ignores_distant_construction() -> void:
+	var root := Node2D.new()
+	add_child(root)
+	auto_free(root)
+	var u := Node2D.new()
+	u.set_script(UnitScript)
+	u.unit_type = "villager"
+	u.position = Vector2.ZERO
+	root.add_child(u)
+	auto_free(u)
+	u._auto_build_radius = 100.0  # Small radius
+	u._auto_build_interval = 0.0
+	u._scene_root = root
+	var b := Node2D.new()
+	b.set_script(BuildingScript)
+	b.building_name = "house"
+	b.max_hp = 550
+	b.hp = 0
+	b.under_construction = true
+	b.build_progress = 0.0
+	b._build_time = 25.0
+	b.footprint = Vector2i(2, 2)
+	b.grid_pos = Vector2i(5, 5)
+	b.owner_id = 0
+	b.position = Vector2(500, 0)  # Far away
+	root.add_child(b)
+	auto_free(b)
+	u._tick_auto_build(0.1)
+	assert_bool(u._build_target == null).is_true()
+
+
+func test_auto_build_skips_non_villagers() -> void:
+	var root := Node2D.new()
+	add_child(root)
+	auto_free(root)
+	var u := Node2D.new()
+	u.set_script(UnitScript)
+	u.unit_type = "archer"  # Not a villager
+	u.position = Vector2.ZERO
+	root.add_child(u)
+	auto_free(u)
+	u._auto_build_radius = 640.0
+	u._auto_build_interval = 0.0
+	u._scene_root = root
+	var b := Node2D.new()
+	b.set_script(BuildingScript)
+	b.building_name = "house"
+	b.max_hp = 550
+	b.hp = 0
+	b.under_construction = true
+	b.build_progress = 0.0
+	b._build_time = 25.0
+	b.footprint = Vector2i(2, 2)
+	b.grid_pos = Vector2i(5, 5)
+	b.owner_id = 0
+	b.position = Vector2(50, 0)
+	root.add_child(b)
+	auto_free(b)
+	u._tick_auto_build(0.1)
+	assert_bool(u._build_target == null).is_true()
