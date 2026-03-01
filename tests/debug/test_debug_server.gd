@@ -384,3 +384,44 @@ func test_resource_names_contains_gold_mine() -> void:
 
 func test_resource_names_does_not_contain_villager() -> void:
 	assert_bool("villager" in DebugServerScript.RESOURCE_NAMES).is_false()
+
+
+# -- world_to_screen tests --
+
+
+func test_world_to_screen_center() -> void:
+	var cam_pos := Vector2(100, 100)
+	var cam_zoom := Vector2(1, 1)
+	var vp_size := Vector2(800, 600)
+	# Entity at camera position should be at viewport center
+	var result := DebugServerScript._world_to_screen(Vector2(100, 100), cam_pos, cam_zoom, vp_size)
+	assert_float(result.x).is_equal(400.0)
+	assert_float(result.y).is_equal(300.0)
+
+
+func test_world_to_screen_offset() -> void:
+	var cam_pos := Vector2(0, 0)
+	var cam_zoom := Vector2(1, 1)
+	var vp_size := Vector2(800, 600)
+	var result := DebugServerScript._world_to_screen(Vector2(50, 30), cam_pos, cam_zoom, vp_size)
+	assert_float(result.x).is_equal(450.0)
+	assert_float(result.y).is_equal(330.0)
+
+
+func test_world_to_screen_zoom() -> void:
+	var cam_pos := Vector2(0, 0)
+	var cam_zoom := Vector2(2, 2)
+	var vp_size := Vector2(800, 600)
+	var result := DebugServerScript._world_to_screen(Vector2(50, 30), cam_pos, cam_zoom, vp_size)
+	# (50-0)*2 + 400 = 500, (30-0)*2 + 300 = 360
+	assert_float(result.x).is_equal(500.0)
+	assert_float(result.y).is_equal(360.0)
+
+
+# -- screenshot query string tests --
+
+
+func test_parse_request_screenshot_with_annotate() -> void:
+	var result := DebugServerScript._parse_request("GET /screenshot?annotate=true HTTP/1.1\r\n\r\n")
+	assert_str(result.get("method", "")).is_equal("GET")
+	assert_str(result.get("path", "")).is_equal("/screenshot?annotate=true")
