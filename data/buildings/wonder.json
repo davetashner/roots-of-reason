@@ -19,5 +19,6 @@
   "age_required": 3,
   "placement_constraint": "",
   "victory_countdown": 600,
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

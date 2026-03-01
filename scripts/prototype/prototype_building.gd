@@ -17,6 +17,7 @@ var hp: int = 0
 var max_hp: int = 0
 var selected: bool = false
 
+var los: int = 0
 var is_drop_off: bool = false
 var drop_off_types: Array[String] = []
 var garrison_capacity: int = 0
@@ -78,6 +79,7 @@ func _load_building_stats() -> void:
 			stats = dl.get_building_stats(building_name)
 	if stats.is_empty():
 		return
+	los = int(stats.get("los", 0))
 	is_drop_off = bool(stats.get("is_drop_off", false))
 	garrison_capacity = int(stats.get("garrison_capacity", 0))
 	var types: Array = stats.get("drop_off_types", [])
@@ -267,7 +269,9 @@ func set_dog_los_bonus(bonus: int) -> void:
 
 
 func get_los() -> int:
-	return _dog_los_bonus
+	if under_construction or _is_ruins:
+		return 0
+	return los + _dog_los_bonus
 
 
 func apply_build_work(amount: float) -> void:
@@ -655,6 +659,7 @@ func save_state() -> Dictionary:
 		"ruins_timer": _ruins_timer,
 		"garrison_capacity": garrison_capacity,
 		"garrisoned_units": garrisoned_names,
+		"los": los,
 		"dog_los_bonus": _dog_los_bonus,
 	}
 
@@ -678,6 +683,7 @@ func load_state(data: Dictionary) -> void:
 	_is_ruins = bool(data.get("is_ruins", false))
 	_ruins_timer = float(data.get("ruins_timer", 0.0))
 	garrison_capacity = int(data.get("garrison_capacity", 0))
+	los = int(data.get("los", 0))
 	_dog_los_bonus = int(data.get("dog_los_bonus", 0))
 	_pending_garrison_names.clear()
 	var g_names: Array = data.get("garrisoned_units", [])

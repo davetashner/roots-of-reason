@@ -20,5 +20,6 @@
   "age_required": 3,
   "placement_constraint": "adjacent_to_water",
   "naval_los_bonus": 5,
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

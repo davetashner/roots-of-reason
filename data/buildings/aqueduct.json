@@ -19,5 +19,6 @@
   "units_produced": [],
   "age_required": 2,
   "placement_constraint": "adjacent_to_river",
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

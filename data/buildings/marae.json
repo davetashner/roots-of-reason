@@ -19,5 +19,6 @@
   "placement_constraint": "",
   "knowledge_rate": 0.5,
   "coastline_reveal": true,
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }

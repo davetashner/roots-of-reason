@@ -21,5 +21,6 @@
   "age_required": 0,
   "placement_constraint": "",
   "food_rate": 5,
-  "defense": 0
+  "defense": 0,
+  "los": 4
 }
