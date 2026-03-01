@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate contact-sheet images from unit sprite manifests.
+"""Generate animated GIFs or static contact sheets from unit sprite manifests.
 
-Reads manifest.json and individual PNG frames, compositing them into
-a side-by-side contact sheet for visual animation verification.
+Reads manifest.json and individual PNG frames. Default output is an animated
+GIF looping through frames. Use --png for static contact sheet grids.
 No running game needed — purely offline.
 
 Requires: Pillow (PIL)
@@ -17,6 +17,8 @@ from pathlib import Path
 Image = None  # lazy import — Pillow not available in all CI environments
 ImageDraw = None
 ImageFont = None
+
+DEFAULT_GIF_FRAME_MS = 300  # milliseconds per frame in GIF output
 
 
 def _require_pil():
@@ -70,6 +72,12 @@ def load_sprite_data(unit_type: str = "villager") -> dict:
         return json.load(f)
 
 
+def load_frame_duration_ms() -> int:
+    """Load frame_duration from villager sprite data, in milliseconds."""
+    data = load_sprite_data()
+    return int(float(data.get("frame_duration", 0.3)) * 1000)
+
+
 def get_frames(manifest: dict, animation: str, direction: str) -> list[dict]:
     """Get sorted frame entries for an animation+direction from the manifest."""
     frames = [
@@ -97,6 +105,53 @@ def get_directions(manifest: dict) -> list[str]:
     """Get directions from the manifest, preserving canonical order."""
     present = {s["direction"] for s in manifest["sprites"]}
     return [d for d in ALL_DIRECTIONS if d in present]
+
+
+def load_frame_images(
+    variant_dir: Path,
+    frames: list[dict],
+    canvas_w: int,
+    canvas_h: int,
+) -> list["Image.Image"]:
+    """Load and center frame PNGs onto canvas-sized images."""
+    _require_pil()
+    images = []
+    for entry in frames:
+        canvas = Image.new("RGBA", (canvas_w, canvas_h), (40, 40, 40, 255))
+        png_path = variant_dir / entry["filename"]
+        if png_path.is_file():
+            frame_img = Image.open(png_path).convert("RGBA")
+            x_off = (canvas_w - frame_img.width) // 2
+            y_off = (canvas_h - frame_img.height) // 2
+            canvas.paste(frame_img, (x_off, max(0, y_off)), frame_img)
+        images.append(canvas)
+    return images
+
+
+def save_gif(
+    images: list["Image.Image"],
+    out_path: Path,
+    frame_ms: int = DEFAULT_GIF_FRAME_MS,
+) -> None:
+    """Save a list of RGBA images as an animated GIF."""
+    _require_pil()
+    if not images:
+        return
+    # Convert RGBA to P (palette) mode for GIF, compositing onto background
+    rgb_frames = []
+    for img in images:
+        bg = Image.new("RGBA", img.size, (40, 40, 40, 255))
+        bg.paste(img, (0, 0), img)
+        rgb_frames.append(bg.convert("RGB"))
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    rgb_frames[0].save(
+        out_path,
+        save_all=True,
+        append_images=rgb_frames[1:],
+        duration=frame_ms,
+        loop=0,
+    )
 
 
 def build_strip(
@@ -132,12 +187,48 @@ def build_strip(
     return strip
 
 
+def generate_gif(
+    variant: str,
+    animation: str | None = None,
+    direction: str | None = None,
+    frame_ms: int = DEFAULT_GIF_FRAME_MS,
+) -> list[Path]:
+    """Generate animated GIF(s) and return output path(s)."""
+    _require_pil()
+    manifest = load_manifest(variant)
+    canvas_w, canvas_h = manifest["canvas_size"]
+    variant_dir = SPRITES_DIR / variant
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    outputs = []
+
+    animations = [animation] if animation else get_animations(manifest)
+    directions_list = [direction] if direction else get_directions(manifest)
+
+    for anim in animations:
+        for d in directions_list:
+            frames = get_frames(manifest, anim, d)
+            if not frames:
+                continue
+            images = load_frame_images(variant_dir, frames, canvas_w, canvas_h)
+            if len(images) < 2:
+                # Single-frame animations get a static PNG instead
+                out_path = OUTPUT_DIR / f"{variant}_{anim}_{d}.png"
+                images[0].save(out_path, "PNG")
+            else:
+                out_path = OUTPUT_DIR / f"{variant}_{anim}_{d}.gif"
+                save_gif(images, out_path, frame_ms)
+            outputs.append(out_path)
+
+    return outputs
+
+
 def generate_sheet(
     variant: str,
     animation: str | None = None,
     direction: str | None = None,
 ) -> list[Path]:
-    """Generate contact sheet(s) and return output path(s)."""
+    """Generate static contact sheet(s) and return output path(s)."""
     _require_pil()
     manifest = load_manifest(variant)
     canvas_w, canvas_h = manifest["canvas_size"]
@@ -199,11 +290,22 @@ def generate_sheet(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Generate sprite contact sheets for animation verification.",
+        description="Generate animated GIFs (default) or static contact sheets from sprite manifests.",
     )
     parser.add_argument("variant", help="Sprite variant (e.g., villager_woman)")
     parser.add_argument("animation", nargs="?", help="Animation name (e.g., walk_a)")
     parser.add_argument("direction", nargs="?", help="Direction (e.g., s, ne)")
+    parser.add_argument(
+        "--png",
+        action="store_true",
+        help="Output static PNG contact sheets instead of animated GIFs",
+    )
+    parser.add_argument(
+        "--speed",
+        type=int,
+        default=0,
+        help="Frame duration in ms (default: from villager.json, typically 300)",
+    )
     args = parser.parse_args(argv)
 
     # Validate variant exists
@@ -212,7 +314,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: variant directory not found: {variant_dir}", file=sys.stderr)
         return 1
 
-    outputs = generate_sheet(args.variant, args.animation, args.direction)
+    if args.png:
+        outputs = generate_sheet(args.variant, args.animation, args.direction)
+    else:
+        frame_ms = args.speed if args.speed > 0 else load_frame_duration_ms()
+        outputs = generate_gif(
+            args.variant, args.animation, args.direction, frame_ms
+        )
+
     if not outputs:
         print("Error: no frames found for the given arguments", file=sys.stderr)
         return 1
