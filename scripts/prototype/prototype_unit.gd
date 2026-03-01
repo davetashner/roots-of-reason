@@ -410,7 +410,7 @@ func _get_visual_state() -> String:
 		return "build"
 	if _gatherer != null and _gatherer.gather_state == GathererComponentScript.GatherState.GATHERING:
 		return "chop" if _gatherer.gather_type == "wood" else "gather"
-	var is_attacking: bool = (
+	var is_attacking = (
 		_combatant != null and _combatant.combat_state == CombatantComponentScript.CombatState.ATTACKING and not _moving
 	)
 	# Wolf/fauna AI bypasses combatant component and unit movement
