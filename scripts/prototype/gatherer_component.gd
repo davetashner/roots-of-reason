@@ -107,7 +107,7 @@ func _tick_moving_to_drop_off() -> void:
 			return
 		_unit.move_to(drop_off_target.global_position)
 		return
-	var dist: float = _unit.position.distance_to(drop_off_target.global_position)
+	var dist: float = _nearest_edge_distance(drop_off_target)
 	if dist <= drop_off_reach and not _unit._moving:
 		gather_state = GatherState.DEPOSITING
 
@@ -162,6 +162,29 @@ func _find_nearest_drop_off(res_type: String) -> Node2D:
 			best_dist = dist
 			best = child
 	return best
+
+
+func _nearest_edge_distance(building: Node2D) -> float:
+	## Return distance from the unit to the nearest footprint cell of a building.
+	## Falls back to global_position distance if the building has no footprint.
+	if "grid_pos" not in building or "footprint" not in building:
+		return _unit.position.distance_to(building.global_position)
+	var fp: Vector2i = building.footprint
+	if fp.x <= 1 and fp.y <= 1:
+		return _unit.position.distance_to(building.global_position)
+	var gp: Vector2i = building.grid_pos
+	# Compute offset from origin cell to each footprint cell in screen space
+	var origin_screen := IsoUtils.grid_to_screen(Vector2(gp))
+	var best_dist := INF
+	for dx in range(fp.x):
+		for dy in range(fp.y):
+			var cell_screen := IsoUtils.grid_to_screen(Vector2(gp.x + dx, gp.y + dy))
+			# Apply offset relative to building position (handles test/runtime position differences)
+			var cell_pos: Vector2 = building.global_position + (cell_screen - origin_screen)
+			var dist: float = _unit.position.distance_to(cell_pos)
+			if dist < best_dist:
+				best_dist = dist
+	return best_dist
 
 
 func _try_find_replacement_resource() -> void:
