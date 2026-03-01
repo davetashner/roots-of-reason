@@ -141,8 +141,9 @@ func _place_resource(
 			# Skip already occupied
 			if occupied.has(pos):
 				continue
-			# Forest clustering: reject tiles where forest density noise is low
-			if forest_noise != null:
+			# Forest clustering: reject tiles where forest density noise is low.
+			# Forest terrain tiles always qualify (terrain-resource linkage).
+			if forest_noise != null and terrain != "forest":
 				var forest_val: float = (forest_noise.get_noise_2d(float(x), float(y)) + 1.0) / 2.0
 				if forest_val < forest_threshold:
 					continue
