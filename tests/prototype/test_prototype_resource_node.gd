@@ -143,20 +143,68 @@ func test_regen_yield_caps_at_total() -> void:
 	var n := _create_regen_node(10, 100.0, 0.0)
 	n.current_yield = 8
 	n.regenerates = true
-	n._is_regrowing = false
-	# Process — should cap at total_yield
+	n._is_regrowing = true
+	# Process — should cap at total_yield and clear regrowing flag
 	n._process(1.0)
 	assert_int(n.current_yield).is_equal(10)
+	assert_bool(n._is_regrowing).is_false()
 
 
-func test_is_regrowing_clears_when_yield_positive() -> void:
+func test_is_regrowing_stays_true_until_full() -> void:
 	var n := _create_regen_node(100, 5.0, 0.0)
 	n.apply_gather_work(100.0)
 	assert_bool(n._is_regrowing).is_true()
-	# Process enough to get yield > 0
+	# Process enough to get yield > 0 but not full
 	n._process(1.0)
-	assert_int(n.current_yield).is_greater(0)
+	assert_int(n.current_yield).is_equal(5)
+	assert_bool(n._is_regrowing).is_true()
+	# Process enough to reach full yield (need 95 more at 5/sec = 19s)
+	n._process(19.0)
+	assert_int(n.current_yield).is_equal(100)
 	assert_bool(n._is_regrowing).is_false()
+
+
+func test_partial_harvest_does_not_regen() -> void:
+	var n := _create_regen_node(100, 5.0, 0.0)
+	n.apply_gather_work(50.0)
+	assert_int(n.current_yield).is_equal(50)
+	assert_bool(n._is_regrowing).is_false()
+	# Process — should NOT regenerate since not fully depleted
+	n._process(1.0)
+	assert_int(n.current_yield).is_equal(50)
+
+
+func test_is_harvestable_true_when_has_yield() -> void:
+	var n := _create_node("food", 100)
+	assert_bool(n.is_harvestable()).is_true()
+
+
+func test_is_harvestable_false_when_depleted() -> void:
+	var n := _create_node("food", 5)
+	n.apply_gather_work(5.0)
+	assert_bool(n.is_harvestable()).is_false()
+
+
+func test_is_harvestable_false_during_regen() -> void:
+	var n := _create_regen_node(10, 5.0, 0.0)
+	n.apply_gather_work(10.0)
+	assert_bool(n._is_regrowing).is_true()
+	# Partially regenerate
+	n._process(1.0)
+	assert_int(n.current_yield).is_equal(5)
+	# Still not harvestable — regrowing
+	assert_bool(n.is_harvestable()).is_false()
+
+
+func test_is_harvestable_true_after_full_regen() -> void:
+	var n := _create_regen_node(10, 100.0, 0.0)
+	n.apply_gather_work(10.0)
+	assert_bool(n.is_harvestable()).is_false()
+	# Fully regenerate
+	n._process(1.0)
+	assert_int(n.current_yield).is_equal(10)
+	assert_bool(n._is_regrowing).is_false()
+	assert_bool(n.is_harvestable()).is_true()
 
 
 # -- save_state / load_state --

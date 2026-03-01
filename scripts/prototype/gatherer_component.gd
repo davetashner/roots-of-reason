@@ -64,7 +64,7 @@ func _tick_moving_to_resource() -> void:
 	if gather_target == null or not is_instance_valid(gather_target):
 		cancel()
 		return
-	if gather_target.current_yield <= 0:
+	if not _is_target_harvestable(gather_target):
 		_try_find_replacement_resource()
 		return
 	var dist: float = _unit.position.distance_to(_nav_position(gather_target))
@@ -80,7 +80,7 @@ func _tick_gathering(game_delta: float) -> void:
 		else:
 			_try_find_replacement_resource()
 		return
-	if gather_target.current_yield <= 0:
+	if not _is_target_harvestable(gather_target):
 		if carried_amount > 0:
 			_start_drop_off_trip()
 		else:
@@ -119,7 +119,7 @@ func _tick_depositing() -> void:
 	carried_amount = 0
 	drop_off_target = null
 	# Return to resource or find replacement
-	if gather_target != null and is_instance_valid(gather_target) and gather_target.current_yield > 0:
+	if gather_target != null and is_instance_valid(gather_target) and _is_target_harvestable(gather_target):
 		gather_state = GatherState.MOVING_TO_RESOURCE
 		_unit.move_to(_nav_position(gather_target))
 	else:
@@ -178,7 +178,7 @@ func _try_find_replacement_resource() -> void:
 			continue
 		if "resource_type" not in child or child.resource_type != gather_type:
 			continue
-		if "current_yield" in child and child.current_yield <= 0:
+		if not _is_target_harvestable(child):
 			continue
 		var dist: float = _unit.position.distance_to(_nav_position(child))
 		if dist < best_dist:
@@ -193,6 +193,16 @@ func _try_find_replacement_resource() -> void:
 		_start_drop_off_trip()
 	else:
 		cancel()
+
+
+static func _is_target_harvestable(target: Node2D) -> bool:
+	if target == null or not is_instance_valid(target):
+		return false
+	if target.has_method("is_harvestable"):
+		return target.is_harvestable()
+	if "current_yield" in target:
+		return target.current_yield > 0
+	return false
 
 
 func cancel() -> void:
