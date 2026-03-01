@@ -3,14 +3,20 @@
   "placeholder": true,
   "description": "A sturdy defensive wall built from fitted stone. Stronger than palisades and harder to breach. [PLACEHOLDER]",
   "hp": 3000,
-  "footprint": [1, 1],
+  "footprint": [
+    1,
+    1
+  ],
   "build_time": 40,
-  "build_cost": { "stone": 75 },
+  "build_cost": {
+    "stone": 75
+  },
   "population_bonus": 0,
   "garrison_capacity": 0,
   "is_drop_off": false,
   "drop_off_types": [],
   "units_produced": [],
   "age_required": 1,
-  "placement_constraint": ""
+  "placement_constraint": "",
+  "defense": 4
 }

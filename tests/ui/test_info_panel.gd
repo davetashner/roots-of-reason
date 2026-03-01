@@ -154,7 +154,7 @@ func test_show_building_displays_damage_state() -> void:
 	var panel := _create_panel()
 	var b := _create_building(275, 550)  # 50% HP — damaged
 	panel.show_building(b)
-	assert_str(panel._stats_label.text).is_equal("Damaged")
+	assert_str(panel._stats_label.text).is_equal("DEF: 0\nDamaged")
 
 
 func test_show_building_ruins_label() -> void:

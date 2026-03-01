@@ -437,6 +437,14 @@ func _draw_selection_outline() -> void:
 ## -- Garrison System --
 
 
+func get_garrison_attack() -> int:
+	var total: int = 0
+	for unit in _garrisoned_units:
+		if is_instance_valid(unit) and unit.stats != null:
+			total += int(unit.stats.get_stat("attack"))
+	return total
+
+
 func garrison_unit(unit: Node2D) -> bool:
 	if not can_garrison():
 		return false

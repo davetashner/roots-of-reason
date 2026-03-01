@@ -1,14 +1,28 @@
 {
   "name": "Dock",
   "hp": 1800,
-  "footprint": [3, 3],
+  "footprint": [
+    3,
+    3
+  ],
   "build_time": 60,
-  "build_cost": { "wood": 150 },
+  "build_cost": {
+    "wood": 150
+  },
   "population_bonus": 0,
   "garrison_capacity": 0,
   "is_drop_off": true,
-  "drop_off_types": ["food"],
-  "units_produced": ["fishing_boat", "transport_ship", "war_galley", "merchant_ship", "cannon_ship"],
+  "drop_off_types": [
+    "food"
+  ],
+  "units_produced": [
+    "fishing_boat",
+    "transport_ship",
+    "war_galley",
+    "merchant_ship",
+    "cannon_ship"
+  ],
   "age_required": 1,
-  "placement_constraint": "adjacent_to_water"
+  "placement_constraint": "adjacent_to_water",
+  "defense": 0
 }

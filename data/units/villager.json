@@ -15,7 +15,7 @@
   },
   "build_speed": 1.0,
   "population_cost": 1,
-  "train_time": 25,
+  "train_time": 20,
   "train_cost": { "food": 50 },
   "armor_type": "none",
   "attack_speed": 2.0,
