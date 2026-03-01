@@ -19,6 +19,7 @@
     "walk_a",
     "walk_b",
     "walk_c",
+    "walk_d",
     "gather",
     "build"
   ],
@@ -704,6 +705,109 @@
       "frame": 5,
       "source_bbox": [1208, 732, 1359, 929],
       "mirrored_from": "villager_woman_walk_c_w_05.png"
+    },
+    {
+      "filename": "villager_woman_walk_d_s_01.png",
+      "animation": "walk_d",
+      "direction": "s",
+      "frame": 1,
+      "source_bbox": [242, 83, 361, 285]
+    },
+    {
+      "filename": "villager_woman_walk_d_s_02.png",
+      "animation": "walk_d",
+      "direction": "s",
+      "frame": 2,
+      "source_bbox": [525, 83, 645, 285]
+    },
+    {
+      "filename": "villager_woman_walk_d_s_03.png",
+      "animation": "walk_d",
+      "direction": "s",
+      "frame": 3,
+      "source_bbox": [818, 83, 938, 285]
+    },
+    {
+      "filename": "villager_woman_walk_d_s_04.png",
+      "animation": "walk_d",
+      "direction": "s",
+      "frame": 4,
+      "source_bbox": [1130, 83, 1250, 285]
+    },
+    {
+      "filename": "villager_woman_walk_d_sw_01.png",
+      "animation": "walk_d",
+      "direction": "sw",
+      "frame": 1,
+      "source_bbox": [204, 735, 342, 916]
+    },
+    {
+      "filename": "villager_woman_walk_d_sw_02.png",
+      "animation": "walk_d",
+      "direction": "sw",
+      "frame": 2,
+      "source_bbox": [498, 735, 631, 916]
+    },
+    {
+      "filename": "villager_woman_walk_d_sw_03.png",
+      "animation": "walk_d",
+      "direction": "sw",
+      "frame": 3,
+      "source_bbox": [739, 735, 878, 916]
+    },
+    {
+      "filename": "villager_woman_walk_d_sw_04.png",
+      "animation": "walk_d",
+      "direction": "sw",
+      "frame": 4,
+      "source_bbox": [986, 735, 1121, 916]
+    },
+    {
+      "filename": "villager_woman_walk_d_sw_05.png",
+      "animation": "walk_d",
+      "direction": "sw",
+      "frame": 5,
+      "source_bbox": [1188, 735, 1325, 916]
+    },
+    {
+      "filename": "villager_woman_walk_d_se_01.png",
+      "animation": "walk_d",
+      "direction": "se",
+      "frame": 1,
+      "source_bbox": [204, 735, 342, 916],
+      "mirrored_from": "villager_woman_walk_d_sw_01.png"
+    },
+    {
+      "filename": "villager_woman_walk_d_se_02.png",
+      "animation": "walk_d",
+      "direction": "se",
+      "frame": 2,
+      "source_bbox": [498, 735, 631, 916],
+      "mirrored_from": "villager_woman_walk_d_sw_02.png"
+    },
+    {
+      "filename": "villager_woman_walk_d_se_03.png",
+      "animation": "walk_d",
+      "direction": "se",
+      "frame": 3,
+      "source_bbox": [739, 735, 878, 916],
+      "mirrored_from": "villager_woman_walk_d_sw_03.png"
+    },
+    {
+      "filename": "villager_woman_walk_d_se_04.png",
+      "animation": "walk_d",
+      "direction": "se",
+      "frame": 4,
+      "source_bbox": [986, 735, 1121, 916],
+      "mirrored_from": "villager_woman_walk_d_sw_04.png"
+    },
+    {
+      "filename": "villager_woman_walk_d_se_05.png",
+      "animation": "walk_d",
+      "direction": "se",
+      "frame": 5,
+      "source_bbox": [1188, 735, 1325, 916],
+      "mirrored_from": "villager_woman_walk_d_sw_05.png"
     }
   ]
 }
