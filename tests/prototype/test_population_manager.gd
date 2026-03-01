@@ -59,21 +59,21 @@ func test_register_building_increases_cap() -> void:
 	var mgr := _create_manager(5)
 	var house := _create_mock_building("house")
 	mgr.register_building(house, 0)
-	assert_int(mgr.get_population_cap(0)).is_equal(10)
+	assert_int(mgr.get_population_cap(0)).is_equal(15)
 
 
 func test_unregister_building_decreases_cap() -> void:
 	var mgr := _create_manager(5)
 	var house := _create_mock_building("house")
 	mgr.register_building(house, 0)
-	assert_int(mgr.get_population_cap(0)).is_equal(10)
+	assert_int(mgr.get_population_cap(0)).is_equal(15)
 	mgr.unregister_building(house, 0)
 	assert_int(mgr.get_population_cap(0)).is_equal(5)
 
 
 func test_cap_clamped_to_hard_cap() -> void:
 	var mgr := _create_manager(5, 20)
-	# Add 5 houses = 5 + 25 = 30, but clamped to 20
+	# Add 5 houses = 5 + 50 = 55, but clamped to 20
 	for i in 5:
 		var house := _create_mock_building("house")
 		mgr.register_building(house, 0)
@@ -123,13 +123,13 @@ func test_cannot_train_when_at_cap() -> void:
 
 func test_cannot_train_when_over_cap() -> void:
 	var mgr := _create_manager(5)
-	# Add 5 units + 1 house to reach cap 10, then remove house
+	# Add units + 1 house to get cap 15, then remove house
 	var house := _create_mock_building("house")
 	mgr.register_building(house, 0)
 	for i in 8:
 		var unit := _create_mock_unit()
 		mgr.register_unit(unit, 0)
-	# Now at 8/10, remove house -> cap goes to 5, population 8
+	# Now at 8/15, remove house -> cap goes to 5, population 8
 	mgr.unregister_building(house, 0)
 	assert_int(mgr.get_population(0)).is_equal(8)
 	assert_int(mgr.get_population_cap(0)).is_equal(5)
@@ -192,7 +192,7 @@ func test_population_changed_signal_emitted_on_register_building() -> void:
 	var monitor := monitor_signals(mgr)
 	var house := _create_mock_building("house")
 	mgr.register_building(house, 0)
-	await assert_signal(monitor).is_emitted("population_changed", [0, 0, 10])
+	await assert_signal(monitor).is_emitted("population_changed", [0, 0, 15])
 
 
 func test_near_cap_warning_signal_emitted() -> void:
@@ -222,7 +222,7 @@ func test_save_load_preserves_state() -> void:
 	var mgr2 := _create_manager(10, 100)  # Different defaults
 	mgr2.load_state(state)
 	assert_int(mgr2.get_population(0)).is_equal(3)
-	assert_int(mgr2.get_population_cap(0)).is_equal(10)
+	assert_int(mgr2.get_population_cap(0)).is_equal(15)
 	assert_int(mgr2._hard_cap).is_equal(200)
 	assert_int(mgr2._starting_cap).is_equal(5)
 
@@ -264,3 +264,67 @@ func test_building_count_changed_signal_emitted() -> void:
 	var house := _create_mock_building("house")
 	mgr.register_building(house, 0)
 	await assert_signal(monitor).is_emitted("building_count_changed", [0, 1])
+
+
+# --- Housing tech bonus ---
+
+
+func test_apply_housing_tech_bonus_increases_cap() -> void:
+	var mgr := _create_manager(5)
+	var house1 := _create_mock_building("house")
+	var house2 := _create_mock_building("house")
+	mgr.register_building(house1, 0)
+	mgr.register_building(house2, 0)
+	# 5 + 10*2 = 25
+	assert_int(mgr.get_population_cap(0)).is_equal(25)
+	# Apply +5 per house tech bonus: 5 + 10*2 + 5*2 = 35
+	mgr.apply_housing_tech_bonus(0, 5)
+	assert_int(mgr.get_population_cap(0)).is_equal(35)
+
+
+func test_housing_tech_bonus_applies_to_new_buildings() -> void:
+	var mgr := _create_manager(5)
+	var house1 := _create_mock_building("house")
+	mgr.register_building(house1, 0)
+	mgr.apply_housing_tech_bonus(0, 5)
+	# 5 + 10 + 5*1 = 20
+	assert_int(mgr.get_population_cap(0)).is_equal(20)
+	# Build another house: 5 + 10*2 + 5*2 = 35
+	var house2 := _create_mock_building("house")
+	mgr.register_building(house2, 0)
+	assert_int(mgr.get_population_cap(0)).is_equal(35)
+
+
+func test_on_tech_researched_with_house_capacity() -> void:
+	var mgr := _create_manager(5)
+	var house := _create_mock_building("house")
+	mgr.register_building(house, 0)
+	# 5 + 10 = 15
+	assert_int(mgr.get_population_cap(0)).is_equal(15)
+	var effects: Dictionary = {"economic_bonus": {"house_capacity": 5}}
+	mgr._on_tech_researched(0, "engineering", effects)
+	# 5 + 10 + 5*1 = 20
+	assert_int(mgr.get_population_cap(0)).is_equal(20)
+
+
+func test_on_tech_researched_ignores_unrelated_effects() -> void:
+	var mgr := _create_manager(5)
+	var house := _create_mock_building("house")
+	mgr.register_building(house, 0)
+	var effects: Dictionary = {"economic_bonus": {"gather_rate": 0.10}}
+	mgr._on_tech_researched(0, "stone_tools", effects)
+	# Should remain unchanged: 5 + 10 = 15
+	assert_int(mgr.get_population_cap(0)).is_equal(15)
+
+
+func test_save_load_preserves_housing_tech_bonus() -> void:
+	var mgr := _create_manager(5, 200)
+	var house := _create_mock_building("house")
+	mgr.register_building(house, 0)
+	mgr.apply_housing_tech_bonus(0, 5)
+	# 5 + 10 + 5*1 = 20
+	assert_int(mgr.get_population_cap(0)).is_equal(20)
+	var state: Dictionary = mgr.save_state()
+	var mgr2 := _create_manager(10, 100)
+	mgr2.load_state(state)
+	assert_int(mgr2._housing_tech_bonus.get(0, 0)).is_equal(5)

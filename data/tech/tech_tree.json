@@ -237,7 +237,8 @@
     "research_time": 70,
     "prerequisites": ["mathematics"],
     "effects": {
-      "unlock_buildings": ["siege_workshop", "aqueduct"]
+      "unlock_buildings": ["siege_workshop", "aqueduct"],
+      "economic_bonus": { "house_capacity": 5 }
     },
     "flavor_text": "Theory meets stone and timber."
   },
