@@ -1,5 +1,6 @@
 {
   "wonder_countdown_duration": 600,
+  "wonder_hp_pause_threshold": 0.5,
   "defeat_delay": 5.0,
   "allow_continue_after_victory": true,
   "singularity_age": 6,
