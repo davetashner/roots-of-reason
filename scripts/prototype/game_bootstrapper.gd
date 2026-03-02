@@ -377,6 +377,7 @@ func setup_hud() -> void:
 	_root.add_child(hud)
 	if hud.has_method("setup"):
 		hud.setup(_root._camera, _root._input_handler)
+	_root._input_handler._hud = hud
 	var info_panel_layer := CanvasLayer.new()
 	info_panel_layer.name = "InfoPanel"
 	info_panel_layer.layer = 10
