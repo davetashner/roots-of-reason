@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rootsofreason.com/blueprint.schema.json",
+  "title": "Unit Blueprint",
+  "description": "Schema for MakeHuman-based unit model blueprints. Defines body parameters, equipment, animations, and game stats template.",
+  "type": "object",
+  "required": ["name", "body", "equipment", "tabard", "animations", "stats_template"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unit identifier (snake_case). Used for file naming throughout the pipeline.",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "body": {
+      "type": "object",
+      "description": "MakeHuman body configuration.",
+      "required": ["mhm_file"],
+      "properties": {
+        "mhm_file": {
+          "type": "string",
+          "description": "Path to .mhm file relative to project root."
+        },
+        "gender": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Gender slider: 0 = female, 1 = male."
+        },
+        "age": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Age slider: 0 = young, 1 = old."
+        },
+        "muscle": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Muscle definition slider."
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Body weight slider."
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Height multiplier (1.0 = default)."
+        },
+        "decimate_ratio": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 1,
+          "description": "Mesh decimation ratio. Lower = fewer polygons."
+        }
+      },
+      "additionalProperties": false
+    },
+    "equipment": {
+      "type": "array",
+      "description": "List of equipment pieces to attach.",
+      "items": {
+        "type": "object",
+        "required": ["template", "parent_bone"],
+        "properties": {
+          "template": {
+            "type": "string",
+            "description": "Equipment template name (bow, quiver, sword, shield, spear).",
+            "enum": ["bow", "quiver", "sword", "shield", "spear"]
+          },
+          "parent_bone": {
+            "type": "string",
+            "description": "Armature bone to parent equipment to."
+          },
+          "location": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Position offset [x, y, z]."
+          },
+          "rotation": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Euler rotation [x, y, z] in radians."
+          },
+          "scale": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Scale [x, y, z]."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "tabard": {
+      "type": "object",
+      "description": "Player color tabard configuration. Every unit needs one for the player color shader.",
+      "required": ["parent_bone"],
+      "properties": {
+        "parent_bone": {
+          "type": "string",
+          "description": "Bone to parent the tabard to."
+        },
+        "scale": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Tabard scale [x, y, z]. Default: [0.22, 0.12, 0.25]."
+        },
+        "location": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Tabard location offset [x, y, z]. Default: [0, 0.01, 0]."
+        }
+      },
+      "additionalProperties": false
+    },
+    "animations": {
+      "type": "object",
+      "description": "Animation configuration.",
+      "required": ["template", "frame_counts"],
+      "properties": {
+        "template": {
+          "type": "string",
+          "description": "Animation template: determines attack style.",
+          "enum": ["ranged", "melee"]
+        },
+        "frame_counts": {
+          "type": "object",
+          "description": "Number of frames per animation.",
+          "required": ["idle", "walk", "attack", "death"],
+          "properties": {
+            "idle": { "type": "integer", "minimum": 1 },
+            "walk": { "type": "integer", "minimum": 1 },
+            "attack": { "type": "integer", "minimum": 1 },
+            "death": { "type": "integer", "minimum": 1 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "stats_template": {
+      "type": "string",
+      "description": "Game stats template to use for generating unit JSON.",
+      "enum": ["ranged", "melee"]
+    }
+  },
+  "additionalProperties": false
+}

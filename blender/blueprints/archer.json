@@ -1,0 +1,39 @@
+{
+  "name": "archer",
+  "body": {
+    "mhm_file": "assets/archer_arms_down.mhm",
+    "gender": 1.0,
+    "age": 0.46,
+    "muscle": 0.75,
+    "weight": 0.4,
+    "height": 1.0,
+    "decimate_ratio": 0.25
+  },
+  "equipment": [
+    {
+      "template": "bow",
+      "parent_bone": "hand_l"
+    },
+    {
+      "template": "quiver",
+      "parent_bone": "spine_02",
+      "location": [0.03, -0.03, 0],
+      "rotation": [0.1745, 0, 0]
+    }
+  ],
+  "tabard": {
+    "parent_bone": "spine_02",
+    "scale": [0.22, 0.12, 0.25],
+    "location": [0, 0.01, 0]
+  },
+  "animations": {
+    "template": "ranged",
+    "frame_counts": {
+      "idle": 4,
+      "walk": 8,
+      "attack": 6,
+      "death": 6
+    }
+  },
+  "stats_template": "ranged"
+}
