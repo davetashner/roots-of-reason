@@ -84,7 +84,7 @@ Project structure and quality pipeline are documented in `CLAUDE.md`.
 **3D-to-2D Render Pipeline (how sprites are actually made):**
 This is the core production method, modeled after how Age of Empires was made.
 1. Define unit in a blueprint JSON (`blender/blueprints/{name}.json`)
-2. Generate 3D model via `blender/create_unit.py` — loads MakeHuman body via MPFB2, attaches equipment from `blender/equipment/`, creates animations from `blender/animations/`
+2. Generate 3D model via `blender/create_unit.py` — loads MakeHuman body via MPFB2, loads clothing (MPFB2 community assets or procedural), creates hair (wild/short/long styles), attaches equipment, creates animations
 3. Render isometric sprites via `blender/render_isometric.py` — 8 cameras at 45° intervals, ortho projection
 4. Generate manifest + pack sprites via `tools/asset_pipeline.py`
 5. Generate game configs via `tools/generate_unit_config.py`
@@ -112,11 +112,13 @@ This is the core production method, modeled after how Age of Empires was made.
 - `blender/create_unit.py` — blueprint-driven Blender model creation (MakeHuman + equipment + animations)
 - `blender/blueprints/{name}.json` — unit blueprint (body, equipment, animations, stats template)
 - `blender/animations/` — reusable animation templates (common, ranged, melee)
-- `blender/equipment/` — reusable equipment templates (bow, quiver, sword, shield, spear, tabard)
+- `blender/equipment/` — reusable equipment templates (bow, quiver, sword, shield, spear, club, tabard) + `mhclo:` prefix for community assets
 - `blender/render_isometric.py` — headless 8-direction isometric renderer
 - `tools/asset_pipeline.py` — orchestrator (render → manifest → pack → validate)
 - `tools/generate_unit_config.py` — generate game-side JSON configs from blueprint
 - `tools/validate_blueprint.py` — validate blueprint JSON against schema
+- `tools/mh_asset_install.py` — install MakeHuman community asset packs (`./tools/ror mh-install <pack>`)
+- `blender/assets_installed.json` — tracks which community packs are installed
 - `tools/spritesheet_packer.py` — pack PNGs → spritesheets + Godot resources
 - `tools/validate_sprites.py` — CI validation (dimensions, frame counts, naming, masks)
 - `tools/generate_tiles.py` — procedural Phase 1 tileset
