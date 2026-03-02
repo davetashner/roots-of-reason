@@ -6,7 +6,7 @@ extends RefCounted
 ## with procedural noise-based terrain.
 
 ## Terrain types that should never be blended into or out of.
-const _NO_BLEND := ["water", "mountain", "canyon", "river", "shore", "shallows", "deep_water"]
+const _NO_BLEND := ["water", "mountain", "canyon", "river", "shore", "shallows", "deep_water", "desert"]
 
 var _thresholds: Dictionary = {
 	"water": 0.30,
