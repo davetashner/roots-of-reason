@@ -38,6 +38,7 @@ const SETTINGS_PATHS: Dictionary = {
 	"command_panel": "ui/command_panel",
 	"commands": "ui/commands",
 	"hud": "ui/hud",
+	"idle_villager_finder": "ui/idle_villager_finder",
 	"info_panel": "ui/info_panel",
 	"notifications": "ui/notifications",
 	"postgame_stats": "ui/postgame_stats",

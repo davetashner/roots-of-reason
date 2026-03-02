@@ -34,6 +34,7 @@ var _patrol_first_point: Vector2 = Vector2.ZERO
 var _formation_manager: RefCounted = null
 var _formation_type: int = 0  # FormationManager.FormationType.STAGGERED
 var _river_overlay: Node = null
+var _hud: Node = null
 var _command_handlers: Array[RefCounted] = []
 var _gather_handler: RefCounted = null
 
@@ -130,7 +131,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			_update_cursor_context(event as InputEventMouseMotion)
 	elif event is InputEventKey and event.pressed and not event.echo:
-		_handle_key(event as InputEventKey)
+		var key := event as InputEventKey
+		if key.keycode == KEY_PERIOD:
+			if _hud != null and _hud.has_method("cycle_to_idle_villager"):
+				_hud.cycle_to_idle_villager()
+			return
+		_handle_key(key)
 
 
 func _handle_key(key: InputEventKey) -> void:
