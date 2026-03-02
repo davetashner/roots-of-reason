@@ -1,6 +1,6 @@
 extends Camera2D
 ## Prototype isometric camera with pan, zoom, edge-scroll, middle-mouse drag,
-## bounds clamping, cursor-centered zoom, and save/load support.
+## trackpad gestures, bounds clamping, cursor-centered zoom, and save/load support.
 
 var _pan_speed: float = 500.0
 var _zoom_min: float = 0.5
@@ -8,6 +8,7 @@ var _zoom_max: float = 3.0
 var _zoom_step: float = 0.1
 var _zoom_lerp_weight: float = 8.0
 var _edge_margin: int = 20
+var _trackpad_zoom_sensitivity: float = 0.5
 
 var _target_zoom: float = 1.0
 var _dragging: bool = false
@@ -32,6 +33,7 @@ func _load_config() -> void:
 	_zoom_step = cfg.get("zoom_step", _zoom_step)
 	_zoom_lerp_weight = cfg.get("zoom_lerp_weight", _zoom_lerp_weight)
 	_edge_margin = int(cfg.get("edge_scroll_margin", _edge_margin))
+	_trackpad_zoom_sensitivity = cfg.get("trackpad_zoom_sensitivity", _trackpad_zoom_sensitivity)
 
 
 func setup(map_bounds: Rect2) -> void:
@@ -62,6 +64,34 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and _dragging:
 		var motion := event as InputEventMouseMotion
 		position -= motion.relative / zoom
+	elif event is InputEventPanGesture:
+		# macOS trackpad two-finger scroll — vertical axis controls zoom
+		var pan := event as InputEventPanGesture
+		var zoom_delta := -pan.delta.y * _trackpad_zoom_sensitivity
+		if absf(zoom_delta) > 0.001:
+			_zoom_toward_cursor_smooth(zoom_delta)
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMagnifyGesture:
+		# macOS trackpad pinch-to-zoom
+		var mag := event as InputEventMagnifyGesture
+		var zoom_delta := mag.factor - 1.0
+		if absf(zoom_delta) > 0.001:
+			_zoom_toward_cursor_smooth(zoom_delta)
+		get_viewport().set_input_as_handled()
+
+
+func _zoom_toward_cursor_smooth(amount: float) -> void:
+	var old_zoom := zoom.x
+	_target_zoom = clampf(_target_zoom + amount, _zoom_min, _zoom_max)
+	var vp := get_viewport()
+	if vp == null:
+		return
+	var mouse_screen := vp.get_mouse_position()
+	var vp_size := get_viewport_rect().size
+	var offset_from_center := mouse_screen - vp_size * 0.5
+	var world_offset_old := offset_from_center / old_zoom
+	var world_offset_new := offset_from_center / _target_zoom
+	position += world_offset_old - world_offset_new
 
 
 func _zoom_toward_cursor(direction: int) -> void:
