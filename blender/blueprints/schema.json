@@ -68,8 +68,8 @@
         "properties": {
           "template": {
             "type": "string",
-            "description": "Equipment template name (bow, quiver, sword, shield, spear).",
-            "enum": ["bow", "quiver", "sword", "shield", "spear"]
+            "description": "Equipment template name (bow, quiver, sword, shield, spear, club).",
+            "enum": ["bow", "quiver", "sword", "shield", "spear", "club"]
           },
           "parent_bone": {
             "type": "string",

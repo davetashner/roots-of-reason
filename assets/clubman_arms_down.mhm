@@ -1,0 +1,23 @@
+# Written by MakeHuman — Clubman unit for Roots of Reason
+version v1.2.0
+camera 6.5 350.5 -0.21781474468604442 0.5118420316199582 -0.12794093483869926 0.9
+modifier forehead/forehead-trans-backward|forward 0.250000
+modifier forehead/forehead-scale-vert-decr|incr 0.150000
+modifier neck/neck-scale-vert-decr|incr 0.200000
+modifier chin/chin-jaw-drop-decr|incr -0.100000
+modifier chin/chin-prominent-decr|incr 0.150000
+modifier breast/BreastSize 0.000000
+modifier breast/BreastFirmness 0.000000
+modifier macrodetails/Gender 1.000000
+modifier macrodetails/Age 0.350000
+modifier macrodetails/African 0.442201
+modifier macrodetails/Asian 0.413799
+modifier macrodetails/Caucasian 0.144000
+modifier macrodetails-universal/Muscle 0.800000
+modifier macrodetails-universal/Weight 0.550000
+modifier macrodetails-height/Height 0.400000
+modifier macrodetails-proportions/BodyProportions 0.500000
+pose standing02.bvh
+clothesHideFaces True
+skinMaterial skins/young_caucasian_male/young_caucasian_male.mhmat
+subdivide False
