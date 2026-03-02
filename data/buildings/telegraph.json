@@ -1,0 +1,22 @@
+{
+  "name": "Telegraph",
+  "hp": 600,
+  "footprint": [2, 2],
+  "build_time": 30,
+  "build_cost": {
+    "wood": 150,
+    "gold": 100
+  },
+  "population_bonus": 0,
+  "garrison_capacity": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 4,
+  "placement_constraint": "",
+  "defense": 0,
+  "los": 6,
+  "effects": {
+    "research_speed_bonus": 0.15
+  }
+}
