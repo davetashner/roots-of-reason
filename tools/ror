@@ -892,6 +892,108 @@ cmd_asset_pipeline() {
     python3 "$SCRIPT_DIR/asset_pipeline.py" "$@"
 }
 
+# ==================== create-unit ====================
+cmd_create_unit() {
+    cd "$PROJECT_ROOT"
+
+    local name="" blueprint="" skip_model=false skip_render=false skip_config=false
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --name)       name="$2"; shift 2 ;;
+            --blueprint)  blueprint="$2"; shift 2 ;;
+            --skip-model) skip_model=true; shift ;;
+            --skip-render) skip_render=true; shift ;;
+            --skip-config) skip_config=true; shift ;;
+            *)
+                err "Unknown option: $1"
+                echo "Usage: ror create-unit --name <unit> | --blueprint <path>"
+                exit 1
+                ;;
+        esac
+    done
+
+    # Resolve blueprint path
+    if [[ -z "$blueprint" ]] && [[ -n "$name" ]]; then
+        blueprint="blender/blueprints/${name}.json"
+    fi
+    if [[ -z "$blueprint" ]]; then
+        err "Must specify --name <unit> or --blueprint <path>"
+        exit 1
+    fi
+    if [[ ! -f "$blueprint" ]]; then
+        err "Blueprint not found: $blueprint"
+        exit 1
+    fi
+
+    # Extract name from blueprint if not provided
+    if [[ -z "$name" ]]; then
+        name=$(python3 -c "import json; print(json.load(open('$blueprint'))['name'])")
+    fi
+
+    # Read animation config from blueprint
+    local anim_template animations frames
+    anim_template=$(python3 -c "
+import json
+bp = json.load(open('$blueprint'))
+fc = bp['animations']['frame_counts']
+anims = ','.join(fc.keys())
+frames = ','.join(str(v) for v in fc.values())
+print(f'{anims}|{frames}')
+")
+    animations="${anim_template%|*}"
+    frames="${anim_template#*|}"
+
+    info "=== Create Unit Pipeline: $name ==="
+    info "Blueprint: $blueprint"
+
+    local blender
+    blender=$(find_blender) || {
+        err "Blender not found. Set BLENDER_BIN or install Blender."
+        exit 1
+    }
+
+    local step=1
+    local total=3
+    [[ "$skip_model" == true ]] && total=$((total - 1))
+    [[ "$skip_render" == true ]] && total=$((total - 1))
+    [[ "$skip_config" == true ]] && total=$((total - 1))
+
+    # Step 1: Create .blend model from blueprint
+    if [[ "$skip_model" != true ]]; then
+        info "Step $step/$total: Creating 3D model from blueprint ..."
+        "$blender" --background --python "$PROJECT_ROOT/blender/create_unit.py" -- \
+            --blueprint "$blueprint"
+        ok "Model created: blender/models/${name}.blend"
+        step=$((step + 1))
+    fi
+
+    # Step 2: Run asset pipeline (render → manifest → pack → validate)
+    if [[ "$skip_render" != true ]]; then
+        info "Step $step/$total: Running asset pipeline (render → manifest → pack → validate) ..."
+        python3 "$SCRIPT_DIR/asset_pipeline.py" "$name" --type unit \
+            --animations "$animations" \
+            --frames-per-anim "$frames"
+        ok "Asset pipeline complete"
+        step=$((step + 1))
+    fi
+
+    # Step 3: Generate game-side config
+    if [[ "$skip_config" != true ]]; then
+        info "Step $step/$total: Generating game configs ..."
+        python3 "$SCRIPT_DIR/generate_unit_config.py" \
+            --blueprint "$blueprint"
+        ok "Game configs generated"
+    fi
+
+    echo ""
+    ok "=== Unit pipeline complete: $name ==="
+    info "Model:         blender/models/${name}.blend"
+    info "Sprites:       assets/sprites/units/${name}/"
+    info "Manifest:      assets/sprites/units/${name}/manifest.json"
+    info "Unit stats:    data/units/${name}.json"
+    info "Sprite config: data/units/sprites/${name}.json"
+}
+
 # ==================== animate ====================
 cmd_animate() {
     cd "$PROJECT_ROOT"
@@ -2182,6 +2284,13 @@ ${BOLD}COMMANDS${RESET}
                         ror blender-render villager --type unit --directions s n
   blender-archer        Render geometric archer (full pipeline: Blender → downscale → manifest)
                         Produces 192 frames (4 anims × 8 dirs × variable frame counts)
+  create-unit --name <unit> | --blueprint <path> [opts]
+                      Full unit creation pipeline: blueprint → 3D model → sprites → game config
+                        ror create-unit --name archer       — run full pipeline from blueprint
+                        ror create-unit --blueprint blender/blueprints/archer.json
+                        ror create-unit --name archer --skip-model   — skip Blender model step
+                        ror create-unit --name archer --skip-render  — skip sprite rendering
+                        ror create-unit --name archer --skip-config  — skip game config gen
   asset-pipeline <subject> [opts]  (alias: pipeline)
                       Run full 3D-to-2D asset pipeline (render → manifest → pack → validate)
                         ror asset-pipeline archer --type unit
@@ -2287,6 +2396,7 @@ case "${1:-help}" in
     sprite-sheet)       shift; cmd_sprite_sheet "$@" ;;
     pack-sprites)       shift; cmd_pack_sprites "$@" ;;
     asset-pipeline|pipeline) shift; cmd_asset_pipeline "$@" ;;
+    create-unit)        shift; cmd_create_unit "$@" ;;
     animate)            shift; cmd_animate "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
     split-sprites)      shift; cmd_split_sprites "$@" ;;
