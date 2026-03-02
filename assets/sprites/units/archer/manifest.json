@@ -1,0 +1,1176 @@
+{
+  "canvas_size": [
+    128,
+    128
+  ],
+  "directions": [
+    "s",
+    "se",
+    "e",
+    "ne",
+    "n",
+    "nw",
+    "w",
+    "sw"
+  ],
+  "animations": [
+    "attack",
+    "death",
+    "idle",
+    "walk"
+  ],
+  "sprites": [
+    {
+      "filename": "archer_attack_s_01.png",
+      "animation": "attack",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "archer_attack_s_02.png",
+      "animation": "attack",
+      "direction": "s",
+      "frame": 2
+    },
+    {
+      "filename": "archer_attack_s_03.png",
+      "animation": "attack",
+      "direction": "s",
+      "frame": 3
+    },
+    {
+      "filename": "archer_attack_s_04.png",
+      "animation": "attack",
+      "direction": "s",
+      "frame": 4
+    },
+    {
+      "filename": "archer_attack_s_05.png",
+      "animation": "attack",
+      "direction": "s",
+      "frame": 5
+    },
+    {
+      "filename": "archer_attack_s_06.png",
+      "animation": "attack",
+      "direction": "s",
+      "frame": 6
+    },
+    {
+      "filename": "archer_attack_se_01.png",
+      "animation": "attack",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "archer_attack_se_02.png",
+      "animation": "attack",
+      "direction": "se",
+      "frame": 2
+    },
+    {
+      "filename": "archer_attack_se_03.png",
+      "animation": "attack",
+      "direction": "se",
+      "frame": 3
+    },
+    {
+      "filename": "archer_attack_se_04.png",
+      "animation": "attack",
+      "direction": "se",
+      "frame": 4
+    },
+    {
+      "filename": "archer_attack_se_05.png",
+      "animation": "attack",
+      "direction": "se",
+      "frame": 5
+    },
+    {
+      "filename": "archer_attack_se_06.png",
+      "animation": "attack",
+      "direction": "se",
+      "frame": 6
+    },
+    {
+      "filename": "archer_attack_e_01.png",
+      "animation": "attack",
+      "direction": "e",
+      "frame": 1
+    },
+    {
+      "filename": "archer_attack_e_02.png",
+      "animation": "attack",
+      "direction": "e",
+      "frame": 2
+    },
+    {
+      "filename": "archer_attack_e_03.png",
+      "animation": "attack",
+      "direction": "e",
+      "frame": 3
+    },
+    {
+      "filename": "archer_attack_e_04.png",
+      "animation": "attack",
+      "direction": "e",
+      "frame": 4
+    },
+    {
+      "filename": "archer_attack_e_05.png",
+      "animation": "attack",
+      "direction": "e",
+      "frame": 5
+    },
+    {
+      "filename": "archer_attack_e_06.png",
+      "animation": "attack",
+      "direction": "e",
+      "frame": 6
+    },
+    {
+      "filename": "archer_attack_ne_01.png",
+      "animation": "attack",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "archer_attack_ne_02.png",
+      "animation": "attack",
+      "direction": "ne",
+      "frame": 2
+    },
+    {
+      "filename": "archer_attack_ne_03.png",
+      "animation": "attack",
+      "direction": "ne",
+      "frame": 3
+    },
+    {
+      "filename": "archer_attack_ne_04.png",
+      "animation": "attack",
+      "direction": "ne",
+      "frame": 4
+    },
+    {
+      "filename": "archer_attack_ne_05.png",
+      "animation": "attack",
+      "direction": "ne",
+      "frame": 5
+    },
+    {
+      "filename": "archer_attack_ne_06.png",
+      "animation": "attack",
+      "direction": "ne",
+      "frame": 6
+    },
+    {
+      "filename": "archer_attack_n_01.png",
+      "animation": "attack",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "archer_attack_n_02.png",
+      "animation": "attack",
+      "direction": "n",
+      "frame": 2
+    },
+    {
+      "filename": "archer_attack_n_03.png",
+      "animation": "attack",
+      "direction": "n",
+      "frame": 3
+    },
+    {
+      "filename": "archer_attack_n_04.png",
+      "animation": "attack",
+      "direction": "n",
+      "frame": 4
+    },
+    {
+      "filename": "archer_attack_n_05.png",
+      "animation": "attack",
+      "direction": "n",
+      "frame": 5
+    },
+    {
+      "filename": "archer_attack_n_06.png",
+      "animation": "attack",
+      "direction": "n",
+      "frame": 6
+    },
+    {
+      "filename": "archer_attack_nw_01.png",
+      "animation": "attack",
+      "direction": "nw",
+      "frame": 1
+    },
+    {
+      "filename": "archer_attack_nw_02.png",
+      "animation": "attack",
+      "direction": "nw",
+      "frame": 2
+    },
+    {
+      "filename": "archer_attack_nw_03.png",
+      "animation": "attack",
+      "direction": "nw",
+      "frame": 3
+    },
+    {
+      "filename": "archer_attack_nw_04.png",
+      "animation": "attack",
+      "direction": "nw",
+      "frame": 4
+    },
+    {
+      "filename": "archer_attack_nw_05.png",
+      "animation": "attack",
+      "direction": "nw",
+      "frame": 5
+    },
+    {
+      "filename": "archer_attack_nw_06.png",
+      "animation": "attack",
+      "direction": "nw",
+      "frame": 6
+    },
+    {
+      "filename": "archer_attack_w_01.png",
+      "animation": "attack",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "archer_attack_w_02.png",
+      "animation": "attack",
+      "direction": "w",
+      "frame": 2
+    },
+    {
+      "filename": "archer_attack_w_03.png",
+      "animation": "attack",
+      "direction": "w",
+      "frame": 3
+    },
+    {
+      "filename": "archer_attack_w_04.png",
+      "animation": "attack",
+      "direction": "w",
+      "frame": 4
+    },
+    {
+      "filename": "archer_attack_w_05.png",
+      "animation": "attack",
+      "direction": "w",
+      "frame": 5
+    },
+    {
+      "filename": "archer_attack_w_06.png",
+      "animation": "attack",
+      "direction": "w",
+      "frame": 6
+    },
+    {
+      "filename": "archer_attack_sw_01.png",
+      "animation": "attack",
+      "direction": "sw",
+      "frame": 1
+    },
+    {
+      "filename": "archer_attack_sw_02.png",
+      "animation": "attack",
+      "direction": "sw",
+      "frame": 2
+    },
+    {
+      "filename": "archer_attack_sw_03.png",
+      "animation": "attack",
+      "direction": "sw",
+      "frame": 3
+    },
+    {
+      "filename": "archer_attack_sw_04.png",
+      "animation": "attack",
+      "direction": "sw",
+      "frame": 4
+    },
+    {
+      "filename": "archer_attack_sw_05.png",
+      "animation": "attack",
+      "direction": "sw",
+      "frame": 5
+    },
+    {
+      "filename": "archer_attack_sw_06.png",
+      "animation": "attack",
+      "direction": "sw",
+      "frame": 6
+    },
+    {
+      "filename": "archer_death_s_01.png",
+      "animation": "death",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "archer_death_s_02.png",
+      "animation": "death",
+      "direction": "s",
+      "frame": 2
+    },
+    {
+      "filename": "archer_death_s_03.png",
+      "animation": "death",
+      "direction": "s",
+      "frame": 3
+    },
+    {
+      "filename": "archer_death_s_04.png",
+      "animation": "death",
+      "direction": "s",
+      "frame": 4
+    },
+    {
+      "filename": "archer_death_s_05.png",
+      "animation": "death",
+      "direction": "s",
+      "frame": 5
+    },
+    {
+      "filename": "archer_death_s_06.png",
+      "animation": "death",
+      "direction": "s",
+      "frame": 6
+    },
+    {
+      "filename": "archer_death_se_01.png",
+      "animation": "death",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "archer_death_se_02.png",
+      "animation": "death",
+      "direction": "se",
+      "frame": 2
+    },
+    {
+      "filename": "archer_death_se_03.png",
+      "animation": "death",
+      "direction": "se",
+      "frame": 3
+    },
+    {
+      "filename": "archer_death_se_04.png",
+      "animation": "death",
+      "direction": "se",
+      "frame": 4
+    },
+    {
+      "filename": "archer_death_se_05.png",
+      "animation": "death",
+      "direction": "se",
+      "frame": 5
+    },
+    {
+      "filename": "archer_death_se_06.png",
+      "animation": "death",
+      "direction": "se",
+      "frame": 6
+    },
+    {
+      "filename": "archer_death_e_01.png",
+      "animation": "death",
+      "direction": "e",
+      "frame": 1
+    },
+    {
+      "filename": "archer_death_e_02.png",
+      "animation": "death",
+      "direction": "e",
+      "frame": 2
+    },
+    {
+      "filename": "archer_death_e_03.png",
+      "animation": "death",
+      "direction": "e",
+      "frame": 3
+    },
+    {
+      "filename": "archer_death_e_04.png",
+      "animation": "death",
+      "direction": "e",
+      "frame": 4
+    },
+    {
+      "filename": "archer_death_e_05.png",
+      "animation": "death",
+      "direction": "e",
+      "frame": 5
+    },
+    {
+      "filename": "archer_death_e_06.png",
+      "animation": "death",
+      "direction": "e",
+      "frame": 6
+    },
+    {
+      "filename": "archer_death_ne_01.png",
+      "animation": "death",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "archer_death_ne_02.png",
+      "animation": "death",
+      "direction": "ne",
+      "frame": 2
+    },
+    {
+      "filename": "archer_death_ne_03.png",
+      "animation": "death",
+      "direction": "ne",
+      "frame": 3
+    },
+    {
+      "filename": "archer_death_ne_04.png",
+      "animation": "death",
+      "direction": "ne",
+      "frame": 4
+    },
+    {
+      "filename": "archer_death_ne_05.png",
+      "animation": "death",
+      "direction": "ne",
+      "frame": 5
+    },
+    {
+      "filename": "archer_death_ne_06.png",
+      "animation": "death",
+      "direction": "ne",
+      "frame": 6
+    },
+    {
+      "filename": "archer_death_n_01.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "archer_death_n_02.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 2
+    },
+    {
+      "filename": "archer_death_n_03.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 3
+    },
+    {
+      "filename": "archer_death_n_04.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 4
+    },
+    {
+      "filename": "archer_death_n_05.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 5
+    },
+    {
+      "filename": "archer_death_n_06.png",
+      "animation": "death",
+      "direction": "n",
+      "frame": 6
+    },
+    {
+      "filename": "archer_death_nw_01.png",
+      "animation": "death",
+      "direction": "nw",
+      "frame": 1
+    },
+    {
+      "filename": "archer_death_nw_02.png",
+      "animation": "death",
+      "direction": "nw",
+      "frame": 2
+    },
+    {
+      "filename": "archer_death_nw_03.png",
+      "animation": "death",
+      "direction": "nw",
+      "frame": 3
+    },
+    {
+      "filename": "archer_death_nw_04.png",
+      "animation": "death",
+      "direction": "nw",
+      "frame": 4
+    },
+    {
+      "filename": "archer_death_nw_05.png",
+      "animation": "death",
+      "direction": "nw",
+      "frame": 5
+    },
+    {
+      "filename": "archer_death_nw_06.png",
+      "animation": "death",
+      "direction": "nw",
+      "frame": 6
+    },
+    {
+      "filename": "archer_death_w_01.png",
+      "animation": "death",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "archer_death_w_02.png",
+      "animation": "death",
+      "direction": "w",
+      "frame": 2
+    },
+    {
+      "filename": "archer_death_w_03.png",
+      "animation": "death",
+      "direction": "w",
+      "frame": 3
+    },
+    {
+      "filename": "archer_death_w_04.png",
+      "animation": "death",
+      "direction": "w",
+      "frame": 4
+    },
+    {
+      "filename": "archer_death_w_05.png",
+      "animation": "death",
+      "direction": "w",
+      "frame": 5
+    },
+    {
+      "filename": "archer_death_w_06.png",
+      "animation": "death",
+      "direction": "w",
+      "frame": 6
+    },
+    {
+      "filename": "archer_death_sw_01.png",
+      "animation": "death",
+      "direction": "sw",
+      "frame": 1
+    },
+    {
+      "filename": "archer_death_sw_02.png",
+      "animation": "death",
+      "direction": "sw",
+      "frame": 2
+    },
+    {
+      "filename": "archer_death_sw_03.png",
+      "animation": "death",
+      "direction": "sw",
+      "frame": 3
+    },
+    {
+      "filename": "archer_death_sw_04.png",
+      "animation": "death",
+      "direction": "sw",
+      "frame": 4
+    },
+    {
+      "filename": "archer_death_sw_05.png",
+      "animation": "death",
+      "direction": "sw",
+      "frame": 5
+    },
+    {
+      "filename": "archer_death_sw_06.png",
+      "animation": "death",
+      "direction": "sw",
+      "frame": 6
+    },
+    {
+      "filename": "archer_idle_s_01.png",
+      "animation": "idle",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "archer_idle_s_02.png",
+      "animation": "idle",
+      "direction": "s",
+      "frame": 2
+    },
+    {
+      "filename": "archer_idle_s_03.png",
+      "animation": "idle",
+      "direction": "s",
+      "frame": 3
+    },
+    {
+      "filename": "archer_idle_s_04.png",
+      "animation": "idle",
+      "direction": "s",
+      "frame": 4
+    },
+    {
+      "filename": "archer_idle_se_01.png",
+      "animation": "idle",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "archer_idle_se_02.png",
+      "animation": "idle",
+      "direction": "se",
+      "frame": 2
+    },
+    {
+      "filename": "archer_idle_se_03.png",
+      "animation": "idle",
+      "direction": "se",
+      "frame": 3
+    },
+    {
+      "filename": "archer_idle_se_04.png",
+      "animation": "idle",
+      "direction": "se",
+      "frame": 4
+    },
+    {
+      "filename": "archer_idle_e_01.png",
+      "animation": "idle",
+      "direction": "e",
+      "frame": 1
+    },
+    {
+      "filename": "archer_idle_e_02.png",
+      "animation": "idle",
+      "direction": "e",
+      "frame": 2
+    },
+    {
+      "filename": "archer_idle_e_03.png",
+      "animation": "idle",
+      "direction": "e",
+      "frame": 3
+    },
+    {
+      "filename": "archer_idle_e_04.png",
+      "animation": "idle",
+      "direction": "e",
+      "frame": 4
+    },
+    {
+      "filename": "archer_idle_ne_01.png",
+      "animation": "idle",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "archer_idle_ne_02.png",
+      "animation": "idle",
+      "direction": "ne",
+      "frame": 2
+    },
+    {
+      "filename": "archer_idle_ne_03.png",
+      "animation": "idle",
+      "direction": "ne",
+      "frame": 3
+    },
+    {
+      "filename": "archer_idle_ne_04.png",
+      "animation": "idle",
+      "direction": "ne",
+      "frame": 4
+    },
+    {
+      "filename": "archer_idle_n_01.png",
+      "animation": "idle",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "archer_idle_n_02.png",
+      "animation": "idle",
+      "direction": "n",
+      "frame": 2
+    },
+    {
+      "filename": "archer_idle_n_03.png",
+      "animation": "idle",
+      "direction": "n",
+      "frame": 3
+    },
+    {
+      "filename": "archer_idle_n_04.png",
+      "animation": "idle",
+      "direction": "n",
+      "frame": 4
+    },
+    {
+      "filename": "archer_idle_nw_01.png",
+      "animation": "idle",
+      "direction": "nw",
+      "frame": 1
+    },
+    {
+      "filename": "archer_idle_nw_02.png",
+      "animation": "idle",
+      "direction": "nw",
+      "frame": 2
+    },
+    {
+      "filename": "archer_idle_nw_03.png",
+      "animation": "idle",
+      "direction": "nw",
+      "frame": 3
+    },
+    {
+      "filename": "archer_idle_nw_04.png",
+      "animation": "idle",
+      "direction": "nw",
+      "frame": 4
+    },
+    {
+      "filename": "archer_idle_w_01.png",
+      "animation": "idle",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "archer_idle_w_02.png",
+      "animation": "idle",
+      "direction": "w",
+      "frame": 2
+    },
+    {
+      "filename": "archer_idle_w_03.png",
+      "animation": "idle",
+      "direction": "w",
+      "frame": 3
+    },
+    {
+      "filename": "archer_idle_w_04.png",
+      "animation": "idle",
+      "direction": "w",
+      "frame": 4
+    },
+    {
+      "filename": "archer_idle_sw_01.png",
+      "animation": "idle",
+      "direction": "sw",
+      "frame": 1
+    },
+    {
+      "filename": "archer_idle_sw_02.png",
+      "animation": "idle",
+      "direction": "sw",
+      "frame": 2
+    },
+    {
+      "filename": "archer_idle_sw_03.png",
+      "animation": "idle",
+      "direction": "sw",
+      "frame": 3
+    },
+    {
+      "filename": "archer_idle_sw_04.png",
+      "animation": "idle",
+      "direction": "sw",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_s_01.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "archer_walk_s_02.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 2
+    },
+    {
+      "filename": "archer_walk_s_03.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 3
+    },
+    {
+      "filename": "archer_walk_s_04.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_s_05.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 5
+    },
+    {
+      "filename": "archer_walk_s_06.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 6
+    },
+    {
+      "filename": "archer_walk_s_07.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 7
+    },
+    {
+      "filename": "archer_walk_s_08.png",
+      "animation": "walk",
+      "direction": "s",
+      "frame": 8
+    },
+    {
+      "filename": "archer_walk_se_01.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "archer_walk_se_02.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 2
+    },
+    {
+      "filename": "archer_walk_se_03.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 3
+    },
+    {
+      "filename": "archer_walk_se_04.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_se_05.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 5
+    },
+    {
+      "filename": "archer_walk_se_06.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 6
+    },
+    {
+      "filename": "archer_walk_se_07.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 7
+    },
+    {
+      "filename": "archer_walk_se_08.png",
+      "animation": "walk",
+      "direction": "se",
+      "frame": 8
+    },
+    {
+      "filename": "archer_walk_e_01.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 1
+    },
+    {
+      "filename": "archer_walk_e_02.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 2
+    },
+    {
+      "filename": "archer_walk_e_03.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 3
+    },
+    {
+      "filename": "archer_walk_e_04.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_e_05.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 5
+    },
+    {
+      "filename": "archer_walk_e_06.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 6
+    },
+    {
+      "filename": "archer_walk_e_07.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 7
+    },
+    {
+      "filename": "archer_walk_e_08.png",
+      "animation": "walk",
+      "direction": "e",
+      "frame": 8
+    },
+    {
+      "filename": "archer_walk_ne_01.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "archer_walk_ne_02.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 2
+    },
+    {
+      "filename": "archer_walk_ne_03.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 3
+    },
+    {
+      "filename": "archer_walk_ne_04.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_ne_05.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 5
+    },
+    {
+      "filename": "archer_walk_ne_06.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 6
+    },
+    {
+      "filename": "archer_walk_ne_07.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 7
+    },
+    {
+      "filename": "archer_walk_ne_08.png",
+      "animation": "walk",
+      "direction": "ne",
+      "frame": 8
+    },
+    {
+      "filename": "archer_walk_n_01.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "archer_walk_n_02.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 2
+    },
+    {
+      "filename": "archer_walk_n_03.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 3
+    },
+    {
+      "filename": "archer_walk_n_04.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_n_05.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 5
+    },
+    {
+      "filename": "archer_walk_n_06.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 6
+    },
+    {
+      "filename": "archer_walk_n_07.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 7
+    },
+    {
+      "filename": "archer_walk_n_08.png",
+      "animation": "walk",
+      "direction": "n",
+      "frame": 8
+    },
+    {
+      "filename": "archer_walk_nw_01.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 1
+    },
+    {
+      "filename": "archer_walk_nw_02.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 2
+    },
+    {
+      "filename": "archer_walk_nw_03.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 3
+    },
+    {
+      "filename": "archer_walk_nw_04.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_nw_05.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 5
+    },
+    {
+      "filename": "archer_walk_nw_06.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 6
+    },
+    {
+      "filename": "archer_walk_nw_07.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 7
+    },
+    {
+      "filename": "archer_walk_nw_08.png",
+      "animation": "walk",
+      "direction": "nw",
+      "frame": 8
+    },
+    {
+      "filename": "archer_walk_w_01.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "archer_walk_w_02.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 2
+    },
+    {
+      "filename": "archer_walk_w_03.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 3
+    },
+    {
+      "filename": "archer_walk_w_04.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_w_05.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 5
+    },
+    {
+      "filename": "archer_walk_w_06.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 6
+    },
+    {
+      "filename": "archer_walk_w_07.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 7
+    },
+    {
+      "filename": "archer_walk_w_08.png",
+      "animation": "walk",
+      "direction": "w",
+      "frame": 8
+    },
+    {
+      "filename": "archer_walk_sw_01.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 1
+    },
+    {
+      "filename": "archer_walk_sw_02.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 2
+    },
+    {
+      "filename": "archer_walk_sw_03.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 3
+    },
+    {
+      "filename": "archer_walk_sw_04.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 4
+    },
+    {
+      "filename": "archer_walk_sw_05.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 5
+    },
+    {
+      "filename": "archer_walk_sw_06.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 6
+    },
+    {
+      "filename": "archer_walk_sw_07.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 7
+    },
+    {
+      "filename": "archer_walk_sw_08.png",
+      "animation": "walk",
+      "direction": "sw",
+      "frame": 8
+    }
+  ]
+}
