@@ -272,15 +272,25 @@ func test_required_techs_allows_placement() -> void:
 	ResourceManager.init_player(0, starting)
 	# Research the required tech
 	tm.mark_researched("agi_core")
-	# Still needs gpu_foundry building — place one first
+	tm.mark_researched("transformer_architecture")
+	# AGI Core requires transformer_lab building (singularity chain)
+	# First place gpu_foundry (needed for transformer_lab)
 	placer.start_placement("gpu_foundry", 0)
 	placer._current_grid_pos = Vector2i(2, 2)
 	placer._is_valid = true
 	placer._confirm_placement()
-	# Mark it as completed
 	for entry: Dictionary in placer._placed_buildings:
 		var node: Node2D = entry.get("node")
 		if is_instance_valid(node) and node.building_name == "gpu_foundry":
+			node.under_construction = false
+	# Then place transformer_lab (needed for agi_core)
+	placer.start_placement("transformer_lab", 0)
+	placer._current_grid_pos = Vector2i(6, 2)
+	placer._is_valid = true
+	placer._confirm_placement()
+	for entry: Dictionary in placer._placed_buildings:
+		var node: Node2D = entry.get("node")
+		if is_instance_valid(node) and node.building_name == "transformer_lab":
 			node.under_construction = false
 	# Now AGI Core should be placeable
 	var result: bool = placer.start_placement("agi_core", 0)
@@ -316,15 +326,24 @@ func test_required_buildings_allows_when_built() -> void:
 	}
 	ResourceManager.init_player(0, starting)
 	tm.mark_researched("agi_core")
-	# Build gpu_foundry first
+	tm.mark_researched("transformer_architecture")
+	# Build gpu_foundry first (needed for transformer_lab)
 	placer.start_placement("gpu_foundry", 0)
 	placer._current_grid_pos = Vector2i(2, 2)
 	placer._is_valid = true
 	placer._confirm_placement()
-	# Mark as completed
 	for entry: Dictionary in placer._placed_buildings:
 		var node: Node2D = entry.get("node")
 		if is_instance_valid(node) and node.building_name == "gpu_foundry":
+			node.under_construction = false
+	# Build transformer_lab (needed for agi_core)
+	placer.start_placement("transformer_lab", 0)
+	placer._current_grid_pos = Vector2i(6, 2)
+	placer._is_valid = true
+	placer._confirm_placement()
+	for entry: Dictionary in placer._placed_buildings:
+		var node: Node2D = entry.get("node")
+		if is_instance_valid(node) and node.building_name == "transformer_lab":
 			node.under_construction = false
 	var result: bool = placer.start_placement("agi_core", 0)
 	assert_bool(result).is_true()

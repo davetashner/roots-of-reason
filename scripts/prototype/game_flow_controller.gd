@@ -111,6 +111,7 @@ func on_building_construction_complete(building: Node2D) -> void:
 		_root._game_stats_tracker.record_building_built(building.owner_id, building.building_name)
 	_bootstrapper.try_attach_production_queue(building)
 	_apply_building_effects(building)
+	_check_singularity_building_alert(building)
 
 
 func on_building_destroyed(building: Node2D) -> void:
@@ -369,6 +370,21 @@ func on_pause_menu_quit_to_desktop() -> void:
 func on_minimap_move_command(world_pos: Vector2) -> void:
 	if _root._input_handler != null and _root._input_handler.has_method("_move_selected"):
 		_root._input_handler._move_selected(world_pos)
+
+
+func _check_singularity_building_alert(building: Node2D) -> void:
+	## Emit a public alert when a singularity chain building is completed.
+	if not "building_name" in building or not "owner_id" in building:
+		return
+	var stats: Dictionary = DataLoader.get_building_stats(building.building_name)
+	if not stats.get("singularity_chain", false):
+		return
+	var building_display_name: String = str(stats.get("name", building.building_name))
+	if _root._notification_panel != null:
+		_root._notification_panel.notify(
+			"%s has been completed! Singularity chain advances." % building_display_name, "alert"
+		)
+	EventBus.emit_building_placed(building, building.owner_id, building.building_name)
 
 
 # -- Private helpers ---------------------------------------------------------
