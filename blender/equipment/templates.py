@@ -236,6 +236,76 @@ def create_spear(armature, parent_bone="hand_r", **_kwargs):
     return spear
 
 
+def create_club(armature, parent_bone="hand_r", **_kwargs):
+    """Create a tapered wooden club — thick head narrowing to a grip.
+
+    Dimensions are large in local space to compensate for bone-parenting
+    compression (bone rest-length scaling).
+    """
+    # Club head (wide bulbous end)
+    bpy.ops.mesh.primitive_uv_sphere_add(
+        segments=12,
+        ring_count=8,
+        radius=0.055,
+        location=(0, 0, 0.28),
+    )
+    club_head = bpy.context.active_object
+    club_head.name = "ClubHead"
+    club_head.scale = (1.0, 1.0, 1.4)
+    bpy.ops.object.transform_apply(scale=True)
+
+    # Club shaft — tapered cone, thick at top, thin at bottom
+    bpy.ops.mesh.primitive_cone_add(
+        vertices=12,
+        radius1=0.018,
+        radius2=0.048,
+        depth=0.55,
+        location=(0, 0, 0),
+    )
+    club = bpy.context.active_object
+    club.name = "Club"
+
+    wood_mat = create_colored_material("ClubWoodMaterial", (0.4, 0.25, 0.1, 1.0))
+    club.data.materials.append(wood_mat)
+
+    # Parent head to shaft
+    club_head.data.materials.append(wood_mat)
+    club_head.parent = club
+
+    # Binding wraps — two thin tori around the mid-section
+    wrap_mat = create_colored_material("ClubWrapMaterial", (0.55, 0.45, 0.3, 1.0))
+    for i, z_pos in enumerate([0.06, 0.15]):
+        bpy.ops.mesh.primitive_torus_add(
+            major_radius=0.042 + i * 0.006,
+            minor_radius=0.006,
+            major_segments=12,
+            minor_segments=4,
+            location=(0, 0, z_pos),
+        )
+        wrap = bpy.context.active_object
+        wrap.name = f"ClubWrap_{i}"
+        wrap.data.materials.append(wrap_mat)
+        wrap.parent = club
+
+    # Handle knob at the bottom
+    bpy.ops.mesh.primitive_uv_sphere_add(
+        segments=8,
+        ring_count=6,
+        radius=0.024,
+        location=(0, 0, -0.275),
+    )
+    knob = bpy.context.active_object
+    knob.name = "ClubKnob"
+    knob.data.materials.append(wood_mat)
+    knob.parent = club
+
+    club.parent = armature
+    club.parent_type = "BONE"
+    club.parent_bone = parent_bone
+
+    return club
+
+
 # Registry of all equipment template functions
 EQUIPMENT_TEMPLATES = {
     "bow": create_bow,
@@ -243,4 +313,5 @@ EQUIPMENT_TEMPLATES = {
     "sword": create_sword,
     "shield": create_shield,
     "spear": create_spear,
+    "club": create_club,
 }

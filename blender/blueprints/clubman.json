@@ -1,0 +1,36 @@
+{
+  "name": "clubman",
+  "body": {
+    "mhm_file": "assets/clubman_arms_down.mhm",
+    "gender": 1.0,
+    "age": 0.35,
+    "muscle": 0.8,
+    "weight": 0.55,
+    "height": 1.0,
+    "decimate_ratio": 0.25,
+    "skin": "young_caucasian_male",
+    "hair": "short01",
+    "clothing": ["loincloth"]
+  },
+  "equipment": [
+    {
+      "template": "club",
+      "parent_bone": "hand_r"
+    }
+  ],
+  "tabard": {
+    "parent_bone": "upperarm_l",
+    "scale": [0.06, 0.06, 0.04],
+    "location": [0, 0, 0]
+  },
+  "animations": {
+    "template": "melee",
+    "frame_counts": {
+      "idle": 4,
+      "walk": 8,
+      "attack": 6,
+      "death": 6
+    }
+  },
+  "stats_template": "melee"
+}
