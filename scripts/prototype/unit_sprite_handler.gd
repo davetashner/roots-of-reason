@@ -79,12 +79,16 @@ func _load_textures() -> void:
 	# Check if this variant has death animations
 	var death_anims: Array = anim_map.get("death", [])
 	_has_death_anim = not death_anims.is_empty()
-	# Build reverse map: manifest_anim -> game_state
-	var manifest_to_game: Dictionary = {}  # manifest anim name -> game state
+	# Build reverse map: manifest_anim -> Array of game states
+	# Multiple game states can map to the same manifest animation (e.g., idle, gather,
+	# build all mapping to manifest "idle"), so we use arrays to avoid overwrites.
+	var manifest_to_games: Dictionary = {}  # manifest anim name -> Array[String]
 	for game_state: String in anim_map.keys():
 		var manifest_anims: Array = anim_map[game_state]
 		for ma: String in manifest_anims:
-			manifest_to_game[ma] = game_state
+			if not manifest_to_games.has(ma):
+				manifest_to_games[ma] = []
+			manifest_to_games[ma].append(game_state)
 	# Load all sprite textures
 	for entry: Dictionary in sprites:
 		var filename: String = entry.get("filename", "")
@@ -93,27 +97,28 @@ func _load_textures() -> void:
 		var frame: int = int(entry.get("frame", 1))
 		if filename == "" or anim == "" or direction == "":
 			continue
-		# Map manifest animation to game state
-		var game_state: String = manifest_to_game.get(anim, "")
-		if game_state == "":
+		# Map manifest animation to all game states that reference it
+		var game_states: Array = manifest_to_games.get(anim, [])
+		if game_states.is_empty():
 			continue
 		var tex_path := base_path + "/" + _variant + "/" + filename
 		var tex: Texture2D = load(tex_path) as Texture2D
 		if tex == null:
 			continue
-		# For animations with multiple manifest anims (e.g., build_a, build_b),
-		# we chain them into one sequence. Use a sub-index based on manifest anim order.
-		var manifest_anims: Array = anim_map.get(game_state, [])
-		var anim_offset: int = manifest_anims.find(anim)
-		if anim_offset < 0:
-			anim_offset = 0
-		# Compute a global frame index that chains sub-animations
-		var prev_frames := _count_prev_frames(
-			sprites, manifest_anims, anim_offset, direction, manifest_to_game, game_state
-		)
-		var global_frame: int = prev_frames + frame - 1
-		var key := game_state + "_" + direction + "_" + str(global_frame)
-		_textures[key] = tex
+		for game_state: String in game_states:
+			# For animations with multiple manifest anims (e.g., build_a, build_b),
+			# we chain them into one sequence. Use a sub-index based on manifest anim order.
+			var manifest_anims: Array = anim_map.get(game_state, [])
+			var anim_offset: int = manifest_anims.find(anim)
+			if anim_offset < 0:
+				anim_offset = 0
+			# Compute a global frame index that chains sub-animations
+			var prev_frames := _count_prev_frames(
+				sprites, manifest_anims, anim_offset, direction, manifest_to_games, game_state
+			)
+			var global_frame: int = prev_frames + frame - 1
+			var key := game_state + "_" + direction + "_" + str(global_frame)
+			_textures[key] = tex
 	# Build sequences: for each "anim_dir", store the ordered list of keys
 	_build_sequences()
 
@@ -123,7 +128,7 @@ func _count_prev_frames(
 	manifest_anims: Array,
 	anim_offset: int,
 	direction: String,
-	manifest_to_game: Dictionary,
+	manifest_to_games: Dictionary,
 	game_state: String,
 ) -> int:
 	var count: int = 0
@@ -131,8 +136,8 @@ func _count_prev_frames(
 		var prev_anim: String = manifest_anims[i]
 		for entry: Dictionary in sprites:
 			if entry.get("animation", "") == prev_anim and entry.get("direction", "") == direction:
-				var gs: String = manifest_to_game.get(prev_anim, "")
-				if gs == game_state:
+				var gs_list: Array = manifest_to_games.get(prev_anim, [])
+				if game_state in gs_list:
 					count += 1
 	return count
 
