@@ -373,3 +373,33 @@ func test_maya_archer_resolves_to_atlatlist() -> void:
 	CivBonusManager.apply_civ_bonuses(0, "maya")
 	var resolved := CivBonusManager.get_resolved_unit_id(0, "archer")
 	assert_str(resolved).is_equal("atlatlist")
+
+
+# --- Egypt ---
+
+
+func test_egypt_loads() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "egypt")
+	assert_str(CivBonusManager.get_active_civ(0)).is_equal("egypt")
+
+
+func test_egypt_stone_gather_rate() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "egypt")
+	assert_float(CivBonusManager.get_bonus_value(0, "stone_gather_rate")).is_equal_approx(1.15, 0.001)
+
+
+func test_egypt_building_hp() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "egypt")
+	assert_float(CivBonusManager.get_bonus_value(0, "building_hp")).is_equal_approx(1.10, 0.001)
+
+
+func test_egypt_library_resolves_to_pyramid() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "egypt")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "library")
+	assert_str(resolved).is_equal("pyramid")
+
+
+func test_egypt_cavalry_resolves_to_war_chariot() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "egypt")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "cavalry")
+	assert_str(resolved).is_equal("war_chariot")

@@ -1,0 +1,17 @@
+{
+  "name": "Pyramid",
+  "hp": 1000,
+  "footprint": [3, 3],
+  "build_time": 45,
+  "build_cost": {"wood": 200, "stone": 300},
+  "population_bonus": 0,
+  "garrison_capacity": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 2,
+  "placement_constraint": "",
+  "defense": 2,
+  "los": 8,
+  "knowledge_rate": 0.625
+}
