@@ -284,3 +284,105 @@ static func _register_building_with_systems(
 	if "_pathfinder" in root and root._pathfinder != null:
 		for cell: Vector2i in BuildingValidator.get_footprint_cells(grid_pos, fp):
 			root._pathfinder.set_cell_solid(cell, true)
+
+
+# -- Unit control commands --
+
+
+static func _get_scene_root() -> Node:
+	## Returns the current scene root or null.
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null:
+		return tree.current_scene
+	return null
+
+
+static func find_entity(entity_name: String, scene_root: Node = null) -> Node:
+	## Finds an entity node by name in the scene tree. Returns null if not found.
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	if root == null:
+		return null
+	return root.get_node_or_null(NodePath(entity_name))
+
+
+static func move_unit(unit_name: String, x: float, y: float, scene_root: Node = null) -> String:
+	## Issues a move command to a unit through its move_to method.
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	var unit: Node = find_entity(unit_name, root)
+	if unit == null:
+		return "Error: unit '%s' not found" % unit_name
+	if not unit.has_method("move_to"):
+		return "Error: '%s' does not support move commands" % unit_name
+	var world_pos := Vector2(x, y)
+	unit.move_to(world_pos)
+	return "Moved '%s' toward (%.0f, %.0f)" % [unit_name, x, y]
+
+
+static func attack_unit(unit_name: String, target_name: String, scene_root: Node = null) -> String:
+	## Issues an attack command — unit engages the target.
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	var unit: Node = find_entity(unit_name, root)
+	if unit == null:
+		return "Error: unit '%s' not found" % unit_name
+	var target: Node = find_entity(target_name, root)
+	if target == null:
+		return "Error: target '%s' not found" % target_name
+	if not unit.has_method("assign_attack_target"):
+		return "Error: '%s' does not support attack commands" % unit_name
+	unit.assign_attack_target(target)
+	return "'%s' attacking '%s'" % [unit_name, target_name]
+
+
+static func gather_unit(unit_name: String, resource_name: String, scene_root: Node = null) -> String:
+	## Issues a gather command — unit gathers from the resource node.
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	var unit: Node = find_entity(unit_name, root)
+	if unit == null:
+		return "Error: unit '%s' not found" % unit_name
+	var resource: Node = find_entity(resource_name, root)
+	if resource == null:
+		return "Error: resource '%s' not found" % resource_name
+	if not unit.has_method("assign_gather_target"):
+		return "Error: '%s' does not support gather commands" % unit_name
+	unit.assign_gather_target(resource)
+	return "'%s' gathering from '%s'" % [unit_name, resource_name]
+
+
+static func set_unit_hp(unit_name: String, new_hp: int, scene_root: Node = null) -> String:
+	## Sets a unit's HP, clamped to [0, max_hp].
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	var unit: Node = find_entity(unit_name, root)
+	if unit == null:
+		return "Error: unit '%s' not found" % unit_name
+	if "hp" not in unit or "max_hp" not in unit:
+		return "Error: '%s' does not have HP" % unit_name
+	var clamped: int = clampi(new_hp, 0, unit.max_hp)
+	unit.hp = clamped
+	if clamped <= 0 and unit.has_method("_die"):
+		unit._die()
+	return "Set '%s' HP to %d/%d" % [unit_name, clamped, unit.max_hp]
+
+
+static func kill_unit(unit_name: String, scene_root: Node = null) -> String:
+	## Immediately destroys a unit, triggering death signals.
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	var unit: Node = find_entity(unit_name, root)
+	if unit == null:
+		return "Error: unit '%s' not found" % unit_name
+	if unit.has_method("_die"):
+		unit.hp = 0
+		unit._die()
+		return "Killed '%s'" % unit_name
+	return "Error: '%s' does not support kill" % unit_name
+
+
+static func teleport_unit(unit_name: String, x: float, y: float, scene_root: Node = null) -> String:
+	## Instantly moves a unit to the given position (no pathfinding).
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	var unit: Node = find_entity(unit_name, root)
+	if unit == null:
+		return "Error: unit '%s' not found" % unit_name
+	if not (unit is Node2D):
+		return "Error: '%s' is not a Node2D" % unit_name
+	(unit as Node2D).position = Vector2(x, y)
+	return "Teleported '%s' to (%.0f, %.0f)" % [unit_name, x, y]
