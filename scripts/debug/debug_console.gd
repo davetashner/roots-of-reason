@@ -62,6 +62,8 @@ func _register_builtin_commands() -> void:
 	_register_economy_commands()
 	_register_tech_commands()
 	_register_unit_control_commands()
+	_register_fog_commands()
+	_register_time_commands()
 
 
 func _register_help_command() -> void:
@@ -277,6 +279,82 @@ func _register_unit_control_commands() -> void:
 		],
 		func(args: Array) -> String: return DebugAPI.teleport_unit(args[0], args[1], args[2]),
 		"Teleport unit: teleport <unit_id> <x> <y>",
+	)
+
+
+func _register_fog_commands() -> void:
+	_registry.register_command(
+		"reveal-map",
+		[],
+		func(_args: Array) -> String: return DebugAPI.reveal_map(),
+		"Reveal entire map, disable fog of war",
+	)
+
+	_registry.register_command(
+		"fog",
+		[
+			{"name": "state", "type": "string", "required": true},
+		],
+		func(args: Array) -> String:
+			var state: String = str(args[0]).to_lower()
+			if state == "on":
+				return DebugAPI.set_fog(true)
+			if state == "off":
+				return DebugAPI.set_fog(false)
+			return "Usage: fog on|off",
+		"Toggle fog of war: fog on|off",
+	)
+
+	_registry.register_command(
+		"show-ai",
+		[],
+		func(_args: Array) -> String: return DebugAPI.show_ai(),
+		"Reveal AI player units/buildings through fog",
+	)
+
+
+func _register_time_commands() -> void:
+	_registry.register_command(
+		"speed",
+		[
+			{"name": "multiplier", "type": "float", "required": true},
+		],
+		func(args: Array) -> String: return DebugAPI.set_speed(args[0]),
+		"Set game speed: speed <0.5|1|2|5|10>",
+	)
+
+	_registry.register_command(
+		"pause",
+		[],
+		func(_args: Array) -> String: return DebugAPI.pause_game(),
+		"Pause the game",
+	)
+
+	_registry.register_command(
+		"unpause",
+		[],
+		func(_args: Array) -> String: return DebugAPI.unpause_game(),
+		"Resume the game at normal speed",
+	)
+
+	_registry.register_command(
+		"step",
+		[
+			{"name": "count", "type": "int", "required": false, "default": 1},
+		],
+		func(args: Array) -> String:
+			var count: int = args[0] if args[0] != null else 1
+			return DebugAPI.step_frame(count),
+		"Advance N physics frames when paused: step [N]",
+	)
+
+	_registry.register_command(
+		"skip",
+		[
+			{"name": "seconds", "type": "float", "required": true},
+		],
+		func(args: Array) -> String: return DebugAPI.skip_time(args[0]),
+		"Fast-forward N seconds of game time: skip <seconds>",
 	)
 
 
