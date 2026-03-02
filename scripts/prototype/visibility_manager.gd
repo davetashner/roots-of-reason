@@ -13,6 +13,7 @@ var _visible: Dictionary = {}  # player_id -> Dictionary(Vector2i -> true)
 var _prev_visible: Dictionary = {}  # player_id -> Dictionary — for diff-based updates
 var _blocks_los_fn: Callable
 var _no_block_fn: Callable = func(_pos: Vector2i) -> bool: return false
+var _fog_enabled: bool = true
 var _map_width: int = 64
 var _map_height: int = 64
 var _update_timer: float = 0.0
@@ -186,6 +187,30 @@ func _screen_to_grid(screen_pos: Vector2) -> Vector2i:
 	var gx := screen_pos.x / tile_w + screen_pos.y / tile_h
 	var gy := screen_pos.y / tile_h - screen_pos.x / tile_w
 	return Vector2i(roundi(gx), roundi(gy))
+
+
+func reveal_all(player_id: int) -> void:
+	## Marks every tile within map bounds as explored and visible for the given player.
+	if not _explored.has(player_id):
+		_explored[player_id] = {}
+	if not _visible.has(player_id):
+		_visible[player_id] = {}
+	for y: int in range(_map_height):
+		for x: int in range(_map_width):
+			var tile := Vector2i(x, y)
+			_explored[player_id][tile] = true
+			_visible[player_id][tile] = true
+	_dirty[player_id] = true
+	visibility_changed.emit(player_id)
+
+
+func set_fog_enabled(enabled: bool) -> void:
+	## Toggles fog rendering. When disabled, all tiles appear fully visible.
+	_fog_enabled = enabled
+
+
+func is_fog_enabled() -> bool:
+	return _fog_enabled
 
 
 func save_state() -> Dictionary:

@@ -241,6 +241,140 @@ static func set_age(age_name: String, player_id: int = 0) -> void:
 	GameManager.advance_age(target_idx)
 
 
+# -- Fog of war commands --
+
+
+static func reveal_map(scene_root: Node = null) -> String:
+	## Disables fog and marks all tiles visible for all players.
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	if root == null:
+		return "Error: no scene root available"
+	if not ("_visibility_manager" in root) or root._visibility_manager == null:
+		return "Error: no VisibilityManager in scene"
+	var vm: Node = root._visibility_manager
+	vm.set_fog_enabled(false)
+	vm.reveal_all(0)
+	# Also hide the fog layer if present
+	if "_fog_layer" in root and root._fog_layer != null:
+		root._fog_layer.visible = false
+	return "Map revealed — fog of war disabled"
+
+
+static func set_fog(enabled: bool, scene_root: Node = null) -> String:
+	## Toggles fog of war on or off.
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	if root == null:
+		return "Error: no scene root available"
+	if not ("_visibility_manager" in root) or root._visibility_manager == null:
+		return "Error: no VisibilityManager in scene"
+	var vm: Node = root._visibility_manager
+	vm.set_fog_enabled(enabled)
+	if "_fog_layer" in root and root._fog_layer != null:
+		root._fog_layer.visible = enabled
+	if enabled:
+		return "Fog of war enabled"
+	vm.reveal_all(0)
+	return "Fog of war disabled"
+
+
+static func show_ai(scene_root: Node = null) -> String:
+	## Reveals AI player entities through fog by marking their tiles visible.
+	var root: Node = scene_root if scene_root != null else _get_scene_root()
+	if root == null:
+		return "Error: no scene root available"
+	if not ("_visibility_manager" in root) or root._visibility_manager == null:
+		return "Error: no VisibilityManager in scene"
+	if not ("_entity_registry" in root) or root._entity_registry == null:
+		return "Error: no EntityRegistry in scene"
+	var vm: Node = root._visibility_manager
+	# Reveal tiles around all non-player-0 entities
+	var count: int = 0
+	for owner_id: int in range(1, 8):  # AI players 1-7
+		var entities: Array = root._entity_registry.get_by_owner(owner_id)
+		for entity in entities:
+			if not is_instance_valid(entity):
+				continue
+			if entity is Node2D:
+				var grid_pos: Vector2i = vm._screen_to_grid(entity.global_position)
+				if not vm._explored.has(0):
+					vm._explored[0] = {}
+				if not vm._visible.has(0):
+					vm._visible[0] = {}
+				# Reveal a small area around each AI entity
+				for dy: int in range(-2, 3):
+					for dx: int in range(-2, 3):
+						var tile := Vector2i(grid_pos.x + dx, grid_pos.y + dy)
+						vm._explored[0][tile] = true
+						vm._visible[0][tile] = true
+				count += 1
+	vm._dirty[0] = true
+	vm.visibility_changed.emit(0)
+	return "Revealed %d AI entities through fog" % count
+
+
+# -- Time control commands --
+
+
+static func set_speed(multiplier: float) -> String:
+	## Sets the game speed via Engine.time_scale.
+	if multiplier < 0.0:
+		return "Error: speed multiplier must be >= 0"
+	Engine.time_scale = multiplier
+	return "Game speed set to %.1fx" % multiplier
+
+
+static func pause_game() -> String:
+	## Pauses the game by setting time_scale to 0.
+	Engine.time_scale = 0.0
+	return "Game paused (time_scale = 0)"
+
+
+static func unpause_game() -> String:
+	## Resumes the game at normal speed.
+	Engine.time_scale = 1.0
+	return "Game resumed (time_scale = 1)"
+
+
+static func step_frame(count: int = 1) -> String:
+	## Advances the given number of physics frames when paused.
+	## Briefly sets time_scale to 1 then back to 0 after the frames.
+	if count < 1:
+		return "Error: frame count must be >= 1"
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return "Error: no SceneTree available"
+	# Temporarily unpause for the requested frames
+	var prev_scale: float = Engine.time_scale
+	Engine.time_scale = 1.0
+	# We can't actually wait for frames in a static method, so we schedule
+	# a deferred callback to re-pause after the frames
+	var frames_remaining := [count]
+	var cb: Callable
+	cb = func() -> void:
+		frames_remaining[0] -= 1
+		if frames_remaining[0] <= 0:
+			Engine.time_scale = 0.0
+			tree.physics_frame.disconnect(cb)
+	tree.physics_frame.connect(cb)
+	return "Stepping %d frame(s) (was time_scale=%.1f)" % [count, prev_scale]
+
+
+static func skip_time(seconds: float) -> String:
+	## Fast-forwards game time by running at max speed for the given duration.
+	if seconds <= 0.0:
+		return "Error: seconds must be > 0"
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return "Error: no SceneTree available"
+	var prev_scale: float = Engine.time_scale
+	var target_scale: float = 20.0
+	Engine.time_scale = target_scale
+	# Schedule restoration after the real-time equivalent
+	var real_seconds: float = seconds / target_scale
+	tree.create_timer(real_seconds).timeout.connect(func() -> void: Engine.time_scale = prev_scale)
+	return "Fast-forwarding %.1fs of game time (%.2fs real time)" % [seconds, real_seconds]
+
+
 static func _get_tech_manager(root: Node) -> Node:
 	## Tries to find TechManager from the scene root.
 	if root != null and "_tech_manager" in root and root._tech_manager != null:
