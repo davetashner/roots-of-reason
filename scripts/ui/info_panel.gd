@@ -5,7 +5,9 @@ extends PanelContainer
 
 const PANEL_WIDTH: float = 400.0
 const PANEL_HEIGHT: float = 120.0
+const PANEL_HEIGHT_WITH_QUEUE: float = 180.0
 const PORTRAIT_SIZE: float = 64.0
+const QUEUE_ICON_SIZE: float = 32.0
 
 var _input_handler: Node = null
 var _target_detector: Node = null
@@ -31,6 +33,15 @@ var _hp_bar_bg: Panel = null
 var _hp_label: Label = null
 var _stats_label: Label = null
 var _hp_bar_container: HBoxContainer = null
+
+# Production queue display nodes
+var _queue_section: VBoxContainer = null
+var _queue_current_label: Label = null
+var _queue_progress_bar: ProgressBar = null
+var _queue_icons_container: HBoxContainer = null
+var _queue_eta_label: Label = null
+var _tracked_queue: Node = null
+var _main_vbox: VBoxContainer = null
 
 
 func _ready() -> void:
@@ -136,6 +147,55 @@ func _build_ui() -> void:
 	_stats_label.add_theme_font_size_override("font_size", 13)
 	vbox.add_child(_stats_label)
 
+	_main_vbox = vbox
+	_build_queue_section(vbox)
+
+
+func _build_queue_section(parent: VBoxContainer) -> void:
+	_queue_section = VBoxContainer.new()
+	_queue_section.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_queue_section.add_theme_constant_override("separation", 2)
+	_queue_section.visible = false
+	parent.add_child(_queue_section)
+
+	# Separator
+	var sep := HSeparator.new()
+	sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_queue_section.add_child(sep)
+
+	# Current training label + progress bar row
+	var current_row := HBoxContainer.new()
+	current_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	current_row.add_theme_constant_override("separation", 6)
+	_queue_section.add_child(current_row)
+
+	_queue_current_label = Label.new()
+	_queue_current_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_queue_current_label.add_theme_font_size_override("font_size", 12)
+	_queue_current_label.custom_minimum_size = Vector2(80, 0)
+	current_row.add_child(_queue_current_label)
+
+	_queue_progress_bar = ProgressBar.new()
+	_queue_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_queue_progress_bar.custom_minimum_size = Vector2(120, 14)
+	_queue_progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_queue_progress_bar.min_value = 0.0
+	_queue_progress_bar.max_value = 100.0
+	_queue_progress_bar.show_percentage = true
+	current_row.add_child(_queue_progress_bar)
+
+	# Queued icons row
+	_queue_icons_container = HBoxContainer.new()
+	_queue_icons_container.mouse_filter = Control.MOUSE_FILTER_STOP
+	_queue_icons_container.add_theme_constant_override("separation", 4)
+	_queue_section.add_child(_queue_icons_container)
+
+	# ETA label
+	_queue_eta_label = Label.new()
+	_queue_eta_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_queue_eta_label.add_theme_font_size_override("font_size", 11)
+	_queue_section.add_child(_queue_eta_label)
+
 
 func setup(
 	input_handler: Node,
@@ -155,6 +215,7 @@ func show_unit(unit: Node2D) -> void:
 	_is_multi = false
 	_clear_hover()
 	_clear_thumbnail()
+	_hide_queue_section()
 	visible = true
 	# Portrait color
 	if "unit_color" in unit:
@@ -255,6 +316,7 @@ func show_building(building: Node2D) -> void:
 			stats_text += "\n" + state_text
 		_stats_label.text = stats_text
 	_update_building_hp(building)
+	_update_queue_display(building)
 
 
 func show_barge(barge: Node2D) -> void:
@@ -263,6 +325,7 @@ func show_barge(barge: Node2D) -> void:
 	_is_multi = false
 	_clear_hover()
 	_clear_thumbnail()
+	_hide_queue_section()
 	visible = true
 	# Portrait color
 	if barge.owner_id == 0:
@@ -293,6 +356,7 @@ func show_multi_select(units: Array) -> void:
 	_is_multi = true
 	_clear_hover()
 	_clear_thumbnail()
+	_hide_queue_section()
 	visible = true
 	# Portrait: use first unit's color
 	if not units.is_empty() and "unit_color" in units[0]:
@@ -340,6 +404,7 @@ func clear() -> void:
 	_tracked_entities.clear()
 	_is_multi = false
 	_clear_hover()
+	_hide_queue_section()
 	visible = false
 
 
@@ -550,6 +615,7 @@ func _update() -> void:
 			if state_text != "":
 				new_stats += "\n" + state_text
 			_stats_label.text = new_stats
+		_update_queue_display(_tracked_entity as Node2D)
 	else:
 		var unit: Node2D = _tracked_entity as Node2D
 		var stats := _get_unit_stats(unit)
@@ -712,6 +778,98 @@ func _get_carry_text(unit: Node2D) -> String:
 	if type_label != "":
 		return "Gathering: %s  (0/%d)" % [type_label, capacity]
 	return ""
+
+
+func _update_queue_display(building: Node2D) -> void:
+	var pq: Node = building.get_node_or_null("ProductionQueue")
+	if pq == null or not pq.has_method("get_queue"):
+		_hide_queue_section()
+		return
+	var queue: Array = pq.get_queue()
+	if queue.is_empty():
+		_hide_queue_section()
+		return
+	_tracked_queue = pq
+	_show_queue_section()
+	# Current training unit
+	var current_type: String = queue[0]
+	var display_name: String = current_type.replace("_", " ").capitalize()
+	_queue_current_label.text = display_name
+	# Progress bar
+	var progress: float = pq.get_progress() if pq.has_method("get_progress") else 0.0
+	_queue_progress_bar.value = progress * 100.0
+	# Queued icons (index 1+)
+	_rebuild_queue_icons(queue, pq)
+	# ETA
+	_update_queue_eta(pq, queue)
+
+
+func _rebuild_queue_icons(queue: Array, pq: Node) -> void:
+	# Clear existing icons
+	for child in _queue_icons_container.get_children():
+		child.queue_free()
+	# Add icon for each queued item (including current at index 0)
+	for i in queue.size():
+		var unit_type: String = queue[i]
+		var icon_btn := Button.new()
+		icon_btn.custom_minimum_size = Vector2(QUEUE_ICON_SIZE, QUEUE_ICON_SIZE)
+		icon_btn.text = unit_type.substr(0, 2).to_upper()
+		icon_btn.add_theme_font_size_override("font_size", 10)
+		icon_btn.tooltip_text = unit_type.replace("_", " ").capitalize()
+		if i == 0:
+			icon_btn.tooltip_text += " (training)"
+		else:
+			icon_btn.tooltip_text += " (queued — click to cancel)"
+		# Use container to avoid lambda capture issue
+		var idx_arr: Array = [i]
+		var pq_ref: Array = [pq]
+		icon_btn.pressed.connect(func() -> void: _on_queue_icon_pressed(pq_ref[0], idx_arr[0]))
+		_queue_icons_container.add_child(icon_btn)
+
+
+func _on_queue_icon_pressed(pq: Node, index: int) -> void:
+	if pq == null or not is_instance_valid(pq):
+		return
+	if not pq.has_method("cancel_at"):
+		return
+	pq.cancel_at(index)
+
+
+func _update_queue_eta(pq: Node, queue: Array) -> void:
+	if queue.is_empty():
+		_queue_eta_label.text = ""
+		return
+	var remaining: float = 0.0
+	# Time remaining for current item
+	var train_time: float = pq.get_current_train_time() if pq.has_method("get_current_train_time") else 0.0
+	var elapsed: float = pq.get_elapsed_time() if pq.has_method("get_elapsed_time") else 0.0
+	remaining += maxf(train_time - elapsed, 0.0)
+	# Time for rest of queue
+	for i in range(1, queue.size()):
+		var unit_type: String = queue[i]
+		if pq.has_method("get_train_time_for"):
+			remaining += pq.get_train_time_for(unit_type)
+	if remaining > 0.0:
+		_queue_eta_label.text = "ETA: %ds" % int(ceilf(remaining))
+	else:
+		_queue_eta_label.text = ""
+
+
+func _show_queue_section() -> void:
+	if _queue_section != null:
+		_queue_section.visible = true
+	custom_minimum_size.y = PANEL_HEIGHT_WITH_QUEUE
+	size.y = PANEL_HEIGHT_WITH_QUEUE
+	offset_top = -PANEL_HEIGHT_WITH_QUEUE
+
+
+func _hide_queue_section() -> void:
+	if _queue_section != null:
+		_queue_section.visible = false
+	_tracked_queue = null
+	custom_minimum_size.y = PANEL_HEIGHT
+	size.y = PANEL_HEIGHT
+	offset_top = -PANEL_HEIGHT
 
 
 func _is_building(entity: Node) -> bool:
