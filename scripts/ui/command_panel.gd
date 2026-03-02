@@ -381,11 +381,14 @@ func _clear_grid() -> void:
 
 
 func _parse_costs(raw_costs: Dictionary) -> Dictionary:
+	var multiplier: float = 1.0
+	if _building_placer != null and _building_placer.has_method("get_building_cost_multiplier"):
+		multiplier = _building_placer.get_building_cost_multiplier()
 	var costs: Dictionary = {}
 	for key: String in raw_costs:
 		var lower_key := key.to_lower()
 		if RESOURCE_NAME_TO_TYPE.has(lower_key):
-			costs[RESOURCE_NAME_TO_TYPE[lower_key]] = int(raw_costs[key])
+			costs[RESOURCE_NAME_TO_TYPE[lower_key]] = int(int(raw_costs[key]) * multiplier)
 	return costs
 
 

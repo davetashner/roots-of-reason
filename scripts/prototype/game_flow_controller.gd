@@ -150,7 +150,7 @@ func on_building_destroyed(building: Node2D) -> void:
 
 
 func _apply_building_effects(building: Node2D) -> void:
-	## Applies data-driven building effects (e.g. research_speed_bonus) on completion.
+	## Applies data-driven building effects (e.g. research_speed_bonus, cost reduction).
 	if not ("building_name" in building and "owner_id" in building):
 		return
 	var stats: Dictionary = DataLoader.get_building_stats(building.building_name)
@@ -160,6 +160,9 @@ func _apply_building_effects(building: Node2D) -> void:
 	var bonus: float = float(effects.get("research_speed_bonus", 0.0))
 	if bonus > 0.0 and _root._tech_manager != null:
 		_root._tech_manager.add_building_research_bonus(building.owner_id, bonus)
+	# Building cost reduction (e.g. Nuclear Plant)
+	if _root._building_placer != null and _root._building_placer.has_method("apply_building_effect"):
+		_root._building_placer.apply_building_effect(building)
 
 
 func _remove_building_effects(building: Node2D) -> void:
@@ -173,6 +176,9 @@ func _remove_building_effects(building: Node2D) -> void:
 	var bonus: float = float(effects.get("research_speed_bonus", 0.0))
 	if bonus > 0.0 and _root._tech_manager != null:
 		_root._tech_manager.remove_building_research_bonus(building.owner_id, bonus)
+	# Revert building cost reduction (e.g. Nuclear Plant)
+	if _root._building_placer != null and _root._building_placer.has_method("revert_building_effect"):
+		_root._building_placer.revert_building_effect(building)
 
 
 func on_unit_produced(unit_type: String, building: Node2D) -> void:

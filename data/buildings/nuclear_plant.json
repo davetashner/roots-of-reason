@@ -1,0 +1,28 @@
+{
+  "name": "Nuclear Plant",
+  "hp": 1500,
+  "footprint": [
+    3,
+    3
+  ],
+  "build_time": 90,
+  "build_cost": {
+    "stone": 300,
+    "gold": 300
+  },
+  "population_bonus": 0,
+  "garrison_capacity": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 5,
+  "placement_constraint": "",
+  "required_techs": [
+    "nuclear_fission"
+  ],
+  "defense": 3,
+  "los": 6,
+  "effects": {
+    "building_cost_reduction": 0.20
+  }
+}
