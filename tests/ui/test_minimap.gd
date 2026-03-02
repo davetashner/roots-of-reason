@@ -313,8 +313,8 @@ func test_process_skips_redraw_when_not_dirty() -> void:
 
 func test_refresh_timer_sets_dirty() -> void:
 	_minimap._dirty = false
-	_minimap._refresh_timer = 0.19
-	_minimap._process(0.02)  # Timer exceeds 0.2
+	_minimap._refresh_timer = 0.09
+	_minimap._process(0.02)  # Timer exceeds 0.1 (10fps refresh)
 	# Timer fired, set dirty, then _process cleared it
 	# But we can check the timer was reset
 	assert_float(_minimap._refresh_timer).is_less(0.01)
