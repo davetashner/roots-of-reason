@@ -27,6 +27,9 @@ var _is_valid: bool = false
 var _player_id: int = 0
 var _placed_buildings: Array[Dictionary] = []
 
+## Multiplier applied to all building costs (e.g. 0.80 = 20% reduction).
+var _building_cost_multiplier: float = 1.0
+
 var _camera: Camera2D = null
 var _pathfinder: Node = null
 var _map_node: Node = null
@@ -212,12 +215,39 @@ func _get_footprint() -> Vector2i:
 	return Vector2i(int(fp[0]), int(fp[1]))
 
 
+func apply_building_effect(building: Node2D) -> void:
+	## Check if a completed building has cost reduction effects and apply them.
+	if not "building_name" in building:
+		return
+	var stats: Dictionary = _load_building_stats(building.building_name)
+	var effects: Dictionary = stats.get("effects", {})
+	var reduction: float = float(effects.get("building_cost_reduction", 0.0))
+	if reduction > 0.0:
+		_building_cost_multiplier = clampf(_building_cost_multiplier - reduction, 0.0, 1.0)
+
+
+func revert_building_effect(building: Node2D) -> void:
+	## Revert cost reduction when a building with effects is destroyed.
+	if not "building_name" in building:
+		return
+	var stats: Dictionary = _load_building_stats(building.building_name)
+	var effects: Dictionary = stats.get("effects", {})
+	var reduction: float = float(effects.get("building_cost_reduction", 0.0))
+	if reduction > 0.0:
+		_building_cost_multiplier = clampf(_building_cost_multiplier + reduction, 0.0, 1.0)
+
+
+func get_building_cost_multiplier() -> float:
+	return _building_cost_multiplier
+
+
 func _parse_costs(raw_costs: Dictionary) -> Dictionary:
 	var costs: Dictionary = {}
 	for key: String in raw_costs:
 		var lower_key := key.to_lower()
 		if RESOURCE_NAME_TO_TYPE.has(lower_key):
-			costs[RESOURCE_NAME_TO_TYPE[lower_key]] = int(raw_costs[key])
+			var base_cost: int = int(raw_costs[key])
+			costs[RESOURCE_NAME_TO_TYPE[lower_key]] = int(base_cost * _building_cost_multiplier)
 	return costs
 
 
@@ -285,10 +315,11 @@ func save_state() -> Dictionary:
 			out["under_construction"] = node.under_construction
 			out["build_progress"] = node.build_progress
 		buildings_out.append(out)
-	return {"placed_buildings": buildings_out}
+	return {"placed_buildings": buildings_out, "building_cost_multiplier": _building_cost_multiplier}
 
 
 func load_state(data: Dictionary) -> void:
+	_building_cost_multiplier = float(data.get("building_cost_multiplier", 1.0))
 	var buildings_data: Array = data.get("placed_buildings", [])
 	for entry: Dictionary in buildings_data:
 		var bname: String = entry.get("building_name", "")
