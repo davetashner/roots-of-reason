@@ -1,0 +1,8 @@
+{
+  "name": "Hieroglyphics",
+  "age": "iron",
+  "cost": {"gold": 100, "knowledge": 150},
+  "effect": {"research_bonus": 0.10},
+  "exclusive_to": "egypt",
+  "description": "Research completes 10% faster"
+}

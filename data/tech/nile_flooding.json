@@ -1,0 +1,8 @@
+{
+  "name": "Nile Flooding",
+  "age": "bronze",
+  "cost": {"food": 150, "wood": 100},
+  "effect": {"farm_food_rate": 0.20},
+  "exclusive_to": "egypt",
+  "description": "Farms produce 20% more food"
+}
