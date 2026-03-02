@@ -633,6 +633,8 @@ func _create_town_center(player_id: int, grid_pos: Vector2i, category: String) -
 		building.entity_category = category
 	_root.add_child(building)
 	_root._target_detector.register_entity(building)
+	if _root._input_handler != null and _root._input_handler.has_method("register_unit"):
+		_root._input_handler.register_unit(building)
 	if _root._population_manager != null:
 		_root._population_manager.register_building(building, building.owner_id)
 	_root._entity_registry.register(building)
@@ -664,6 +666,8 @@ func _create_house(player_id: int, grid_pos: Vector2i, category: String) -> Node
 		building.entity_category = category
 	_root.add_child(building)
 	_root._target_detector.register_entity(building)
+	if _root._input_handler != null and _root._input_handler.has_method("register_unit"):
+		_root._input_handler.register_unit(building)
 	if _root._population_manager != null:
 		_root._population_manager.register_building(building, building.owner_id)
 	_root._entity_registry.register(building)
