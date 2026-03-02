@@ -1,0 +1,37 @@
+{
+  "name": "infantry",
+  "body": {
+    "mhm_file": "assets/archer_arms_down.mhm",
+    "gender": 1.0,
+    "age": 0.5,
+    "muscle": 0.85,
+    "weight": 0.5,
+    "height": 1.0,
+    "decimate_ratio": 0.25
+  },
+  "equipment": [
+    {
+      "template": "sword",
+      "parent_bone": "hand_r"
+    },
+    {
+      "template": "shield",
+      "parent_bone": "hand_l"
+    }
+  ],
+  "tabard": {
+    "parent_bone": "spine_02",
+    "scale": [0.24, 0.13, 0.27],
+    "location": [0, 0.01, 0]
+  },
+  "animations": {
+    "template": "melee",
+    "frame_counts": {
+      "idle": 4,
+      "walk": 8,
+      "attack": 6,
+      "death": 6
+    }
+  },
+  "stats_template": "melee"
+}
