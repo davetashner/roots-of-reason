@@ -1,7 +1,18 @@
 extends GdUnitTestSuite
-## Tests for command_panel.gd — context-sensitive command button grid.
+## Tests for command_panel.gd — context-sensitive command button grid with
+## dynamic villager build menu.
 
 const CommandPanelScript := preload("res://scripts/ui/command_panel.gd")
+
+var _original_age: int = 0
+
+
+func before() -> void:
+	_original_age = GameManager.current_age
+
+
+func after() -> void:
+	GameManager.current_age = _original_age
 
 
 class StubUnit:
@@ -36,6 +47,8 @@ class StubBuildingPlacer:
 	extends Node
 	var last_building: String = ""
 	var last_player_id: int = -1
+	## Tracks which buildings are "unlocked" for testing
+	var _unlocked: Dictionary = {}
 
 	func start_placement(building_name: String, player_id: int) -> bool:
 		last_building = building_name
@@ -44,6 +57,14 @@ class StubBuildingPlacer:
 
 	func is_active() -> bool:
 		return false
+
+	func is_building_unlocked(building_name: String, _player_id: int) -> bool:
+		if _unlocked.is_empty():
+			return true
+		return _unlocked.has(building_name)
+
+	func get_building_cost_multiplier() -> float:
+		return 1.0
 
 
 func _create_panel() -> PanelContainer:
@@ -55,19 +76,108 @@ func _create_panel() -> PanelContainer:
 	return panel
 
 
-func test_get_commands_for_villager_returns_build_commands() -> void:
+# -- Villager dynamic build menu --
+
+
+func test_villager_selection_shows_tab_bar() -> void:
 	var panel := _create_panel()
 	var unit := StubUnit.new()
 	unit.unit_type = "villager"
-	unit.selected = true
 	add_child(unit)
 	auto_free(unit)
-	var commands: Array = panel._get_commands_for_selection([unit])
-	assert_that(commands.size()).is_greater(0)
-	var ids: Array[String] = []
-	for cmd: Dictionary in commands:
-		ids.append(cmd.get("id", ""))
-	assert_that(ids).contains(["build_house"])
+	panel.update_commands([unit])
+	assert_bool(panel._tab_bar.visible).is_true()
+	assert_bool(panel._is_villager_mode).is_true()
+
+
+func test_non_villager_selection_hides_tab_bar() -> void:
+	var panel := _create_panel()
+	var unit := StubUnit.new()
+	unit.unit_type = "infantry"
+	add_child(unit)
+	auto_free(unit)
+	panel.update_commands([unit])
+	assert_bool(panel._tab_bar.visible).is_false()
+	assert_bool(panel._is_villager_mode).is_false()
+
+
+func test_dynamic_build_menu_shows_unlocked_civilian_buildings() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	placer._unlocked = {"house": true, "farm": true, "town_center": true}
+	add_child(placer)
+	auto_free(placer)
+	var handler := StubInputHandler.new()
+	add_child(handler)
+	auto_free(handler)
+	panel.setup(handler, placer)
+	panel._build_tab = "civilian"
+	GameManager.current_age = 0
+	var unit := StubUnit.new()
+	unit.unit_type = "villager"
+	add_child(unit)
+	auto_free(unit)
+	panel.update_commands([unit])
+	# Should have buttons in the grid
+	var grid: GridContainer = panel._grid
+	assert_that(grid.get_child_count()).is_greater(0)
+	# Check that at least one button has a build action
+	var found_build := false
+	for child in grid.get_children():
+		if child is Button and child.has_meta("command"):
+			var cmd: Dictionary = child.get_meta("command")
+			if cmd.get("action", "") == "build":
+				found_build = true
+				break
+	assert_bool(found_build).is_true()
+
+
+func test_dynamic_build_menu_filters_locked_buildings() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	# Only house is unlocked — barracks, market etc should be hidden
+	placer._unlocked = {"house": true, "farm": true}
+	add_child(placer)
+	auto_free(placer)
+	var handler := StubInputHandler.new()
+	add_child(handler)
+	auto_free(handler)
+	panel.setup(handler, placer)
+	panel._build_tab = "military"
+	var unit := StubUnit.new()
+	unit.unit_type = "villager"
+	add_child(unit)
+	auto_free(unit)
+	panel.update_commands([unit])
+	# Military tab should have zero buttons since none unlocked
+	assert_that(panel._grid.get_child_count()).is_equal(0)
+
+
+func test_tab_switching_re_renders_grid() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	var handler := StubInputHandler.new()
+	add_child(handler)
+	auto_free(handler)
+	panel.setup(handler, placer)
+	var unit := StubUnit.new()
+	unit.unit_type = "villager"
+	add_child(unit)
+	auto_free(unit)
+	panel.update_commands([unit])
+	# Switch to military tab
+	panel._on_tab_pressed("military")
+	assert_str(panel._build_tab).is_equal("military")
+
+
+func test_default_tab_is_civilian() -> void:
+	var panel := _create_panel()
+	assert_str(panel._build_tab).is_equal("civilian")
+
+
+# -- Non-villager commands still work --
 
 
 func test_get_commands_for_empty_selection_returns_empty() -> void:
@@ -78,7 +188,6 @@ func test_get_commands_for_empty_selection_returns_empty() -> void:
 
 func test_check_affordability_with_resources_returns_true() -> void:
 	var panel := _create_panel()
-	# Give player 0 enough wood
 	(
 		ResourceManager
 		. init_player(
@@ -99,7 +208,6 @@ func test_check_affordability_with_resources_returns_true() -> void:
 
 func test_check_affordability_without_resources_returns_false() -> void:
 	var panel := _create_panel()
-	# Give player 0 no resources
 	(
 		ResourceManager
 		. init_player(
@@ -136,6 +244,13 @@ func test_get_commands_for_default_unit_returns_stop_hold() -> void:
 
 func test_update_commands_creates_buttons() -> void:
 	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	var handler := StubInputHandler.new()
+	add_child(handler)
+	auto_free(handler)
+	panel.setup(handler, placer)
 	var unit := StubUnit.new()
 	unit.unit_type = "villager"
 	unit.selected = true
@@ -148,6 +263,13 @@ func test_update_commands_creates_buttons() -> void:
 
 func test_update_commands_clears_on_empty_selection() -> void:
 	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	var handler := StubInputHandler.new()
+	add_child(handler)
+	auto_free(handler)
+	panel.setup(handler, placer)
 	# First populate with commands
 	var unit := StubUnit.new()
 	unit.unit_type = "villager"
@@ -156,7 +278,6 @@ func test_update_commands_clears_on_empty_selection() -> void:
 	panel.update_commands([unit])
 	# Then clear
 	panel.update_commands([])
-	# Grid children will be queue_freed next frame but we check the commands logic
 	var commands: Array = panel._get_commands_for_selection([])
 	assert_that(commands.size()).is_equal(0)
 
@@ -183,14 +304,18 @@ func test_non_build_action_affordability_returns_true() -> void:
 	assert_that(result).is_true()
 
 
-func test_save_load_state() -> void:
+func test_save_load_state_includes_build_tab() -> void:
 	var panel := _create_panel()
 	panel._player_id = 2
+	panel._build_tab = "military"
 	var state: Dictionary = panel.save_state()
 	assert_that(state.get("player_id")).is_equal(2)
+	assert_that(state.get("build_tab")).is_equal("military")
 	panel._player_id = 0
+	panel._build_tab = "civilian"
 	panel.load_state(state)
 	assert_that(panel._player_id).is_equal(2)
+	assert_that(panel._build_tab).is_equal("military")
 
 
 func test_building_name_lookup_returns_market_commands() -> void:

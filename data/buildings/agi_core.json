@@ -1,5 +1,6 @@
 {
   "name": "AGI Core",
+  "category": "economy",
   "hp": 5000,
   "footprint": [
     4,

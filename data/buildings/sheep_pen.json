@@ -1,5 +1,6 @@
 {
   "name": "Sheep Pen",
+  "category": "civilian",
   "placeholder": true,
   "description": "A fenced enclosure for keeping sheep. Provides a steady supply of food from herded animals. [PLACEHOLDER]",
   "hp": 500,

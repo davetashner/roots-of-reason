@@ -1,7 +1,11 @@
 {
   "name": "Telegraph",
+  "category": "economy",
   "hp": 600,
-  "footprint": [2, 2],
+  "footprint": [
+    2,
+    2
+  ],
   "build_time": 30,
   "build_cost": {
     "wood": 150,

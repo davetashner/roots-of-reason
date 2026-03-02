@@ -1,5 +1,6 @@
 {
   "name": "House",
+  "category": "civilian",
   "hp": 550,
   "footprint": [
     2,
