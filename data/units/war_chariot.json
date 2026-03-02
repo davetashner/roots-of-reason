@@ -1,0 +1,19 @@
+{
+  "name": "War Chariot",
+  "hp": 45,
+  "attack": 7,
+  "defense": 1,
+  "speed": 2.0,
+  "range": 3,
+  "los": 6,
+  "population_cost": 2,
+  "train_time": 25,
+  "train_cost": {"food": 80, "gold": 40},
+  "bonus_vs": {"infantry": 1.5},
+  "armor_type": "medium",
+  "attack_speed": 2.0,
+  "attack_type": "ranged",
+  "unit_category": "military",
+  "default_stance": "aggressive",
+  "movement_type": "land"
+}
