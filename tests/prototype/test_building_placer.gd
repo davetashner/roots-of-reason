@@ -347,3 +347,46 @@ func test_required_buildings_allows_when_built() -> void:
 			node.under_construction = false
 	var result: bool = placer.start_placement("agi_core", 0)
 	assert_bool(result).is_true()
+
+
+# -- is_building_unlocked --
+
+
+func test_is_building_unlocked_returns_true_for_age_zero_building() -> void:
+	var placer := _create_placer()
+	GameManager.current_age = 0
+	var unlocked: bool = placer.is_building_unlocked("house", 0)
+	assert_bool(unlocked).is_true()
+
+
+func test_is_building_unlocked_returns_false_when_age_too_low() -> void:
+	var placer := _create_placer()
+	GameManager.current_age = 0
+	var unlocked: bool = placer.is_building_unlocked("barracks", 0)
+	assert_bool(unlocked).is_false()
+
+
+func test_is_building_unlocked_returns_true_at_correct_age() -> void:
+	var placer := _create_placer()
+	GameManager.current_age = 1
+	var unlocked: bool = placer.is_building_unlocked("barracks", 0)
+	assert_bool(unlocked).is_true()
+
+
+func test_is_building_unlocked_ignores_affordability() -> void:
+	var placer := _create_placer()
+	GameManager.current_age = 0
+	# Zero out resources — unlock check should still pass
+	var no_res: Dictionary = {ResourceManager.ResourceType.WOOD: 0}
+	ResourceManager.init_player(0, no_res)
+	var unlocked: bool = placer.is_building_unlocked("house", 0)
+	assert_bool(unlocked).is_true()
+
+
+func test_is_building_unlocked_checks_required_techs() -> void:
+	var pair := _create_placer_with_tech_manager()
+	var placer: Node = pair[0]
+	GameManager.current_age = 5
+	# nuclear_plant requires nuclear_fission tech
+	var unlocked: bool = placer.is_building_unlocked("nuclear_plant", 0)
+	assert_bool(unlocked).is_false()

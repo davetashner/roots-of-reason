@@ -59,6 +59,23 @@ func is_active() -> bool:
 	return _active
 
 
+func is_building_unlocked(building_name: String, player_id: int) -> bool:
+	## Check if a building is unlocked (age, tech, prerequisite buildings) without
+	## starting placement or checking affordability.
+	var resolved := CivBonusManager.get_resolved_building_id(player_id, building_name)
+	var stats := _load_building_stats(resolved)
+	if stats.is_empty():
+		return false
+	var age_req: int = int(stats.get("age_required", 0))
+	if age_req > GameManager.current_age:
+		return false
+	if not _check_required_techs(stats, player_id):
+		return false
+	if not _check_required_buildings(stats, player_id):
+		return false
+	return true
+
+
 func start_placement(building_name: String, player_id: int = 0) -> bool:
 	if _active:
 		cancel_placement()

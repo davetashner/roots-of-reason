@@ -1,5 +1,6 @@
 {
   "name": "Transformer Lab",
+  "category": "economy",
   "hp": 2000,
   "footprint": [
     3,

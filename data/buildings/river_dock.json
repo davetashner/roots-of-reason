@@ -1,5 +1,6 @@
 {
   "name": "River Dock",
+  "category": "civilian",
   "hp": 400,
   "footprint": [
     1,

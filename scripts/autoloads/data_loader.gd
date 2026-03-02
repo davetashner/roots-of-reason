@@ -170,6 +170,21 @@ func get_all_civ_ids() -> Array:
 	return ids
 
 
+func get_all_building_ids() -> Array:
+	var ids := []
+	var dir := DirAccess.open("res://data/buildings")
+	if dir == null:
+		return ids
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+	while file_name != "":
+		if file_name.ends_with(".json"):
+			ids.append(file_name.get_basename())
+		file_name = dir.get_next()
+	ids.sort()
+	return ids
+
+
 func _build_tech_index() -> void:
 	var data: Variant = load_json("res://data/tech/tech_tree.json")
 	if data == null:

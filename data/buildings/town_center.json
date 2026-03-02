@@ -1,5 +1,6 @@
 {
   "name": "Town Center",
+  "category": "civilian",
   "hp": 2400,
   "footprint": [
     3,

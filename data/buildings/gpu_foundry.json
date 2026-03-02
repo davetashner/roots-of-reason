@@ -1,5 +1,6 @@
 {
   "name": "GPU Foundry",
+  "category": "economy",
   "hp": 2000,
   "footprint": [
     3,

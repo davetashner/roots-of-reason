@@ -1,5 +1,6 @@
 {
   "name": "Aqueduct",
+  "category": "civilian",
   "placeholder": true,
   "description": "A stone channel that carries fresh water into the city, enabling population growth and reducing disease risk. [PLACEHOLDER]",
   "hp": 2000,

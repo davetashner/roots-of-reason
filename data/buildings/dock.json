@@ -1,5 +1,6 @@
 {
   "name": "Dock",
+  "category": "military",
   "hp": 1800,
   "footprint": [
     3,

@@ -10,18 +10,6 @@
     ["R", "F", "V"]
   ],
   "commands": {
-    "villager": [
-      {"id": "build_house", "label": "House", "tooltip": "Build House (25 Wood)", "action": "build", "building": "house"},
-      {"id": "build_town_center", "label": "TC", "tooltip": "Build Town Center (275 Wood, 100 Stone)", "action": "build", "building": "town_center"},
-      {"id": "build_river_dock", "label": "Dock", "tooltip": "Build River Dock (100 Wood)", "action": "build", "building": "river_dock"},
-      {"id": "build_farm", "label": "Farm", "tooltip": "Build Farm (60 Wood)", "action": "build", "building": "farm"},
-      {"id": "build_barracks", "label": "Barracks", "tooltip": "Build Barracks (175 Wood)", "action": "build", "building": "barracks"},
-      {"id": "build_dock", "label": "Dock", "tooltip": "Build Dock (150 Wood)", "action": "build", "building": "dock"},
-      {"id": "build_market", "label": "Market", "tooltip": "Build Market (175 Wood)", "action": "build", "building": "market"},
-      {"id": "build_library", "label": "Library", "tooltip": "Build Library (150 Wood, 50 Gold)", "action": "build", "building": "library"},
-      {"id": "build_wonder", "label": "Wonder", "tooltip": "Build Wonder (1000 Wood, Stone, Gold)", "action": "build", "building": "wonder"},
-      {"id": "build_factory", "label": "Factory", "tooltip": "Build Factory (200 Wood, 150 Stone, 100 Gold)", "action": "build", "building": "factory"}
-    ],
     "market": [
       {"id": "sell_food", "label": "Sell Food", "tooltip": "Sell 100 Food for Gold", "action": "trade", "sell_resource": "food", "sell_amount": 100},
       {"id": "sell_wood", "label": "Sell Wood", "tooltip": "Sell 100 Wood for Gold", "action": "trade", "sell_resource": "wood", "sell_amount": 100},

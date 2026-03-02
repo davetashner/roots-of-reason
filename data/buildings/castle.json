@@ -1,5 +1,6 @@
 {
   "name": "Castle",
+  "category": "military",
   "placeholder": true,
   "description": "A massive fortified stronghold with concentric walls and towers. The pinnacle of medieval military architecture. [PLACEHOLDER]",
   "hp": 6000,

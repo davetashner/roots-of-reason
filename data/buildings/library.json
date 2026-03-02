@@ -1,5 +1,6 @@
 {
   "name": "Library",
+  "category": "economy",
   "hp": 800,
   "footprint": [
     2,

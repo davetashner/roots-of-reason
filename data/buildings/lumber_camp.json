@@ -1,5 +1,6 @@
 {
   "name": "Lumber Camp",
+  "category": "civilian",
   "hp": 600,
   "footprint": [
     2,

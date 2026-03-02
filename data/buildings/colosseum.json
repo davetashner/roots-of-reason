@@ -1,5 +1,6 @@
 {
   "name": "Colosseum",
+  "category": "economy",
   "hp": 1000,
   "footprint": [
     3,

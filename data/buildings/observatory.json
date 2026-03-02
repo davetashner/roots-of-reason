@@ -1,9 +1,16 @@
 {
   "name": "Observatory",
+  "category": "economy",
   "hp": 800,
-  "footprint": [2, 2],
+  "footprint": [
+    2,
+    2
+  ],
   "build_time": 35,
-  "build_cost": {"wood": 200, "stone": 150},
+  "build_cost": {
+    "wood": 200,
+    "stone": 150
+  },
   "population_bonus": 0,
   "garrison_capacity": 0,
   "is_drop_off": false,
