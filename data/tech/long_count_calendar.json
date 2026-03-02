@@ -1,0 +1,8 @@
+{
+  "name": "Long Count Calendar",
+  "age": "bronze",
+  "cost": {"food": 100, "knowledge": 100},
+  "effect": {"age_cost_multiplier": 0.85},
+  "exclusive_to": "maya",
+  "description": "Reduces age advancement costs by 15%"
+}
