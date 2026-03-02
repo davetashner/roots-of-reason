@@ -120,6 +120,9 @@ static func _get_category(entity: Node) -> String:
 
 ## Check if two entities are hostile to each other.
 static func is_hostile(entity_a: Node, entity_b: Node) -> bool:
+	# Non-combatant entities (resources, ruins) are never hostile
+	if _is_non_combatant(entity_a) or _is_non_combatant(entity_b):
+		return false
 	var owner_a: int = entity_a.owner_id if "owner_id" in entity_a else -1
 	var owner_b: int = entity_b.owner_id if "owner_id" in entity_b else -1
 	if owner_a == -1 and owner_b == -1:
@@ -127,3 +130,10 @@ static func is_hostile(entity_a: Node, entity_b: Node) -> bool:
 	if owner_a == -1 or owner_b == -1:
 		return true  # Gaia vs any player: hostile
 	return owner_a != owner_b
+
+
+static func _is_non_combatant(entity: Node) -> bool:
+	if "entity_category" not in entity:
+		return false
+	var cat: String = entity.entity_category
+	return cat == "resource_node" or cat == "ruins"
