@@ -147,6 +147,22 @@ func is_paused() -> bool:
 	return _paused
 
 
+func get_current_train_time() -> float:
+	return _current_train_time
+
+
+func get_elapsed_time() -> float:
+	return _progress
+
+
+func get_max_queue_size() -> int:
+	return _max_queue_size
+
+
+func get_train_time_for(unit_type: String) -> float:
+	return _get_train_time(unit_type)
+
+
 func get_rally_point_offset() -> Vector2i:
 	return _rally_point_offset
 
