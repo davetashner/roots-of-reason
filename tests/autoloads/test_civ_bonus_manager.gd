@@ -313,3 +313,63 @@ func test_polynesia_naval_resolves_to_war_canoe() -> void:
 	CivBonusManager.apply_civ_bonuses(0, "polynesia")
 	var resolved := CivBonusManager.get_resolved_unit_id(0, "war_galley")
 	assert_str(resolved).is_equal("war_canoe")
+
+
+# --- China ---
+
+
+func test_china_loads() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "china")
+	assert_str(CivBonusManager.get_active_civ(0)).is_equal("china")
+
+
+func test_china_research_speed() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "china")
+	assert_float(CivBonusManager.get_bonus_value(0, "research_speed")).is_equal_approx(1.20, 0.001)
+
+
+func test_china_knowledge_generation() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "china")
+	assert_float(CivBonusManager.get_bonus_value(0, "knowledge_generation")).is_equal_approx(1.10, 0.001)
+
+
+func test_china_library_resolves_to_academy() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "china")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "library")
+	assert_str(resolved).is_equal("academy")
+
+
+func test_china_archer_resolves_to_chu_ko_nu() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "china")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "archer")
+	assert_str(resolved).is_equal("chu_ko_nu")
+
+
+# --- Maya ---
+
+
+func test_maya_loads() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "maya")
+	assert_str(CivBonusManager.get_active_civ(0)).is_equal("maya")
+
+
+func test_maya_knowledge_generation() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "maya")
+	assert_float(CivBonusManager.get_bonus_value(0, "knowledge_generation")).is_equal_approx(1.15, 0.001)
+
+
+func test_maya_age_advancement_cost() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "maya")
+	assert_float(CivBonusManager.get_bonus_value(0, "age_advancement_cost")).is_equal_approx(0.85, 0.001)
+
+
+func test_maya_library_resolves_to_observatory() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "maya")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "library")
+	assert_str(resolved).is_equal("observatory")
+
+
+func test_maya_archer_resolves_to_atlatlist() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "maya")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "archer")
+	assert_str(resolved).is_equal("atlatlist")
