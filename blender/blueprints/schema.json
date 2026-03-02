@@ -55,6 +55,78 @@
           "minimum": 0.05,
           "maximum": 1,
           "description": "Mesh decimation ratio. Lower = fewer polygons."
+        },
+        "skin": {
+          "type": "string",
+          "description": "MPFB2 skin name (e.g., 'young_caucasian_male')."
+        },
+        "hair": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Legacy: MPFB2 hair asset name."
+            },
+            {
+              "type": "object",
+              "description": "Hair configuration with style and color.",
+              "required": ["style"],
+              "properties": {
+                "style": {
+                  "type": "string",
+                  "description": "Hair style: 'wild' (prehistoric, large displacement), 'short' (small displacement), 'long' (extends down neck).",
+                  "enum": ["wild", "short", "long"]
+                },
+                "color": {
+                  "type": "array",
+                  "items": { "type": "number" },
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "description": "Hair color as RGBA [r, g, b, a] in 0-1 range."
+                },
+                "asset": {
+                  "type": "string",
+                  "description": "Optional MPFB2 hair asset name. If omitted, uses procedural hair."
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "clothing": {
+          "type": "array",
+          "description": "Clothing pieces to load. Supports MPFB2 community assets or legacy procedural names.",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Legacy: procedural clothing name (e.g., 'loincloth')."
+              },
+              {
+                "type": "object",
+                "description": "MPFB2 clothing asset with material options.",
+                "required": ["asset"],
+                "properties": {
+                  "asset": {
+                    "type": "string",
+                    "description": "MPFB2 clothing asset name (e.g., 'rehmanpolanski_viking_tunic')."
+                  },
+                  "player_colored": {
+                    "type": "boolean",
+                    "description": "If true, apply player color material (shaded magenta). Default: false.",
+                    "default": false
+                  },
+                  "color": {
+                    "type": "array",
+                    "items": { "type": "number" },
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": "Solid color RGBA [r, g, b, a] in 0-1 range. Ignored if player_colored is true."
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
         }
       },
       "additionalProperties": false
@@ -68,8 +140,7 @@
         "properties": {
           "template": {
             "type": "string",
-            "description": "Equipment template name (bow, quiver, sword, shield, spear, club).",
-            "enum": ["bow", "quiver", "sword", "shield", "spear", "club"]
+            "description": "Equipment template name. Built-in: bow, quiver, sword, shield, spear, club. Or 'mhclo:<asset_name>' for MakeHuman community equipment."
           },
           "parent_bone": {
             "type": "string",
