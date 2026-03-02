@@ -221,24 +221,17 @@ func test_save_load_roundtrip() -> void:
 	var u2 := _create_unit(Vector2(20, 20))
 	var u3 := _create_unit(Vector2(30, 30))
 	_register_units(handler, [u1, u2, u3])
-	# Select u1, u3 and assign group 1
+	# Select u1, u3
 	u1.select()
 	u3.select()
-	handler._assign_control_group(1)
 	var state: Dictionary = handler.save_state()
 	# Clear everything
 	handler._deselect_all()
-	handler._control_groups.clear()
 	assert_int(handler.get_selected_count()).is_equal(0)
 	# Restore
 	handler.load_state(state)
 	assert_bool(u1.selected).is_true()
 	assert_bool(u2.selected).is_false()
-	assert_bool(u3.selected).is_true()
-	# Verify control group restored
-	handler._deselect_all()
-	handler._recall_control_group(1)
-	assert_bool(u1.selected).is_true()
 	assert_bool(u3.selected).is_true()
 
 
@@ -248,7 +241,102 @@ func test_save_state_keys() -> void:
 	_register_units(handler, [u1])
 	u1.select()
 	var state: Dictionary = handler.save_state()
-	assert_dict(state).contains_keys(["selected_indices", "control_groups", "last_recalled_group"])
+	assert_dict(state).contains_keys(["selected_indices", "last_recalled_group"])
+
+
+func test_save_state_excludes_control_groups() -> void:
+	var handler := _create_handler()
+	var u1 := _create_unit(Vector2(10, 10))
+	var u2 := _create_unit(Vector2(20, 20))
+	_register_units(handler, [u1, u2])
+	u1.select()
+	u2.select()
+	handler._assign_control_group(1)
+	var state: Dictionary = handler.save_state()
+	# Control groups are session-only and must NOT appear in save data
+	assert_bool(state.has("control_groups")).is_false()
+
+
+func test_control_group_assign_and_recall_three_units() -> void:
+	var handler := _create_handler()
+	var u1 := _create_unit(Vector2(10, 10))
+	var u2 := _create_unit(Vector2(20, 20))
+	var u3 := _create_unit(Vector2(30, 30))
+	_register_units(handler, [u1, u2, u3])
+	# Select all 3 and assign to group 1
+	u1.select()
+	u2.select()
+	u3.select()
+	handler._assign_control_group(1)
+	handler._deselect_all()
+	assert_int(handler.get_selected_count()).is_equal(0)
+	# Recall group 1 — all 3 should be selected
+	handler._recall_control_group(1)
+	assert_bool(u1.selected).is_true()
+	assert_bool(u2.selected).is_true()
+	assert_bool(u3.selected).is_true()
+	assert_int(handler.get_selected_count()).is_equal(3)
+
+
+func test_unit_death_removes_from_group() -> void:
+	var handler := _create_handler()
+	var u1 := _create_unit(Vector2(10, 10))
+	var u2 := _create_unit(Vector2(20, 20))
+	var u3 := _create_unit(Vector2(30, 30))
+	_register_units(handler, [u1, u2, u3])
+	u1.select()
+	u2.select()
+	u3.select()
+	handler._assign_control_group(1)
+	handler._deselect_all()
+	# Simulate u2 dying via the unit_died signal
+	u2.unit_died.emit(u2, null)
+	# Recall group 1 — only u1 and u3 should be selected
+	handler._recall_control_group(1)
+	assert_bool(u1.selected).is_true()
+	assert_bool(u2.selected).is_false()
+	assert_bool(u3.selected).is_true()
+	assert_int(handler.get_selected_count()).is_equal(2)
+
+
+func test_reassign_replaces_group() -> void:
+	var handler := _create_handler()
+	var u1 := _create_unit(Vector2(10, 10))
+	var u2 := _create_unit(Vector2(20, 20))
+	var u3 := _create_unit(Vector2(30, 30))
+	_register_units(handler, [u1, u2, u3])
+	# Assign u1 and u2 to group 1
+	u1.select()
+	u2.select()
+	handler._assign_control_group(1)
+	handler._deselect_all()
+	# Reassign group 1 to only u3
+	u3.select()
+	handler._assign_control_group(1)
+	handler._deselect_all()
+	# Recall group 1 — only u3 should be selected
+	handler._recall_control_group(1)
+	assert_bool(u1.selected).is_false()
+	assert_bool(u2.selected).is_false()
+	assert_bool(u3.selected).is_true()
+	assert_int(handler.get_selected_count()).is_equal(1)
+
+
+func test_control_group_badge_set_on_units() -> void:
+	var handler := _create_handler()
+	var u1 := _create_unit(Vector2(10, 10))
+	var u2 := _create_unit(Vector2(20, 20))
+	_register_units(handler, [u1, u2])
+	u1.select()
+	handler._assign_control_group(3)
+	assert_int(u1.control_group).is_equal(3)
+	assert_int(u2.control_group).is_equal(-1)
+	# Reassign group 3 to u2 — u1 badge should clear
+	handler._deselect_all()
+	u2.select()
+	handler._assign_control_group(3)
+	assert_int(u1.control_group).is_equal(-1)
+	assert_int(u2.control_group).is_equal(3)
 
 
 # -- Config defaults --

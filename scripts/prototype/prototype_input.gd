@@ -185,7 +185,23 @@ func _assign_control_group(group_index: int) -> void:
 	var selected := _get_selected_units()
 	if selected.size() > _max_selection_size:
 		selected.resize(_max_selection_size)
+	# Clear badge on units previously in this group
+	if _control_groups.has(group_index):
+		for old_unit in _control_groups[group_index]:
+			if is_instance_valid(old_unit) and "control_group" in old_unit:
+				if old_unit.control_group == group_index:
+					old_unit.control_group = -1
+					if old_unit.has_method("mark_visual_dirty"):
+						old_unit.mark_visual_dirty()
 	_control_groups[group_index] = selected
+	# Set badge on newly assigned units and connect death signal
+	for unit in selected:
+		if "control_group" in unit:
+			unit.control_group = group_index
+			if unit.has_method("mark_visual_dirty"):
+				unit.mark_visual_dirty()
+		if unit.has_signal("unit_died") and not unit.unit_died.is_connected(_on_group_unit_died):
+			unit.unit_died.connect(_on_group_unit_died)
 
 
 func _recall_control_group(group_index: int) -> void:
@@ -228,6 +244,21 @@ func _center_camera_on_group(group_index: int) -> void:
 			count += 1
 	if count > 0:
 		_camera.position = centroid / count
+
+
+func _on_group_unit_died(unit: Node2D, _killer: Node2D) -> void:
+	for group_index in _control_groups:
+		var group: Array = _control_groups[group_index]
+		var idx := group.find(unit)
+		if idx >= 0:
+			group.remove_at(idx)
+
+
+func get_unit_control_group(unit: Node) -> int:
+	for group_index in _control_groups:
+		if unit in _control_groups[group_index]:
+			return group_index
+	return -1
 
 
 func _handle_mouse_button(mb: InputEventMouseButton) -> void:
@@ -505,19 +536,9 @@ func save_state() -> Dictionary:
 	for i in _units.size():
 		if "selected" in _units[i] and _units[i].selected:
 			selected_indices.append(i)
-	# Build control group data as index arrays
-	var groups_data: Dictionary = {}
-	for group_index in _control_groups:
-		var indices: Array[int] = []
-		for unit in _control_groups[group_index]:
-			if is_instance_valid(unit):
-				var idx := _units.find(unit)
-				if idx >= 0:
-					indices.append(idx)
-		groups_data[str(group_index)] = indices
+	# Control groups are session-only — intentionally NOT saved
 	return {
 		"selected_indices": selected_indices,
-		"control_groups": groups_data,
 		"last_recalled_group": _last_recalled_group,
 	}
 
@@ -532,17 +553,7 @@ func load_state(data: Dictionary) -> void:
 		var i := int(idx)
 		if i >= 0 and i < _units.size() and _units[i].has_method("select"):
 			_units[i].select()
-	# Restore control groups
-	var groups_data: Dictionary = data.get("control_groups", {})
-	for key in groups_data:
-		var group_index := int(key)
-		var indices: Array = groups_data[key]
-		var group: Array[Node] = []
-		for idx in indices:
-			var i := int(idx)
-			if i >= 0 and i < _units.size():
-				group.append(_units[i])
-		_control_groups[group_index] = group
+	# Control groups are session-only — not restored from save data
 
 
 func _show_click_marker(world_pos: Vector2, command_type: String = "move") -> void:

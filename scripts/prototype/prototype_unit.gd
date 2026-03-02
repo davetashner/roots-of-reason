@@ -35,6 +35,7 @@ var selected: bool = false
 var hp: int = 0
 var max_hp: int = 0
 var kill_count: int = 0
+var control_group: int = -1  # -1 = no group; 1-9 = assigned group badge
 var _target_pos: Vector2 = Vector2.ZERO
 var _moving: bool = false
 var _path: Array[Vector2] = []
@@ -845,6 +846,21 @@ func _draw() -> void:
 		var hpc := Color(0.2, 0.8, 0.2) if r > 0.5 else Color(0.9, 0.2, 0.2)
 		BarDrawer.draw_bar(
 			self, Vector2(-bw / 2.0, by), Vector2(bw, 3.0), r, hpc, Color(0.2, 0.2, 0.2, 0.8), Color.TRANSPARENT
+		)
+	# Control group badge
+	if control_group >= 1 and control_group <= 9:
+		var badge_pos := Vector2(RADIUS + 2.0, -RADIUS - 2.0)
+		draw_circle(badge_pos, 6.0, Color(0.1, 0.1, 0.1, 0.8))
+		var text_pos := badge_pos + Vector2(-3.0, 4.0)
+		var badge_color := Color(1, 1, 0.6, 1.0)
+		draw_string(
+			ThemeDB.fallback_font,
+			text_pos,
+			str(control_group),
+			HORIZONTAL_ALIGNMENT_CENTER,
+			-1,
+			9,
+			badge_color,
 		)
 
 
