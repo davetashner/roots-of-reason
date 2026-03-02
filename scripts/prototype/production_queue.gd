@@ -25,7 +25,10 @@ var _progress: float = 0.0
 var _current_train_time: float = 0.0
 var _paused: bool = false
 var _population_manager: Node = null
+var _tech_manager: Node = null
 var _rally_point_offset: Vector2i = Vector2i(1, 1)
+## Reverse lookup: unit_type -> tech_id that unlocks it (built lazily from tech tree)
+var _unit_tech_requirements: Dictionary = {}
 
 
 func _ready() -> void:
@@ -42,10 +45,19 @@ func _load_config() -> void:
 		_rally_point_offset = Vector2i(int(offset[0]), int(offset[1]))
 
 
-func setup(building: Node2D, owner_id: int, population_manager: Node = null) -> void:
+func setup(
+	building: Node2D,
+	owner_id: int,
+	population_manager: Node = null,
+	tech_manager: Node = null,
+) -> void:
 	_building = building
 	_owner_id = owner_id
 	_population_manager = population_manager
+	_tech_manager = tech_manager
+	if _tech_manager == null:
+		_tech_manager = _find_tech_manager()
+	_build_unit_tech_requirements()
 
 
 func _process(delta: float) -> void:
@@ -82,6 +94,8 @@ func can_produce(unit_type: String) -> bool:
 		return false
 	if not _building_produces(unit_type):
 		return false
+	if not _is_unit_tech_unlocked(unit_type):
+		return false
 	var costs := _get_train_costs(unit_type)
 	if costs.is_empty():
 		return true
@@ -92,6 +106,8 @@ func add_to_queue(unit_type: String) -> bool:
 	if _queue.size() >= _max_queue_size:
 		return false
 	if not _building_produces(unit_type):
+		return false
+	if not _is_unit_tech_unlocked(unit_type):
 		return false
 	var raw_costs := _get_raw_train_costs(unit_type)
 	var costs := _parse_costs(raw_costs)
@@ -288,6 +304,52 @@ func _spend(costs: Dictionary) -> bool:
 		if rm and rm.has_method("spend"):
 			return rm.spend(_owner_id, costs)
 	return true
+
+
+func _find_tech_manager() -> Node:
+	if is_instance_valid(Engine.get_main_loop()):
+		var root: Window = Engine.get_main_loop().root
+		if root != null:
+			var tm: Node = root.get_node_or_null("TechManager")
+			if tm != null:
+				return tm
+			# Also check first child scene (prototype_game root)
+			for child in root.get_children():
+				var nested: Node = child.get_node_or_null("TechManager")
+				if nested != null:
+					return nested
+	return null
+
+
+func _build_unit_tech_requirements() -> void:
+	## Scans the tech tree for unlock_units effects and builds a reverse lookup.
+	_unit_tech_requirements.clear()
+	var tech_tree: Variant = null
+	if Engine.has_singleton("DataLoader"):
+		tech_tree = DataLoader.load_json("res://data/tech/tech_tree.json")
+	elif is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("load_json"):
+			tech_tree = dl.load_json("res://data/tech/tech_tree.json")
+	if tech_tree == null or not (tech_tree is Array):
+		return
+	for tech: Dictionary in tech_tree:
+		var effects: Dictionary = tech.get("effects", {})
+		var unlock_units: Array = effects.get("unlock_units", [])
+		var tech_id: String = str(tech.get("id", ""))
+		for unit_name: String in unlock_units:
+			_unit_tech_requirements[unit_name] = tech_id
+
+
+func _is_unit_tech_unlocked(unit_type: String) -> bool:
+	## Returns true if the unit has no tech prerequisite or the required tech
+	## is already researched by the owner.
+	if unit_type not in _unit_tech_requirements:
+		return true  # No tech requirement
+	var required_tech: String = _unit_tech_requirements[unit_type]
+	if _tech_manager != null and _tech_manager.has_method("is_tech_researched"):
+		return _tech_manager.is_tech_researched(required_tech, _owner_id)
+	return true  # No tech manager available — allow production
 
 
 func _refund(costs: Dictionary) -> void:
