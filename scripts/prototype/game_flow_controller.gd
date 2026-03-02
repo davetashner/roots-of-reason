@@ -236,6 +236,28 @@ func on_unit_produced(unit_type: String, building: Node2D) -> void:
 		trade_ai.name = "TradeCartAI"
 		trade_ai.set_script(TradeCartAIScript)
 		unit.add_child(trade_ai)
+	# Fishing boats auto-assign to nearest fish deposit on spawn
+	if resolved_type == "fishing_boat" and unit.has_method("assign_gather_target"):
+		var fish_deposit: Node2D = _find_nearest_fish_deposit(unit.position)
+		if fish_deposit != null:
+			unit.assign_gather_target(fish_deposit)
+
+
+func _find_nearest_fish_deposit(from_pos: Vector2) -> Node2D:
+	var best: Node2D = null
+	var best_dist := INF
+	for child in _root.get_children():
+		if "entity_category" not in child or child.entity_category != "resource_node":
+			continue
+		if "resource_name" not in child or child.resource_name != "fish":
+			continue
+		if child.has_method("is_harvestable") and not child.is_harvestable():
+			continue
+		var dist: float = from_pos.distance_to(child.global_position)
+		if dist < best_dist:
+			best_dist = dist
+			best = child
+	return best
 
 
 func on_unit_died(unit: Node2D, killer: Node2D) -> void:
