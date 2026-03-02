@@ -24,6 +24,7 @@ var _hp_yellow_threshold: float = 0.3
 
 # Child nodes
 var _portrait: ColorRect = null
+var _portrait_texture: TextureRect = null
 var _name_label: Label = null
 var _hp_bar_fill: Panel = null
 var _hp_bar_bg: Panel = null
@@ -73,6 +74,15 @@ func _build_ui() -> void:
 	_portrait.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
 	_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(_portrait)
+	# Building thumbnail overlay (rendered on top of portrait color)
+	_portrait_texture = TextureRect.new()
+	_portrait_texture.custom_minimum_size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	_portrait_texture.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	_portrait_texture.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_portrait_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_portrait_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_portrait_texture.visible = false
+	_portrait.add_child(_portrait_texture)
 
 	# Right side
 	var vbox := VBoxContainer.new()
@@ -144,6 +154,7 @@ func show_unit(unit: Node2D) -> void:
 	_tracked_entities.clear()
 	_is_multi = false
 	_clear_hover()
+	_clear_thumbnail()
 	visible = true
 	# Portrait color
 	if "unit_color" in unit:
@@ -188,6 +199,8 @@ func show_building(building: Node2D) -> void:
 		_portrait.color = Color(0.2, 0.5, 1.0)
 	else:
 		_portrait.color = Color(0.8, 0.2, 0.2)
+	# Building sprite thumbnail
+	_load_building_thumbnail(building)
 	# Name
 	if is_ruins:
 		_name_label.text = "Ruins"
@@ -249,6 +262,7 @@ func show_barge(barge: Node2D) -> void:
 	_tracked_entities.clear()
 	_is_multi = false
 	_clear_hover()
+	_clear_thumbnail()
 	visible = true
 	# Portrait color
 	if barge.owner_id == 0:
@@ -278,6 +292,7 @@ func show_multi_select(units: Array) -> void:
 	_tracked_entities = units.duplicate()
 	_is_multi = true
 	_clear_hover()
+	_clear_thumbnail()
 	visible = true
 	# Portrait: use first unit's color
 	if not units.is_empty() and "unit_color" in units[0]:
@@ -295,6 +310,7 @@ func show_multi_select(units: Array) -> void:
 func show_resource_node(node: Node2D) -> void:
 	_hovered_entity = node
 	_is_hovering_resource = true
+	_clear_thumbnail()
 	visible = true
 	# Portrait color from node
 	if "_node_color" in node:
@@ -331,6 +347,29 @@ func _clear_hover() -> void:
 	_hovered_entity = null
 	_is_hovering_resource = false
 	_is_hovering_wolf = false
+
+
+func _load_building_thumbnail(building: Node2D) -> void:
+	if _portrait_texture == null:
+		return
+	var bname: String = building.building_name if "building_name" in building else ""
+	if bname == "":
+		_clear_thumbnail()
+		return
+	var path := "res://assets/sprites/buildings/placeholder/" + bname + ".png"
+	if ResourceLoader.exists(path):
+		var tex: Texture2D = load(path)
+		if tex != null:
+			_portrait_texture.texture = tex
+			_portrait_texture.visible = true
+			return
+	_clear_thumbnail()
+
+
+func _clear_thumbnail() -> void:
+	if _portrait_texture != null:
+		_portrait_texture.texture = null
+		_portrait_texture.visible = false
 
 
 func _get_hp_color(ratio: float) -> Color:
