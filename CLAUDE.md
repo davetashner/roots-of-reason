@@ -45,7 +45,7 @@ Run before committing:
 Use `/gdtest` skill to generate test suites for new scripts.
 
 - **After creating a new GDScript file**, run `/gdtest <path>` to generate its test suite
-- **Available skills:** `/gdtest` (test generation), `/hud` (HUD elements), `/ui-theme` (Godot themes)
+- **Available skills:** `/gdtest` (test generation), `/hud` (HUD elements), `/ui-theme` (Godot themes), `/unit-blueprint` (generate unit blueprint JSON from description)
 
 ## Asset Processing Pipeline
 
