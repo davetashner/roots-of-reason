@@ -1,7 +1,11 @@
 {
   "name": "Academy",
+  "category": "economy",
   "hp": 800,
-  "footprint": [2, 2],
+  "footprint": [
+    2,
+    2
+  ],
   "build_time": 30,
   "build_cost": {
     "wood": 200,

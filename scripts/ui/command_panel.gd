@@ -1,6 +1,7 @@
 extends PanelContainer
 ## Command panel — context-sensitive grid of command buttons at bottom-right.
 ## Shows available actions based on selected unit/building type.
+## Villager build menu is dynamically generated from building data with category tabs.
 
 const RESOURCE_NAME_TO_TYPE: Dictionary = {
 	"food": ResourceManager.ResourceType.FOOD,
@@ -10,13 +11,21 @@ const RESOURCE_NAME_TO_TYPE: Dictionary = {
 	"knowledge": ResourceManager.ResourceType.KNOWLEDGE,
 }
 
+const BUILD_CATEGORIES := ["civilian", "military", "economy"]
+const MAX_GRID_SLOTS := 12
+
 var _input_handler: Node = null
 var _building_placer: Node = null
 var _trade_manager: Node = null
+var _vbox: VBoxContainer = null
+var _tab_bar: HBoxContainer = null
 var _grid: GridContainer = null
 var _config: Dictionary = {}
 var _last_selection_hash: int = -1
 var _player_id: int = 0
+var _build_tab: String = "civilian"
+var _is_villager_mode: bool = false
+var _build_page: int = 0
 
 
 func _ready() -> void:
@@ -44,7 +53,8 @@ func _setup_layout() -> void:
 	var btn_size: int = int(_config.get("button_size", 48))
 	var margin: int = int(_config.get("button_margin", 4))
 	var panel_width: int = columns * (btn_size + margin) + margin
-	var panel_height: int = rows * (btn_size + margin) + margin
+	var tab_height := 20
+	var panel_height: int = rows * (btn_size + margin) + margin + tab_height
 	custom_minimum_size = Vector2(panel_width, panel_height)
 	size = Vector2(panel_width, panel_height)
 	anchor_left = 1.0
@@ -62,12 +72,69 @@ func _setup_layout() -> void:
 	style.bg_color = Color(0.1, 0.1, 0.1, 0.6)
 	style.set_corner_radius_all(4)
 	add_theme_stylebox_override("panel", style)
+	# VBox to hold tab bar + grid
+	_vbox = VBoxContainer.new()
+	_vbox.name = "VBox"
+	_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_vbox)
+	# Tab bar (hidden by default, shown in villager mode)
+	_tab_bar = HBoxContainer.new()
+	_tab_bar.name = "TabBar"
+	_tab_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tab_bar.visible = false
+	_vbox.add_child(_tab_bar)
+	_rebuild_tab_bar()
 	# Grid container
 	_grid = GridContainer.new()
 	_grid.name = "CommandGrid"
 	_grid.columns = columns
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_grid)
+	_vbox.add_child(_grid)
+
+
+func _rebuild_tab_bar() -> void:
+	for child in _tab_bar.get_children():
+		child.queue_free()
+	for cat: String in BUILD_CATEGORIES:
+		var tab_btn := Button.new()
+		tab_btn.name = "Tab_%s" % cat
+		tab_btn.text = cat.capitalize()
+		tab_btn.custom_minimum_size = Vector2(50, 18)
+		tab_btn.clip_text = true
+		tab_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		tab_btn.add_theme_font_size_override("font_size", 9)
+		_style_tab_button(tab_btn, cat == _build_tab)
+		tab_btn.pressed.connect(_on_tab_pressed.bind(cat))
+		_tab_bar.add_child(tab_btn)
+
+
+func _style_tab_button(btn: Button, active: bool) -> void:
+	var style := StyleBoxFlat.new()
+	if active:
+		style.bg_color = Color(0.3, 0.3, 0.5, 0.9)
+	else:
+		style.bg_color = Color(0.15, 0.15, 0.2, 0.7)
+	style.set_corner_radius_all(2)
+	btn.add_theme_stylebox_override("normal", style)
+	var hover_style := StyleBoxFlat.new()
+	hover_style.bg_color = Color(0.35, 0.35, 0.55, 0.9)
+	hover_style.set_corner_radius_all(2)
+	btn.add_theme_stylebox_override("hover", hover_style)
+
+
+func _on_tab_pressed(category: String) -> void:
+	if _build_tab == category:
+		return
+	_build_tab = category
+	_build_page = 0
+	# Update tab button styles
+	for child in _tab_bar.get_children():
+		if child is Button:
+			var cat: String = child.name.replace("Tab_", "")
+			_style_tab_button(child, cat == _build_tab)
+	# Re-render the build grid
+	if _is_villager_mode:
+		_render_build_commands()
 
 
 func setup(
@@ -104,9 +171,35 @@ func _compute_selection_hash(units: Array) -> int:
 
 func update_commands(units: Array) -> void:
 	_clear_grid()
+	_is_villager_mode = _is_villager_selection(units)
+	_tab_bar.visible = _is_villager_mode
+	if _is_villager_mode:
+		_build_page = 0
+		_render_build_commands()
+		return
 	var commands: Array = _get_commands_for_selection(units)
 	if commands.is_empty():
 		return
+	_render_command_list(commands)
+
+
+func _is_villager_selection(units: Array) -> bool:
+	if units.is_empty():
+		return false
+	for unit in units:
+		if is_instance_valid(unit) and "unit_type" in unit:
+			if unit.unit_type == "villager":
+				return true
+	return false
+
+
+func _render_build_commands() -> void:
+	_clear_grid()
+	var commands: Array = _get_dynamic_build_commands()
+	_render_command_list(commands)
+
+
+func _render_command_list(commands: Array) -> void:
 	var hotkeys: Array = _config.get("hotkeys", [])
 	for i in commands.size():
 		var cmd: Dictionary = commands[i]
@@ -118,6 +211,116 @@ func update_commands(units: Array) -> void:
 			hotkey = hotkeys[row][col]
 		var btn := _create_button(cmd, hotkey)
 		_grid.add_child(btn)
+
+
+func _get_dynamic_build_commands() -> Array:
+	## Build the dynamic list of build commands for the active tab, filtered
+	## by unlock state. Only shows buildings the player has unlocked.
+	var all_ids: Array = _get_all_building_ids()
+	var unlocked: Array = []
+	for building_id: String in all_ids:
+		# Skip civ-unique buildings not belonging to this player's civ
+		if _is_civ_unique_for_other_player(building_id):
+			continue
+		# Resolve civ replacement (e.g. house -> longhouse for Vikings)
+		var resolved: String = _resolve_building_id(building_id)
+		var stats: Dictionary = _load_building_stats(resolved)
+		if stats.is_empty():
+			continue
+		var cat: String = str(stats.get("category", ""))
+		if cat != _build_tab:
+			continue
+		if not _is_unlocked(building_id):
+			continue
+		var cmd := {
+			"id": "build_%s" % resolved,
+			"label": str(stats.get("name", resolved)),
+			"tooltip": _build_tooltip(resolved, stats),
+			"action": "build",
+			"building": building_id,
+		}
+		unlocked.append(cmd)
+	# Paginate — show up to MAX_GRID_SLOTS per page
+	var start: int = _build_page * MAX_GRID_SLOTS
+	var end: int = mini(start + MAX_GRID_SLOTS, unlocked.size())
+	if start >= unlocked.size():
+		return []
+	return unlocked.slice(start, end)
+
+
+func _get_all_building_ids() -> Array:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_all_building_ids()
+	var dl: Node = null
+	if is_instance_valid(Engine.get_main_loop()):
+		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+	if dl != null and dl.has_method("get_all_building_ids"):
+		return dl.get_all_building_ids()
+	return []
+
+
+func _is_civ_unique_for_other_player(building_id: String) -> bool:
+	## Returns true if building_id is a civ-unique building that belongs to a
+	## different civ than this player's. Base buildings are never filtered out.
+	var stats: Dictionary = _load_building_stats(building_id)
+	if stats.is_empty():
+		return false
+	# Check if any civ replaces a base building with this building_id
+	var all_civs: Array = _get_all_civ_ids()
+	for civ_id: String in all_civs:
+		var civ_data: Dictionary = _load_civ_data(civ_id)
+		var unique: Dictionary = civ_data.get("unique_building", {})
+		if unique.is_empty():
+			continue
+		var unique_name: String = str(unique.get("name", "")).to_lower().replace(" ", "_")
+		if unique_name == building_id:
+			# This is a civ-unique building — check if it's for this player
+			var player_civ: String = CivBonusManager.get_active_civ(_player_id)
+			return player_civ != civ_id
+	return false
+
+
+func _get_all_civ_ids() -> Array:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_all_civ_ids()
+	var dl: Node = null
+	if is_instance_valid(Engine.get_main_loop()):
+		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+	if dl != null and dl.has_method("get_all_civ_ids"):
+		return dl.get_all_civ_ids()
+	return []
+
+
+func _load_civ_data(civ_id: String) -> Dictionary:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_civ_data(civ_id)
+	var dl: Node = null
+	if is_instance_valid(Engine.get_main_loop()):
+		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+	if dl != null and dl.has_method("get_civ_data"):
+		return dl.get_civ_data(civ_id)
+	return {}
+
+
+func _resolve_building_id(building_id: String) -> String:
+	return CivBonusManager.get_resolved_building_id(_player_id, building_id)
+
+
+func _is_unlocked(building_id: String) -> bool:
+	if _building_placer != null and _building_placer.has_method("is_building_unlocked"):
+		return _building_placer.is_building_unlocked(building_id, _player_id)
+	return true
+
+
+func _build_tooltip(building_id: String, stats: Dictionary) -> String:
+	var tip: String = "Build %s" % str(stats.get("name", building_id))
+	var costs: Dictionary = stats.get("build_cost", {})
+	if not costs.is_empty():
+		var parts: Array[String] = []
+		for res: String in costs:
+			parts.append("%d %s" % [int(costs[res]), res.capitalize()])
+		tip += " (%s)" % ", ".join(parts)
+	return tip
 
 
 func _get_commands_for_selection(units: Array) -> Array:
@@ -132,6 +335,10 @@ func _get_commands_for_selection(units: Array) -> Array:
 				lookup_key = unit.building_name
 				break
 			if "unit_type" in unit:
+				# Villager is handled dynamically, skip static lookup
+				if unit.unit_type == "villager":
+					lookup_key = "default"
+					break
 				lookup_key = unit.unit_type
 				break
 	var result: Array = []
@@ -424,8 +631,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func save_state() -> Dictionary:
-	return {"player_id": _player_id}
+	return {"player_id": _player_id, "build_tab": _build_tab}
 
 
 func load_state(data: Dictionary) -> void:
 	_player_id = int(data.get("player_id", 0))
+	_build_tab = str(data.get("build_tab", "civilian"))

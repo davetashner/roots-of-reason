@@ -1,5 +1,6 @@
 {
   "name": "Deep Ocean Navigation",
+  "category": "military",
   "placeholder": true,
   "description": "A navigational institute housing charts and instruments for open-ocean voyaging. Extends naval line of sight and enables long-range trade routes. [PLACEHOLDER]",
   "hp": 1200,

@@ -1,5 +1,6 @@
 {
   "name": "Nuclear Plant",
+  "category": "economy",
   "hp": 1500,
   "footprint": [
     3,
@@ -23,6 +24,6 @@
   "defense": 3,
   "los": 6,
   "effects": {
-    "building_cost_reduction": 0.20
+    "building_cost_reduction": 0.2
   }
 }

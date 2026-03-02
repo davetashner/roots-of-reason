@@ -1,5 +1,6 @@
 {
   "name": "Stone Wall",
+  "category": "military",
   "placeholder": true,
   "description": "A sturdy defensive wall built from fitted stone. Stronger than palisades and harder to breach. [PLACEHOLDER]",
   "hp": 3000,

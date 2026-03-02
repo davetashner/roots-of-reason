@@ -1,5 +1,6 @@
 {
   "name": "Farm",
+  "category": "civilian",
   "hp": 300,
   "footprint": [
     2,

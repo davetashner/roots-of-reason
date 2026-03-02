@@ -1,5 +1,6 @@
 {
   "name": "Siege Workshop",
+  "category": "military",
   "placeholder": true,
   "description": "A specialized workshop for constructing siege weapons. Required to train catapults and other siege engines. [PLACEHOLDER]",
   "hp": 1500,
