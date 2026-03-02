@@ -7,6 +7,8 @@ signal player_defeated(player_id: int)
 signal player_victorious(player_id: int, condition: String)
 signal wonder_countdown_started(player_id: int, duration: float)
 signal wonder_countdown_cancelled(player_id: int)
+signal wonder_countdown_paused(player_id: int)
+signal wonder_countdown_resumed(player_id: int)
 signal agi_core_built(player_id: int)
 
 # Config loaded from data/settings/game/victory.json
@@ -15,6 +17,7 @@ var _defeat_delay: float = 5.0
 var _allow_continue: bool = true
 var _singularity_age: int = 6
 var _nomadic_grace_duration: float = 300.0
+var _wonder_hp_pause_threshold: float = 0.5
 var _condition_labels: Dictionary = {
 	"military": "Military Conquest",
 	"singularity": "Singularity Achieved",
@@ -56,6 +59,7 @@ func _load_config() -> void:
 	_allow_continue = bool(cfg.get("allow_continue_after_victory", _allow_continue))
 	_singularity_age = int(cfg.get("singularity_age", _singularity_age))
 	_nomadic_grace_duration = float(cfg.get("nomadic_grace_duration", _nomadic_grace_duration))
+	_wonder_hp_pause_threshold = float(cfg.get("wonder_hp_pause_threshold", _wonder_hp_pause_threshold))
 	var conditions: Dictionary = cfg.get("victory_conditions", {})
 	for key: String in conditions:
 		var cond: Dictionary = conditions[key]
@@ -105,6 +109,8 @@ func _tick_wonder_countdowns(game_delta: float) -> void:
 	var completed_players: Array = []
 	for player_id: int in _wonder_countdowns:
 		var state: Dictionary = _wonder_countdowns[player_id]
+		if state.get("paused", false):
+			continue
 		state["remaining"] = float(state["remaining"]) - game_delta
 		if float(state["remaining"]) <= 0.0:
 			completed_players.append(player_id)
@@ -217,6 +223,7 @@ func start_wonder_countdown(player_id: int, wonder_node: Node2D) -> void:
 	_wonder_countdowns[player_id] = {
 		"remaining": _wonder_countdown_duration,
 		"node": wonder_node,
+		"paused": false,
 	}
 	wonder_countdown_started.emit(player_id, _wonder_countdown_duration)
 
@@ -232,6 +239,46 @@ func get_wonder_countdown_remaining(player_id: int) -> float:
 	if not _wonder_countdowns.has(player_id):
 		return -1.0
 	return float(_wonder_countdowns[player_id]["remaining"])
+
+
+func is_wonder_countdown_paused(player_id: int) -> bool:
+	if not _wonder_countdowns.has(player_id):
+		return false
+	return bool(_wonder_countdowns[player_id].get("paused", false))
+
+
+func pause_wonder_countdown(player_id: int) -> void:
+	if not _wonder_countdowns.has(player_id):
+		return
+	var state: Dictionary = _wonder_countdowns[player_id]
+	if state.get("paused", false):
+		return
+	state["paused"] = true
+	wonder_countdown_paused.emit(player_id)
+
+
+func resume_wonder_countdown(player_id: int) -> void:
+	if not _wonder_countdowns.has(player_id):
+		return
+	var state: Dictionary = _wonder_countdowns[player_id]
+	if not state.get("paused", false):
+		return
+	state["paused"] = false
+	wonder_countdown_resumed.emit(player_id)
+
+
+func on_wonder_hp_changed(player_id: int, current_hp: int, max_hp: int) -> void:
+	## Called when a Wonder's HP changes. Pauses countdown if HP ratio drops below
+	## threshold, resumes if HP ratio is restored above threshold.
+	if not _wonder_countdowns.has(player_id):
+		return
+	if max_hp <= 0:
+		return
+	var ratio: float = float(current_hp) / float(max_hp)
+	if ratio < _wonder_hp_pause_threshold:
+		pause_wonder_countdown(player_id)
+	else:
+		resume_wonder_countdown(player_id)
 
 
 func get_game_result() -> Dictionary:
@@ -369,6 +416,7 @@ func save_state() -> Dictionary:
 		wonder_out[str(pid)] = {
 			"remaining": float(state["remaining"]),
 			"node_name": node_name,
+			"paused": bool(state.get("paused", false)),
 		}
 	var defeated_out: Array = []
 	for pid: int in _defeated_players:
@@ -408,6 +456,7 @@ func load_state(data: Dictionary) -> void:
 		_wonder_countdowns[pid] = {
 			"remaining": float(entry.get("remaining", 0.0)),
 			"node": null,
+			"paused": bool(entry.get("paused", false)),
 		}
 	var timer_data: Dictionary = data.get("defeat_timers", {})
 	_defeat_timers.clear()
