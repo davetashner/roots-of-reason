@@ -68,29 +68,19 @@ func setup_civilizations() -> void:
 func setup_units() -> void:
 	var offsets := get_villager_offsets()
 	var tc_pos := get_start_position(0)
+	var unit_index := 0
 	for i in offsets.size():
-		var unit := Node2D.new()
-		unit.name = "Unit_%d" % i
-		unit.set_script(UnitScript)
 		var offset: Vector2i = offsets[i]
-		var spawn_pos: Vector2i = tc_pos + offset
-		unit.position = IsoUtils.grid_to_screen(Vector2(spawn_pos))
-		unit.unit_type = "villager"
-		_root.add_child(unit)
-		unit._scene_root = _root
-		unit._pathfinder = _root._pathfinder
-		if _root._visibility_manager != null:
-			unit._visibility_manager = _root._visibility_manager
-		if _root._war_survival != null:
-			unit._war_survival = _root._war_survival
-		if _root._input_handler.has_method("register_unit"):
-			_root._input_handler.register_unit(unit)
-		if _root._target_detector != null:
-			_root._target_detector.register_entity(unit)
-		if _root._population_manager != null:
-			_root._population_manager.register_unit(unit, 0)
-		_root._entity_registry.register(unit)
-		unit.unit_died.connect(_root._on_unit_died)
+		_spawn_player_unit("villager", "Unit_%d" % unit_index, tc_pos + offset)
+		unit_index += 1
+	# Spawn additional starting units (e.g. archer) from config
+	var extra_units := get_starting_units()
+	for entry in extra_units:
+		var unit_type: String = str(entry.get("type", ""))
+		var raw_offset: Array = entry.get("offset", [0, 0])
+		var offset := Vector2i(int(raw_offset[0]), int(raw_offset[1]))
+		_spawn_player_unit(unit_type, "Unit_%d" % unit_index, tc_pos + offset)
+		unit_index += 1
 
 
 func setup_demo_entities() -> void:
@@ -554,6 +544,36 @@ func get_villager_offsets() -> Array[Vector2i]:
 		if offset is Array and offset.size() == 2:
 			result.append(Vector2i(int(offset[0]), int(offset[1])))
 	return result
+
+
+func get_starting_units() -> Array:
+	var cfg: Dictionary = DataLoader.load_json("res://data/settings/map/map_generation.json")
+	var start_cfg: Dictionary = cfg.get("starting_locations", {})
+	return start_cfg.get("starting_units", [])
+
+
+func _spawn_player_unit(unit_type: String, unit_name: String, spawn_pos: Vector2i) -> Node2D:
+	var unit := Node2D.new()
+	unit.name = unit_name
+	unit.set_script(UnitScript)
+	unit.position = IsoUtils.grid_to_screen(Vector2(spawn_pos))
+	unit.unit_type = unit_type
+	_root.add_child(unit)
+	unit._scene_root = _root
+	unit._pathfinder = _root._pathfinder
+	if _root._visibility_manager != null:
+		unit._visibility_manager = _root._visibility_manager
+	if _root._war_survival != null:
+		unit._war_survival = _root._war_survival
+	if _root._input_handler.has_method("register_unit"):
+		_root._input_handler.register_unit(unit)
+	if _root._target_detector != null:
+		_root._target_detector.register_entity(unit)
+	if _root._population_manager != null:
+		_root._population_manager.register_unit(unit, 0)
+	_root._entity_registry.register(unit)
+	unit.unit_died.connect(_root._on_unit_died)
+	return unit
 
 
 func find_naval_spawn_point(building: Node2D) -> Vector2i:

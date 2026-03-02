@@ -165,8 +165,10 @@ func _try_load_sprite() -> void:
 	_sprite.texture = display_tex
 	_sprite.centered = true
 	var fp_center := _footprint_screen_center()
+	# Align sprite bottom with footprint bottom vertex (not center)
+	var fp_bottom_y: float = float(footprint.x + footprint.y - 1) * IsoUtils.HALF_H
 	var half_h := display_tex.get_height() / 2.0
-	_sprite.offset = Vector2(fp_center.x, fp_center.y - half_h)
+	_sprite.offset = Vector2(fp_center.x, fp_bottom_y - half_h)
 	# Apply player color shader for magenta mask recoloring
 	var shader: Shader = load(_SHADER_PATH) as Shader
 	if shader != null:

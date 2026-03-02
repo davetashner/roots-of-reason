@@ -84,7 +84,10 @@
     "elevation_ideal_min": 0.3,
     "elevation_ideal_max": 0.6,
     "seed_offset": 5000,
-    "villager_offsets": [[-1, 0], [0, -1], [-1, -1], [1, -1], [-1, 1]]
+    "villager_offsets": [[-1, 0], [0, -1], [-1, -1], [1, -1], [-1, 1]],
+    "starting_units": [
+      { "type": "archer", "offset": [1, 1] }
+    ]
   },
   "resource_generation": {
     "resources": {

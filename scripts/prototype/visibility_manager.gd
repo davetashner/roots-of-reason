@@ -12,6 +12,7 @@ var _explored: Dictionary = {}  # player_id -> Dictionary(Vector2i -> true)
 var _visible: Dictionary = {}  # player_id -> Dictionary(Vector2i -> true)
 var _prev_visible: Dictionary = {}  # player_id -> Dictionary — for diff-based updates
 var _blocks_los_fn: Callable
+var _no_block_fn: Callable = func(_pos: Vector2i) -> bool: return false
 var _map_width: int = 64
 var _map_height: int = 64
 var _update_timer: float = 0.0
@@ -61,7 +62,8 @@ func update_visibility(player_id: int, units: Array, pinned_tiles: Array[Vector2
 		# Convert unit screen position to grid position.
 		# For buildings with a footprint, use the center tile instead of the origin corner.
 		var grid_pos: Vector2i
-		if "grid_pos" in unit and "footprint" in unit:
+		var is_building: bool = "grid_pos" in unit and "footprint" in unit
+		if is_building:
 			var fp: Vector2i = unit.footprint
 			grid_pos = Vector2i(unit.grid_pos.x + fp.x / 2, unit.grid_pos.y + fp.y / 2)
 		else:
@@ -76,6 +78,8 @@ func update_visibility(player_id: int, units: Array, pinned_tiles: Array[Vector2
 		if cached.size() > 0 and cached.get("grid_pos") == grid_pos and cached.get("los_radius") == los_radius:
 			tiles = cached["tiles"]
 		else:
+			# Buildings have unobstructed LOS (not blocked by terrain like forests)
+			var block_fn: Callable = _no_block_fn if is_building else _blocks_los_fn
 			tiles = (
 				LOSCalculator
 				. compute_visible_tiles(
@@ -83,7 +87,7 @@ func update_visibility(player_id: int, units: Array, pinned_tiles: Array[Vector2
 					los_radius,
 					_map_width,
 					_map_height,
-					_blocks_los_fn,
+					block_fn,
 				)
 			)
 			_fov_cache[uid] = {
