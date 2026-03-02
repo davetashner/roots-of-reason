@@ -28,6 +28,7 @@ func save_game(slot: int) -> bool:
 		"game_manager": GameManager.save_state(),
 		"resource_manager": ResourceManager.save_state(),
 		"civ_bonus_manager": CivBonusManager.save_state(),
+		"audio_manager": AudioManager.save_state(),
 	}
 	if _scene_provider != null and _scene_provider.has_method("save_state"):
 		data["scene"] = _scene_provider.save_state()
@@ -73,6 +74,8 @@ func apply_loaded_state(data: Dictionary) -> void:
 		ResourceManager.load_state(data["resource_manager"])
 	if data.has("civ_bonus_manager"):
 		CivBonusManager.load_state(data["civ_bonus_manager"])
+	if data.has("audio_manager"):
+		AudioManager.load_state(data["audio_manager"])
 	if data.has("scene") and _scene_provider != null and _scene_provider.has_method("load_state"):
 		await _scene_provider.load_state(data["scene"])
 	load_complete.emit()
