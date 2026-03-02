@@ -61,6 +61,7 @@ func _register_builtin_commands() -> void:
 	_register_spawn_commands()
 	_register_economy_commands()
 	_register_tech_commands()
+	_register_unit_control_commands()
 
 
 func _register_help_command() -> void:
@@ -213,6 +214,69 @@ func _register_tech_commands() -> void:
 			DebugAPI.set_age(age_name, pid)
 			return "Set age to %s" % GameManager.get_age_name(),
 		"Jump to age: set-age <age_name> [player_id]",
+	)
+
+
+func _register_unit_control_commands() -> void:
+	_registry.register_command(
+		"move",
+		[
+			{"name": "unit_id", "type": "string", "required": true},
+			{"name": "x", "type": "float", "required": true},
+			{"name": "y", "type": "float", "required": true},
+		],
+		func(args: Array) -> String: return DebugAPI.move_unit(args[0], args[1], args[2]),
+		"Move unit: move <unit_id> <x> <y>",
+	)
+
+	_registry.register_command(
+		"attack",
+		[
+			{"name": "unit_id", "type": "string", "required": true},
+			{"name": "target_id", "type": "string", "required": true},
+		],
+		func(args: Array) -> String: return DebugAPI.attack_unit(args[0], args[1]),
+		"Attack target: attack <unit_id> <target_id>",
+	)
+
+	_registry.register_command(
+		"gather",
+		[
+			{"name": "unit_id", "type": "string", "required": true},
+			{"name": "resource_id", "type": "string", "required": true},
+		],
+		func(args: Array) -> String: return DebugAPI.gather_unit(args[0], args[1]),
+		"Gather resource: gather <unit_id> <resource_id>",
+	)
+
+	_registry.register_command(
+		"set-hp",
+		[
+			{"name": "unit_id", "type": "string", "required": true},
+			{"name": "hp", "type": "int", "required": true},
+		],
+		func(args: Array) -> String: return DebugAPI.set_unit_hp(args[0], args[1]),
+		"Set unit HP: set-hp <unit_id> <hp>",
+	)
+
+	_registry.register_command(
+		"kill",
+		[
+			{"name": "unit_id", "type": "string", "required": true},
+		],
+		func(args: Array) -> String: return DebugAPI.kill_unit(args[0]),
+		"Kill unit instantly: kill <unit_id>",
+	)
+
+	_registry.register_command(
+		"teleport",
+		[
+			{"name": "unit_id", "type": "string", "required": true},
+			{"name": "x", "type": "float", "required": true},
+			{"name": "y", "type": "float", "required": true},
+		],
+		func(args: Array) -> String: return DebugAPI.teleport_unit(args[0], args[1], args[2]),
+		"Teleport unit: teleport <unit_id> <x> <y>",
 	)
 
 
