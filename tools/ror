@@ -994,6 +994,12 @@ print(f'{anims}|{frames}')
     info "Sprite config: data/units/sprites/${name}.json"
 }
 
+# ==================== mh-install ====================
+cmd_mh_install() {
+    cd "$PROJECT_ROOT"
+    python3 "$SCRIPT_DIR/mh_asset_install.py" "$@"
+}
+
 # ==================== animate ====================
 cmd_animate() {
     cd "$PROJECT_ROOT"
@@ -2291,6 +2297,12 @@ ${BOLD}COMMANDS${RESET}
                         ror create-unit --name archer --skip-model   — skip Blender model step
                         ror create-unit --name archer --skip-render  — skip sprite rendering
                         ror create-unit --name archer --skip-config  — skip game config gen
+  mh-install [packs...] [opts]
+                      Install MakeHuman community asset packs for MPFB2
+                        ror mh-install suits02 shirts03 equipment01
+                        ror mh-install --list              — list available packs
+                        ror mh-install --status            — show installed packs
+                        ror mh-install suits02 --force     — reinstall a pack
   asset-pipeline <subject> [opts]  (alias: pipeline)
                       Run full 3D-to-2D asset pipeline (render → manifest → pack → validate)
                         ror asset-pipeline archer --type unit
@@ -2397,6 +2409,7 @@ case "${1:-help}" in
     pack-sprites)       shift; cmd_pack_sprites "$@" ;;
     asset-pipeline|pipeline) shift; cmd_asset_pipeline "$@" ;;
     create-unit)        shift; cmd_create_unit "$@" ;;
+    mh-install)         shift; cmd_mh_install "$@" ;;
     animate)            shift; cmd_animate "$@" ;;
     data-check)         shift; cmd_data_check "$@" ;;
     split-sprites)      shift; cmd_split_sprites "$@" ;;
