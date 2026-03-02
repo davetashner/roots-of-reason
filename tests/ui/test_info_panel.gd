@@ -238,3 +238,48 @@ func test_garrison_count_updates_in_realtime() -> void:
 	# Trigger update by calling show_building again (simulates _update path)
 	panel.show_building(b)
 	assert_str(panel._stats_label.text).contains("Garrisoned: 1/15")
+
+
+# -- Building thumbnail --
+
+
+func test_portrait_texture_created_in_build_ui() -> void:
+	var panel := _create_panel()
+	assert_object(panel._portrait_texture).is_not_null()
+
+
+func test_portrait_texture_hidden_by_default() -> void:
+	var panel := _create_panel()
+	assert_bool(panel._portrait_texture.visible).is_false()
+
+
+func test_show_building_clears_thumbnail_for_missing_sprite() -> void:
+	var panel := _create_panel()
+	var b := _create_building(550, 550)
+	b.building_name = "nonexistent_building_xyz"
+	panel.show_building(b)
+	assert_bool(panel._portrait_texture.visible).is_false()
+
+
+func test_show_unit_clears_thumbnail() -> void:
+	var panel := _create_panel()
+	# First show building (may set thumbnail)
+	var b := _create_building(550, 550)
+	panel.show_building(b)
+	# Then show unit — thumbnail should be cleared
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "villager"
+	unit.owner_id = 0
+	unit.hp = 25
+	unit.max_hp = 25
+	add_child(unit)
+	auto_free(unit)
+	panel.show_unit(unit)
+	assert_bool(panel._portrait_texture.visible).is_false()
+
+
+func test_clear_thumbnail_sets_texture_null() -> void:
+	var panel := _create_panel()
+	panel._clear_thumbnail()
+	assert_object(panel._portrait_texture.texture).is_null()

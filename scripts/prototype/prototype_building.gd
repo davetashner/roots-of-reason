@@ -58,6 +58,7 @@ var _build_seq_texture: Texture2D = null
 var _build_seq_frame_count: int = 0
 var _build_seq_frame_width: int = 0
 var _finished_texture: Texture2D = null
+var _selection_overlay: Node2D = null
 
 
 func _ready() -> void:
@@ -66,6 +67,7 @@ func _ready() -> void:
 	_load_combat_config()
 	_load_destruction_config()
 	_try_load_sprite()
+	_create_selection_overlay()
 
 
 func _load_building_stats() -> void:
@@ -198,6 +200,45 @@ func _footprint_screen_center() -> Vector2:
 	return IsoUtils.grid_to_screen(Vector2(cx, cy))
 
 
+func _create_selection_overlay() -> void:
+	_selection_overlay = Node2D.new()
+	_selection_overlay.z_index = 1
+	_selection_overlay.visible = false
+	add_child(_selection_overlay)
+	_selection_overlay.draw.connect(_on_selection_overlay_draw)
+
+
+func _on_selection_overlay_draw() -> void:
+	if not selected:
+		return
+	var hw := IsoUtils.HALF_W
+	var hh := IsoUtils.HALF_H
+	var highlight_fill := Color(0.3, 1.0, 0.3, 0.25)
+	var highlight_line := Color(1.0, 1.0, 0.3, 0.8)
+	# Draw filled highlight tiles for each footprint cell
+	for x in footprint.x:
+		for y in footprint.y:
+			var offset := IsoUtils.grid_to_screen(Vector2(x, y))
+			var points := PackedVector2Array(
+				[
+					offset + Vector2(0, -hh),
+					offset + Vector2(hw, 0),
+					offset + Vector2(0, hh),
+					offset + Vector2(-hw, 0),
+				]
+			)
+			_selection_overlay.draw_colored_polygon(points, highlight_fill)
+	# Draw bounding outline
+	var top := IsoUtils.grid_to_screen(Vector2(0, 0)) + Vector2(0, -hh)
+	var right := IsoUtils.grid_to_screen(Vector2(footprint.x - 1, 0)) + Vector2(hw, 0)
+	var bottom := IsoUtils.grid_to_screen(Vector2(footprint.x - 1, footprint.y - 1)) + Vector2(0, hh)
+	var left := IsoUtils.grid_to_screen(Vector2(0, footprint.y - 1)) + Vector2(-hw, 0)
+	_selection_overlay.draw_line(top, right, highlight_line, 2.0)
+	_selection_overlay.draw_line(right, bottom, highlight_line, 2.0)
+	_selection_overlay.draw_line(bottom, left, highlight_line, 2.0)
+	_selection_overlay.draw_line(left, top, highlight_line, 2.0)
+
+
 func take_damage(amount: int, _attacker: Node2D) -> void:
 	if _is_ruins:
 		return
@@ -300,11 +341,17 @@ func _complete_construction() -> void:
 
 func select() -> void:
 	selected = true
+	if _selection_overlay != null:
+		_selection_overlay.visible = true
+		_selection_overlay.queue_redraw()
 	queue_redraw()
 
 
 func deselect() -> void:
 	selected = false
+	if _selection_overlay != null:
+		_selection_overlay.visible = false
+		_selection_overlay.queue_redraw()
 	queue_redraw()
 
 
@@ -392,9 +439,7 @@ func _draw() -> void:
 				for y in footprint.y:
 					var offset := IsoUtils.grid_to_screen(Vector2(x, y))
 					_draw_crack_overlay(offset, damage_state)
-	# Selection highlight (drawn over sprite or procedural)
-	if selected:
-		_draw_selection_outline()
+	# Selection highlight is handled by _selection_overlay (renders above sprite)
 	# Progress bar during construction
 	if under_construction:
 		_draw_progress_bar()
@@ -479,21 +524,6 @@ func _draw_crack_overlay(offset: Vector2, state: String) -> void:
 	# Diagonal crack lines across the cell
 	draw_line(offset + Vector2(-hw * 0.3, -hh * 0.5), offset + Vector2(hw * 0.4, hh * 0.3), crack_color, 1.5)
 	draw_line(offset + Vector2(hw * 0.1, -hh * 0.4), offset + Vector2(-hw * 0.2, hh * 0.5), crack_color, 1.5)
-
-
-func _draw_selection_outline() -> void:
-	var hw := IsoUtils.HALF_W
-	var hh := IsoUtils.HALF_H
-	# Corners of the bounding iso region
-	var top := IsoUtils.grid_to_screen(Vector2(0, 0)) + Vector2(0, -hh)
-	var right := IsoUtils.grid_to_screen(Vector2(footprint.x - 1, 0)) + Vector2(hw, 0)
-	var bottom := IsoUtils.grid_to_screen(Vector2(footprint.x - 1, footprint.y - 1)) + Vector2(0, hh)
-	var left := IsoUtils.grid_to_screen(Vector2(0, footprint.y - 1)) + Vector2(-hw, 0)
-	var highlight := Color(1.0, 1.0, 0.3, 0.8)
-	draw_line(top, right, highlight, 2.0)
-	draw_line(right, bottom, highlight, 2.0)
-	draw_line(bottom, left, highlight, 2.0)
-	draw_line(left, top, highlight, 2.0)
 
 
 ## -- Garrison System --

@@ -309,3 +309,34 @@ func test_backward_compat_load_no_ruins_fields() -> void:
 	b.load_state(old_state)
 	assert_bool(b._is_ruins).is_false()
 	assert_float(b._ruins_timer).is_equal_approx(0.0, 0.001)
+
+
+# -- Selection overlay --
+
+
+func test_selection_overlay_created_on_ready() -> void:
+	var b := _create_building(false)
+	assert_object(b._selection_overlay).is_not_null()
+
+
+func test_selection_overlay_hidden_by_default() -> void:
+	var b := _create_building(false)
+	assert_bool(b._selection_overlay.visible).is_false()
+
+
+func test_select_shows_overlay() -> void:
+	var b := _create_building(false)
+	b.select()
+	assert_bool(b._selection_overlay.visible).is_true()
+
+
+func test_deselect_hides_overlay() -> void:
+	var b := _create_building(false)
+	b.select()
+	b.deselect()
+	assert_bool(b._selection_overlay.visible).is_false()
+
+
+func test_selection_overlay_z_index_above_sprite() -> void:
+	var b := _create_building(false)
+	assert_int(b._selection_overlay.z_index).is_greater(0)
