@@ -110,9 +110,11 @@ func on_building_construction_complete(building: Node2D) -> void:
 	if _root._game_stats_tracker != null and "owner_id" in building and "building_name" in building:
 		_root._game_stats_tracker.record_building_built(building.owner_id, building.building_name)
 	_bootstrapper.try_attach_production_queue(building)
+	_apply_building_effects(building)
 
 
 func on_building_destroyed(building: Node2D) -> void:
+	_remove_building_effects(building)
 	_root._entity_registry.unregister(building)
 	if _root._population_manager != null and "owner_id" in building:
 		_root._population_manager.unregister_building(building, building.owner_id)
@@ -145,6 +147,32 @@ func on_building_destroyed(building: Node2D) -> void:
 		if _root._ai_economy != null:
 			_root._ai_economy.on_building_destroyed(building)
 	_root._update_fog_of_war()
+
+
+func _apply_building_effects(building: Node2D) -> void:
+	## Applies data-driven building effects (e.g. research_speed_bonus) on completion.
+	if not ("building_name" in building and "owner_id" in building):
+		return
+	var stats: Dictionary = DataLoader.get_building_stats(building.building_name)
+	var effects: Dictionary = stats.get("effects", {})
+	if effects.is_empty():
+		return
+	var bonus: float = float(effects.get("research_speed_bonus", 0.0))
+	if bonus > 0.0 and _root._tech_manager != null:
+		_root._tech_manager.add_building_research_bonus(building.owner_id, bonus)
+
+
+func _remove_building_effects(building: Node2D) -> void:
+	## Removes data-driven building effects when a building is destroyed.
+	if not ("building_name" in building and "owner_id" in building):
+		return
+	var stats: Dictionary = DataLoader.get_building_stats(building.building_name)
+	var effects: Dictionary = stats.get("effects", {})
+	if effects.is_empty():
+		return
+	var bonus: float = float(effects.get("research_speed_bonus", 0.0))
+	if bonus > 0.0 and _root._tech_manager != null:
+		_root._tech_manager.remove_building_research_bonus(building.owner_id, bonus)
 
 
 func on_unit_produced(unit_type: String, building: Node2D) -> void:

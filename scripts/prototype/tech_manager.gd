@@ -64,6 +64,9 @@ var _kb_last_regression_time: Dictionary = {}
 ## {player_id: float} — bonus from historical events (plague aftermath, renaissance)
 var _event_research_bonus: Dictionary = {}
 
+## {player_id: float} — cumulative bonus from completed buildings (e.g. Telegraph)
+var _building_research_bonus: Dictionary = {}
+
 
 func _ready() -> void:
 	_load_config()
@@ -342,6 +345,7 @@ func save_state() -> Dictionary:
 		"max_queue_size": _max_queue_size,
 		"regressed_techs": _regressed_techs.duplicate(true),
 		"kb_last_regression_time": _kb_last_regression_time.duplicate(),
+		"building_research_bonus": _building_research_bonus.duplicate(),
 	}
 
 
@@ -368,6 +372,11 @@ func load_state(data: Dictionary) -> void:
 	var raw_kb_time: Dictionary = data.get("kb_last_regression_time", {})
 	for key: Variant in raw_kb_time:
 		_kb_last_regression_time[int(key)] = float(raw_kb_time[key])
+	# Deserialize building research bonus
+	_building_research_bonus = {}
+	var raw_brb: Dictionary = data.get("building_research_bonus", {})
+	for key: Variant in raw_brb:
+		_building_research_bonus[int(key)] = float(raw_brb[key])
 
 
 func setup_war_bonus(war_bonus_node: WarResearchBonus) -> void:
@@ -478,6 +487,7 @@ func _get_effective_speed(player_id: int) -> float:
 	if _war_bonus_node != null:
 		war_bonus = _war_bonus_node.get_war_bonus(player_id)
 	var tech_bonuses: float = _event_research_bonus.get(player_id, 0.0)
+	tech_bonuses += _building_research_bonus.get(player_id, 0.0)
 	return ResearchSpeed.get_effective_speed(1.0, GameManager.current_age, _research_config, war_bonus, tech_bonuses)
 
 
@@ -487,3 +497,23 @@ func set_event_research_bonus(player_id: int, bonus: float) -> void:
 
 func clear_event_research_bonus(player_id: int) -> void:
 	_event_research_bonus.erase(player_id)
+
+
+func add_building_research_bonus(player_id: int, bonus: float) -> void:
+	## Adds a research speed bonus from a completed building (e.g. Telegraph +15%).
+	_building_research_bonus[player_id] = _building_research_bonus.get(player_id, 0.0) + bonus
+
+
+func remove_building_research_bonus(player_id: int, bonus: float) -> void:
+	## Removes a building research speed bonus (e.g. when building is destroyed).
+	var current: float = _building_research_bonus.get(player_id, 0.0)
+	current = maxf(0.0, current - bonus)
+	if current <= 0.0:
+		_building_research_bonus.erase(player_id)
+	else:
+		_building_research_bonus[player_id] = current
+
+
+func get_building_research_bonus(player_id: int) -> float:
+	## Returns the total building-based research bonus for the player.
+	return _building_research_bonus.get(player_id, 0.0)
