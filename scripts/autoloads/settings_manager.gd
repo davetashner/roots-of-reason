@@ -123,8 +123,8 @@ func set_tutorial_completed(value: bool) -> void:
 	_save()
 
 
-func set_hotkey_binding(action: String, scancode: int) -> void:
-	_hotkey_bindings[action] = scancode
+func set_hotkey_binding(action: String, value: Variant) -> void:
+	_hotkey_bindings[action] = value
 	_save()
 
 
@@ -202,7 +202,14 @@ func _from_dict(data: Dictionary) -> void:
 	if hotkeys is Dictionary:
 		_hotkey_bindings = {}
 		for key: String in hotkeys.keys():
-			_hotkey_bindings[key] = int(hotkeys[key])
+			var val: Variant = hotkeys[key]
+			if val is Dictionary:
+				_hotkey_bindings[key] = {
+					"keycode": int(val.get("keycode", 0)),
+					"modifiers": int(val.get("modifiers", 0)),
+				}
+			else:
+				_hotkey_bindings[key] = int(val)
 	else:
 		_hotkey_bindings = {}
 
