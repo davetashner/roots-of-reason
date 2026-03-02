@@ -68,26 +68,26 @@ func test_registry_has_set_age_command() -> void:
 
 
 func test_execute_help_returns_commands_list() -> void:
-	var result := _console.execute_command("help")
+	var result: String = _console.execute_command("help")
 	assert_str(result).contains("Available commands")
 	assert_str(result).contains("spawn")
 	assert_str(result).contains("give")
 
 
 func test_execute_unknown_command_returns_error() -> void:
-	var result := _console.execute_command("nonexistent_cmd")
+	var result: String = _console.execute_command("nonexistent_cmd")
 	assert_str(result).contains("Unknown command")
 
 
 func test_execute_give_through_console() -> void:
 	ResourceManager.init_player(99, {})
-	var result := _console.execute_command("give food 500 99")
+	var result: String = _console.execute_command("give food 500 99")
 	assert_str(result).contains("Gave")
 	assert_int(ResourceManager.get_amount(99, ResourceManager.ResourceType.FOOD)).is_equal(500)
 
 
 func test_execute_advance_age_through_console() -> void:
 	GameManager.current_age = 0
-	var result := _console.execute_command("advance-age")
+	var result: String = _console.execute_command("advance-age")
 	assert_str(result).contains("Advanced")
 	assert_int(GameManager.current_age).is_equal(1)

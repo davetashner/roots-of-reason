@@ -5,7 +5,7 @@ extends CanvasLayer
 
 var _registry: DebugCommandRegistry = null
 var _panel: PanelContainer = null
-var _input: LineEdit = null
+var _input_field: LineEdit = null
 var _output: RichTextLabel = null
 var _visible: bool = false
 var _history: Array[String] = []
@@ -38,11 +38,11 @@ func _toggle_console() -> void:
 	_visible = not _visible
 	_panel.visible = _visible
 	if _visible:
-		_input.grab_focus()
-		_input.clear()
+		_input_field.grab_focus()
+		_input_field.clear()
 		_history_index = -1
 	else:
-		_input.release_focus()
+		_input_field.release_focus()
 
 
 func get_registry() -> DebugCommandRegistry:
@@ -248,10 +248,10 @@ func _build_ui() -> void:
 	_output.add_theme_color_override("default_color", Color(0.8, 0.9, 0.8))
 	vbox.add_child(_output)
 
-	_input = LineEdit.new()
-	_input.name = "Input"
-	_input.placeholder_text = "Type a command... (Tab to complete, Up/Down for history)"
-	_input.caret_blink = true
+	_input_field = LineEdit.new()
+	_input_field.name = "Input"
+	_input_field.placeholder_text = "Type a command... (Tab to complete, Up/Down for history)"
+	_input_field.caret_blink = true
 	var input_style := StyleBoxFlat.new()
 	input_style.bg_color = Color(0.1, 0.1, 0.15, 0.9)
 	input_style.border_color = Color(0.4, 0.4, 0.6)
@@ -259,12 +259,12 @@ func _build_ui() -> void:
 	input_style.border_width_top = 1
 	input_style.content_margin_left = 6
 	input_style.content_margin_right = 6
-	_input.add_theme_stylebox_override("normal", input_style)
-	_input.add_theme_color_override("font_color", Color(0.9, 1.0, 0.9))
-	vbox.add_child(_input)
+	_input_field.add_theme_stylebox_override("normal", input_style)
+	_input_field.add_theme_color_override("font_color", Color(0.9, 1.0, 0.9))
+	vbox.add_child(_input_field)
 
-	_input.text_submitted.connect(_on_command_submitted)
-	_input.gui_input.connect(_on_input_gui_event)
+	_input_field.text_submitted.connect(_on_command_submitted)
+	_input_field.gui_input.connect(_on_input_gui_event)
 
 	add_child(_panel)
 	_append_output("[color=cyan]Debug Console ready. Type 'help' for commands.[/color]")
@@ -279,7 +279,7 @@ func _on_command_submitted(text: String) -> void:
 	var result := _registry.execute(text)
 	if not result.is_empty():
 		_append_output(result)
-	_input.clear()
+	_input_field.clear()
 	_completion_candidates.clear()
 	_completion_index = -1
 
@@ -312,18 +312,18 @@ func _navigate_history(direction: int) -> void:
 	else:
 		_history_index += direction
 	_history_index = clampi(_history_index, 0, _history.size() - 1)
-	_input.text = _history[_history_index]
-	_input.caret_column = _input.text.length()
+	_input_field.text = _history[_history_index]
+	_input_field.caret_column = _input_field.text.length()
 
 
 func _tab_complete() -> void:
-	var text := _input.text
+	var text := _input_field.text
 	if text.is_empty():
 		return
 	var completions := _registry.get_completions(text)
 	if completions.size() == 1:
-		_input.text = completions[0] + " "
-		_input.caret_column = _input.text.length()
+		_input_field.text = completions[0] + " "
+		_input_field.caret_column = _input_field.text.length()
 	elif completions.size() > 1:
 		_append_output("[color=yellow]%s[/color]" % " | ".join(completions))
 
