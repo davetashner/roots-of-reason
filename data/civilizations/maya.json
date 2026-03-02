@@ -2,8 +2,8 @@
   "name": "Maya",
   "description": "Masters of the calendar whose knowledge of the cosmos accelerates their advancement.",
   "bonuses": {
-    "age_advancement_cost": 0.85,
-    "knowledge_generation": 1.1
+    "knowledge_generation": 1.15,
+    "age_advancement_cost": 0.85
   },
   "unique_building": {
     "name": "Observatory",
@@ -11,11 +11,10 @@
     "map_reveal_radius": 15
   },
   "unique_unit": {
-    "name": "Atlatl",
+    "name": "Atlatlist",
     "base_unit": "archer",
-    "range_bonus": 1,
-    "attack_penalty": -1
+    "bonus_vs_infantry": 2.0
   },
-  "unique_techs": ["astronomical_calendar", "sacred_cenote"],
+  "unique_techs": ["long_count_calendar", "star_chart"],
   "starting_bonuses": {}
 }

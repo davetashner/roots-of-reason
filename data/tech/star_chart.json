@@ -1,0 +1,8 @@
+{
+  "name": "Star Chart",
+  "age": "iron",
+  "cost": {"gold": 150, "knowledge": 150},
+  "effect": {"unit_los_bonus": 0.25},
+  "exclusive_to": "maya",
+  "description": "All units gain 25% increased line of sight"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Papermaking",
+  "age": "iron",
+  "cost": {
+    "gold": 100,
+    "knowledge": 125
+  },
+  "effect": {
+    "research_cost_multiplier": 0.85
+  },
+  "exclusive_to": "china",
+  "description": "Reduces research costs by 15%"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Gunpowder Mastery",
+  "age": "medieval",
+  "cost": {
+    "gold": 200,
+    "knowledge": 200
+  },
+  "effect": {
+    "gunpowder_age_requirement": -1
+  },
+  "exclusive_to": "china",
+  "description": "Gunpowder technologies become available one age earlier"
+}
