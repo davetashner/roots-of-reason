@@ -1,0 +1,8 @@
+{
+  "name": "Longship Navigation",
+  "age": "bronze",
+  "cost": {"wood": 200, "gold": 100},
+  "effect": {"naval_speed_bonus": 0.40},
+  "exclusive_to": "vikings",
+  "description": "Naval units gain 40% additional speed"
+}

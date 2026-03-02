@@ -1,0 +1,8 @@
+{
+  "name": "Berserkergang",
+  "age": "iron",
+  "cost": {"food": 200, "gold": 150},
+  "effect": {"unlock_rage_ability": true},
+  "exclusive_to": "vikings",
+  "description": "Berserkers gain Rage: +50% attack when below 30% HP"
+}
