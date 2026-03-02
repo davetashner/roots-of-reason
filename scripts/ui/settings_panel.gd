@@ -2,6 +2,8 @@ extends VBoxContainer
 ## Reusable settings panel with audio sliders and display toggles.
 ## Used by both main menu and pause menu.
 
+const HotkeyRemappingScript := preload("res://scripts/ui/hotkey_remapping.gd")
+
 
 func build(back_callback: Callable) -> void:
 	add_theme_constant_override("separation", 12)
@@ -41,6 +43,16 @@ func build(back_callback: Callable) -> void:
 	# Fullscreen checkbox
 	_add_check_row("FullscreenCheck", "Fullscreen", SettingsManager.is_fullscreen(), _on_fullscreen_toggled)
 	_add_check_row("VsyncCheck", "VSync", SettingsManager.is_vsync(), _on_vsync_toggled)
+
+	# Hotkey section
+	var hotkey_spacer := Control.new()
+	hotkey_spacer.custom_minimum_size = Vector2(0, 8)
+	add_child(hotkey_spacer)
+
+	var hotkey_section := VBoxContainer.new()
+	hotkey_section.set_script(HotkeyRemappingScript)
+	add_child(hotkey_section)
+	hotkey_section.build()
 
 	# Back button
 	var btn_spacer := Control.new()
