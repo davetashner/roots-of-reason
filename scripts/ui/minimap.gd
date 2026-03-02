@@ -23,7 +23,7 @@ const TERRAIN_COLORS: Dictionary = {
 	"deep_water": Color("2B5F8A"),
 }
 const DEFAULT_TERRAIN_COLOR := Color(0.2, 0.2, 0.2)
-const REFRESH_INTERVAL: float = 0.2
+const REFRESH_INTERVAL: float = 0.1
 
 var _map_node: Node = null
 var _camera: Camera2D = null
