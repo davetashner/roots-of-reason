@@ -1,0 +1,41 @@
+{
+  "variants": [
+    "infantry"
+  ],
+  "base_path": "res://assets/sprites/units",
+  "scale": 0.5,
+  "offset_y": -16.0,
+  "frame_duration": 0.3,
+  "directions": [
+    "s",
+    "se",
+    "e",
+    "ne",
+    "n",
+    "nw",
+    "w",
+    "sw"
+  ],
+  "animation_map": {
+    "infantry": {
+      "attack": [
+        "attack"
+      ],
+      "death": [
+        "death"
+      ],
+      "idle": [
+        "idle"
+      ],
+      "walk": [
+        "walk"
+      ],
+      "gather": [
+        "idle"
+      ],
+      "build": [
+        "idle"
+      ]
+    }
+  }
+}
