@@ -1,0 +1,33 @@
+{
+  "name": "Transformer Lab",
+  "hp": 2000,
+  "footprint": [
+    3,
+    3
+  ],
+  "build_time": 120,
+  "build_cost": {
+    "stone": 500,
+    "gold": 500,
+    "knowledge": 300
+  },
+  "population_bonus": 0,
+  "garrison_capacity": 0,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 6,
+  "placement_constraint": "",
+  "required_techs": [
+    "transformer_architecture"
+  ],
+  "required_buildings": [
+    "gpu_foundry"
+  ],
+  "defense": 5,
+  "los": 8,
+  "effects": {
+    "research_speed_bonus": 2.0
+  },
+  "singularity_chain": true
+}

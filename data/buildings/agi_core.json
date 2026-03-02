@@ -22,7 +22,7 @@
     "agi_core"
   ],
   "required_buildings": [
-    "gpu_foundry"
+    "transformer_lab"
   ],
   "defense": 0,
   "los": 4
