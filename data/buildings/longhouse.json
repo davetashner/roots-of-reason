@@ -1,0 +1,17 @@
+{
+  "name": "Longhouse",
+  "hp": 600,
+  "footprint": [2, 2],
+  "build_time": 15,
+  "build_cost": {"wood": 30},
+  "population_bonus": 12,
+  "garrison_capacity": 5,
+  "garrison_heal_rate": 0.5,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [],
+  "age_required": 0,
+  "placement_constraint": "",
+  "defense": 0,
+  "los": 4
+}
