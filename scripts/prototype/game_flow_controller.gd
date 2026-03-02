@@ -198,6 +198,12 @@ func on_unit_produced(unit_type: String, building: Node2D) -> void:
 	var spawn_grid: Vector2i = Vector2i.ZERO
 	if "grid_pos" in building:
 		spawn_grid = building.grid_pos + offset
+		# Ensure spawn point is outside the building footprint
+		if "footprint" in building:
+			var fp: Vector2i = building.footprint
+			if offset.x < fp.x and offset.y < fp.y:
+				# Default offset lands inside the footprint — place just outside
+				spawn_grid = building.grid_pos + Vector2i(fp.x, 0)
 	var unit_stats: Dictionary = DataLoader.get_unit_stats(resolved_type)
 	if unit_stats.get("movement_type", "") == "water" and _root._map_node != null:
 		var naval_spawn: Vector2i = _bootstrapper.find_naval_spawn_point(building)
