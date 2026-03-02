@@ -93,14 +93,32 @@ func test_egypt_has_building_hp() -> void:
 	assert_float(float(bonuses.get("building_hp", 0.0))).is_equal_approx(1.10, 0.001)
 
 
+func test_vikings_loads() -> void:
+	var data: Dictionary = DataLoader.get_civ_data("vikings")
+	assert_dict(data).is_not_empty()
+	assert_str(str(data.get("name", ""))).is_equal("Vikings")
+
+
+func test_vikings_has_naval_speed() -> void:
+	var data: Dictionary = DataLoader.get_civ_data("vikings")
+	var bonuses: Dictionary = data.get("bonuses", {})
+	assert_float(float(bonuses.get("naval_speed", 0.0))).is_equal_approx(1.15, 0.001)
+
+
+func test_vikings_has_infantry_attack() -> void:
+	var data: Dictionary = DataLoader.get_civ_data("vikings")
+	var bonuses: Dictionary = data.get("bonuses", {})
+	assert_float(float(bonuses.get("infantry_attack", 0.0))).is_equal_approx(1.10, 0.001)
+
+
 func test_all_civs_have_starting_bonuses() -> void:
-	for civ_id in ["mesopotamia", "rome", "polynesia", "china", "maya", "egypt"]:
+	for civ_id in ["mesopotamia", "rome", "polynesia", "china", "maya", "egypt", "vikings"]:
 		var data: Dictionary = DataLoader.get_civ_data(civ_id)
 		assert_bool(data.has("starting_bonuses")).is_true()
 
 
 func test_all_civs_have_required_fields() -> void:
-	for civ_id in ["mesopotamia", "rome", "polynesia", "china", "maya", "egypt"]:
+	for civ_id in ["mesopotamia", "rome", "polynesia", "china", "maya", "egypt", "vikings"]:
 		var data: Dictionary = DataLoader.get_civ_data(civ_id)
 		assert_bool(data.has("name")).is_true()
 		assert_bool(data.has("description")).is_true()

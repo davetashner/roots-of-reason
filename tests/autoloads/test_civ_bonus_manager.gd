@@ -403,3 +403,41 @@ func test_egypt_cavalry_resolves_to_war_chariot() -> void:
 	CivBonusManager.apply_civ_bonuses(0, "egypt")
 	var resolved := CivBonusManager.get_resolved_unit_id(0, "cavalry")
 	assert_str(resolved).is_equal("war_chariot")
+
+
+# --- Vikings ---
+
+
+func test_vikings_loads() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "vikings")
+	assert_str(CivBonusManager.get_active_civ(0)).is_equal("vikings")
+
+
+func test_vikings_naval_speed() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "vikings")
+	assert_float(CivBonusManager.get_bonus_value(0, "naval_speed")).is_equal_approx(1.15, 0.001)
+
+
+func test_vikings_infantry_attack() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "vikings")
+	assert_float(CivBonusManager.get_bonus_value(0, "infantry_attack")).is_equal_approx(1.10, 0.001)
+
+
+func test_vikings_house_resolves_to_longhouse() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "vikings")
+	var resolved := CivBonusManager.get_resolved_building_id(0, "house")
+	assert_str(resolved).is_equal("longhouse")
+
+
+func test_vikings_infantry_resolves_to_berserker() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "vikings")
+	var resolved := CivBonusManager.get_resolved_unit_id(0, "infantry")
+	assert_str(resolved).is_equal("berserker")
+
+
+func test_vikings_naval_speed_applied_to_war_galley() -> void:
+	CivBonusManager.apply_civ_bonuses(0, "vikings")
+	var stats := UnitStats.new("war_galley", {"speed": 1.8})
+	CivBonusManager.apply_bonus_to_unit(stats, "war_galley", 0)
+	# 15% speed bonus: 1.8 * 1.15 = 2.07
+	assert_float(stats.get_stat("speed")).is_equal_approx(2.07, 0.01)
