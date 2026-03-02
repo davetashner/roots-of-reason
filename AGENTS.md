@@ -83,12 +83,13 @@ Project structure and quality pipeline are documented in `CLAUDE.md`.
 
 **3D-to-2D Render Pipeline (how sprites are actually made):**
 This is the core production method, modeled after how Age of Empires was made.
-1. Model once in Blender (low-poly, stylized)
-2. Rig + animate once (one direction only)
-3. Render rig (`blender/render_rig.blend`): 8 cameras at 45° intervals, isometric angle, ortho projection
-4. Batch render script (`blender/batch_render.py`): renders all anims from all cameras headless
-5. Spritesheet packer (`tools/spritesheet_packer.py`): packs PNGs → spritesheets + Godot SpriteFrames
-6. One animation authored = 8 directions output. One model = all player colors via shader.
+1. Define unit in a blueprint JSON (`blender/blueprints/{name}.json`)
+2. Generate 3D model via `blender/create_unit.py` — loads MakeHuman body via MPFB2, attaches equipment from `blender/equipment/`, creates animations from `blender/animations/`
+3. Render isometric sprites via `blender/render_isometric.py` — 8 cameras at 45° intervals, ortho projection
+4. Generate manifest + pack sprites via `tools/asset_pipeline.py`
+5. Generate game configs via `tools/generate_unit_config.py`
+6. One-command pipeline: `./tools/ror create-unit --name <unit>`
+7. One animation authored = 8 directions output. One model = all player colors via shader.
 
 **Three production phases:**
 - Phase 1: Fully procedural (Python generators, zero manual art, geometric shapes)
@@ -107,14 +108,20 @@ This is the core production method, modeled after how Age of Empires was made.
 - Tiles: `{terrain}_{variant}_{index}.png`
 
 **Asset toolchain:**
+- `./tools/ror create-unit --name <unit>` — full end-to-end pipeline (model → render → config)
+- `blender/create_unit.py` — blueprint-driven Blender model creation (MakeHuman + equipment + animations)
+- `blender/blueprints/{name}.json` — unit blueprint (body, equipment, animations, stats template)
+- `blender/animations/` — reusable animation templates (common, ranged, melee)
+- `blender/equipment/` — reusable equipment templates (bow, quiver, sword, shield, spear, tabard)
+- `blender/render_isometric.py` — headless 8-direction isometric renderer
+- `tools/asset_pipeline.py` — orchestrator (render → manifest → pack → validate)
+- `tools/generate_unit_config.py` — generate game-side JSON configs from blueprint
+- `tools/validate_blueprint.py` — validate blueprint JSON against schema
+- `tools/spritesheet_packer.py` — pack PNGs → spritesheets + Godot resources
+- `tools/validate_sprites.py` — CI validation (dimensions, frame counts, naming, masks)
 - `tools/generate_tiles.py` — procedural Phase 1 tileset
 - `tools/generate_unit_sprites.py` — procedural Phase 1 unit sprites
 - `tools/generate_building_sprites.py` — procedural Phase 1 building sprites
-- `tools/spritesheet_packer.py` — pack PNGs → spritesheets + Godot resources
-- `tools/validate_sprites.py` — CI validation (dimensions, frame counts, naming, masks)
-- `tools/asset_pipeline.py` — orchestrator (runs full pipeline in one command)
-- `blender/render_rig.blend` — 8-camera isometric render template
-- `blender/batch_render.py` — headless Blender batch renderer
 - `tools/asset_config.json` — single source of truth for all asset definitions
 
 **Color palettes:**
