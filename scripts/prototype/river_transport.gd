@@ -310,6 +310,9 @@ func _release_barge(barge: Node2D) -> void:
 		_target_detector.unregister_entity(barge)
 	barge.set_process(false)
 	barge.visible = false
+	barge.hp = 0
+	if barge.is_inside_tree():
+		barge.get_parent().remove_child(barge)
 	barge.carried_resources.clear()
 	barge.total_carried = 0
 	barge.river_path.clear()

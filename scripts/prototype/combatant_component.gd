@@ -197,9 +197,11 @@ func _scan_for_targets() -> Node2D:
 	for child in root.get_children():
 		if child == _unit or not (child is Node2D):
 			continue
+		if "hp" not in child:
+			continue
 		if not CombatResolver.is_hostile(_unit, child):
 			continue
-		if "hp" in child and child.hp <= 0:
+		if child.hp <= 0:
 			continue
 		if _unit.position.distance_to(child.global_position) > scan_radius:
 			continue
