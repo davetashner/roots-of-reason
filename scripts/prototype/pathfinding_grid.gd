@@ -58,8 +58,14 @@ func find_path(from: Vector2i, to: Vector2i) -> Array[Vector2i]:
 	# Clamp to grid bounds
 	from = _clamp_to_grid(from)
 	to = _clamp_to_grid(to)
-	if _astar.is_point_solid(from) or _astar.is_point_solid(to):
+	if _astar.is_point_solid(to):
 		return []
+	# If origin is solid (e.g. unit spawned inside a building), find the nearest
+	# passable neighbor so the unit can path out.
+	if _astar.is_point_solid(from):
+		from = _nearest_passable(from)
+		if from == Vector2i(-1, -1):
+			return []
 	var packed: PackedVector2Array = _astar.get_id_path(from, to)
 	var result: Array[Vector2i] = []
 	for point in packed:
@@ -140,3 +146,16 @@ func _clamp_to_grid(pos: Vector2i) -> Vector2i:
 
 func _is_valid_cell(pos: Vector2i) -> bool:
 	return pos.x >= 0 and pos.x < _map_size and pos.y >= 0 and pos.y < _map_size
+
+
+func _nearest_passable(pos: Vector2i) -> Vector2i:
+	## Search outward for the nearest non-solid cell (radius up to 4).
+	for radius in range(1, 5):
+		for dx in range(-radius, radius + 1):
+			for dy in range(-radius, radius + 1):
+				if abs(dx) != radius and abs(dy) != radius:
+					continue
+				var neighbor := pos + Vector2i(dx, dy)
+				if _is_valid_cell(neighbor) and not _astar.is_point_solid(neighbor):
+					return neighbor
+	return Vector2i(-1, -1)

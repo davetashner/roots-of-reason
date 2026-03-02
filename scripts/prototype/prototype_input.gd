@@ -392,18 +392,18 @@ func _move_selected(world_pos: Vector2) -> void:
 		unit_positions.append((unit as Node2D).global_position)
 	var assignments: Array[Vector2] = FormationManagerScript.assign_slots_sorted(unit_positions, slot_positions, facing)
 	# Move each unit to its assigned slot
-	if _pathfinder != null and _pathfinder.has_method("find_path_world"):
-		for i in selected.size():
-			var dest: Vector2 = assignments[i]
-			var unit_pos: Vector2 = (selected[i] as Node2D).global_position
+	for i in selected.size():
+		var dest: Vector2 = assignments[i]
+		var unit_pos: Vector2 = (selected[i] as Node2D).global_position
+		var moved := false
+		if _pathfinder != null and _pathfinder.has_method("find_path_world"):
 			var path: Array[Vector2] = _pathfinder.find_path_world(unit_pos, dest)
 			if path.size() > 0 and selected[i].has_method("follow_path"):
 				selected[i].follow_path(path)
-		return
-	# Fallback: direct movement
-	for i in selected.size():
-		if selected[i].has_method("move_to"):
-			selected[i].move_to(assignments[i])
+				moved = true
+		# Fallback: direct movement when pathfinding unavailable or returns empty
+		if not moved and selected[i].has_method("move_to"):
+			selected[i].move_to(dest)
 
 
 func _issue_context_command(world_pos: Vector2) -> void:
