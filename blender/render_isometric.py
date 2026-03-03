@@ -333,17 +333,17 @@ def build_farm_stage(stage):
     objects = []
 
     # Materials
-    earth_mat = _create_diffuse_material("FarmEarth", (0.45, 0.32, 0.18, 1.0))
-    furrow_mat = _create_diffuse_material("FarmFurrow", (0.35, 0.22, 0.12, 1.0))
-    wood_mat = _create_diffuse_material("FarmWood", (0.55, 0.40, 0.25, 1.0))
-    wall_mat = _create_diffuse_material("FarmWall", (0.60, 0.50, 0.35, 1.0))
-    roof_mat = _create_diffuse_material("FarmRoof", (0.70, 0.20, 0.15, 1.0))
+    earth_mat = _create_diffuse_material("FarmEarth", (0.35, 0.25, 0.12, 1.0))
+    furrow_mat = _create_diffuse_material("FarmFurrow", (0.28, 0.18, 0.08, 1.0))
+    wood_mat = _create_diffuse_material("FarmWood", (0.40, 0.28, 0.14, 1.0))
+    wall_mat = _create_diffuse_material("FarmWall", (0.50, 0.38, 0.22, 1.0))
+    roof_mat = _create_diffuse_material("FarmRoof", (0.75, 0.58, 0.20, 1.0))
     magenta_mat = _create_magenta_material()
-    wheat_mat = _create_diffuse_material("FarmWheat", (0.90, 0.80, 0.35, 1.0))
+    wheat_mat = _create_diffuse_material("FarmWheat", (0.85, 0.70, 0.25, 1.0))
     wheat_dark_mat = _create_diffuse_material(
-        "FarmWheatDark", (0.80, 0.68, 0.28, 1.0)
+        "FarmWheatDark", (0.70, 0.55, 0.18, 1.0)
     )
-    stalk_mat = _create_diffuse_material("FarmStalk", (0.55, 0.65, 0.25, 1.0))
+    stalk_mat = _create_diffuse_material("FarmStalk", (0.45, 0.55, 0.18, 1.0))
 
     # --- Ground plot (all stages) ---
     # Slightly raised earth slab
