@@ -297,6 +297,256 @@ def build_poc_house():
 
 
 # ---------------------------------------------------------------------------
+# Farm model (4 construction stages)
+# ---------------------------------------------------------------------------
+
+def _clear_model_objects():
+    """Remove all mesh/empty objects from the scene, keeping camera and lights."""
+    to_delete = []
+    for obj in bpy.data.objects:
+        if obj.type in {"MESH", "EMPTY"}:
+            to_delete.append(obj)
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in to_delete:
+        obj.select_set(True)
+    if to_delete:
+        bpy.ops.object.delete(use_global=False)
+    # Clean orphan meshes/materials
+    for block in bpy.data.meshes:
+        if block.users == 0:
+            bpy.data.meshes.remove(block)
+    for block in bpy.data.materials:
+        if block.users == 0:
+            bpy.data.materials.remove(block)
+
+
+def build_farm_stage(stage):
+    """Build farm model at a given construction stage (1-4).
+
+    Stage 1: Tilled soil with furrow rows
+    Stage 2: Soil + barn frame (wooden posts and ridge beam)
+    Stage 3: Soil + completed barn with walls, roof, magenta door
+    Stage 4: Complete farm — barn + grown wheat crops
+
+    Returns list of created objects.
+    """
+    objects = []
+
+    # Materials
+    earth_mat = _create_diffuse_material("FarmEarth", (0.45, 0.32, 0.18, 1.0))
+    furrow_mat = _create_diffuse_material("FarmFurrow", (0.35, 0.22, 0.12, 1.0))
+    wood_mat = _create_diffuse_material("FarmWood", (0.55, 0.40, 0.25, 1.0))
+    wall_mat = _create_diffuse_material("FarmWall", (0.60, 0.50, 0.35, 1.0))
+    roof_mat = _create_diffuse_material("FarmRoof", (0.70, 0.20, 0.15, 1.0))
+    magenta_mat = _create_magenta_material()
+    wheat_mat = _create_diffuse_material("FarmWheat", (0.90, 0.80, 0.35, 1.0))
+    wheat_dark_mat = _create_diffuse_material(
+        "FarmWheatDark", (0.80, 0.68, 0.28, 1.0)
+    )
+    stalk_mat = _create_diffuse_material("FarmStalk", (0.55, 0.65, 0.25, 1.0))
+
+    # --- Ground plot (all stages) ---
+    # Slightly raised earth slab
+    bpy.ops.mesh.primitive_cube_add(size=2, location=(0, 0, 0.05))
+    ground = bpy.context.active_object
+    ground.name = "FarmGround"
+    ground.scale = (1.8, 1.8, 0.08)
+    bpy.ops.object.transform_apply(scale=True)
+    ground.data.materials.append(earth_mat)
+    objects.append(ground)
+
+    # Raised border/edge around the plot
+    for i, (bx, by, sx, sy) in enumerate([
+        (1.8, 0, 0.1, 1.9),   # +X edge
+        (-1.8, 0, 0.1, 1.9),  # -X edge
+        (0, 1.8, 1.9, 0.1),   # +Y edge
+        (0, -1.8, 1.9, 0.1),  # -Y edge
+    ]):
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(bx, by, 0.12))
+        edge = bpy.context.active_object
+        edge.name = f"FarmEdge{i}"
+        edge.scale = (sx, sy, 0.06)
+        bpy.ops.object.transform_apply(scale=True)
+        edge.data.materials.append(furrow_mat)
+        objects.append(edge)
+
+    # Furrow rows across the field
+    num_furrows = 6
+    for i in range(num_furrows):
+        fy = -1.3 + (2.6 / (num_furrows - 1)) * i
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, fy, 0.11))
+        furrow = bpy.context.active_object
+        furrow.name = f"FarmFurrow{i}"
+        furrow.scale = (1.6, 0.05, 0.03)
+        bpy.ops.object.transform_apply(scale=True)
+        furrow.data.materials.append(furrow_mat)
+        objects.append(furrow)
+
+    if stage < 2:
+        print(f"  Built farm stage {stage}: tilled soil")
+        return objects
+
+    # --- Barn frame (stage 2+) ---
+    # Barn sits in the back-right corner (visible in isometric S view)
+    barn_x, barn_y = 1.0, 1.0
+
+    # Four corner posts — taller
+    for px, py in [(-0.5, -0.4), (0.5, -0.4), (-0.5, 0.4), (0.5, 0.4)]:
+        bpy.ops.mesh.primitive_cylinder_add(
+            radius=0.07, depth=1.2,
+            location=(barn_x + px, barn_y + py, 0.7)
+        )
+        post = bpy.context.active_object
+        post.name = "BarnPost"
+        post.data.materials.append(wood_mat)
+        objects.append(post)
+
+    # Ridge beam along the top
+    bpy.ops.mesh.primitive_cylinder_add(
+        radius=0.05, depth=1.0,
+        location=(barn_x, barn_y, 1.35)
+    )
+    ridge = bpy.context.active_object
+    ridge.name = "BarnRidge"
+    ridge.rotation_euler = (math.radians(90), 0, 0)
+    bpy.ops.object.transform_apply(rotation=True)
+    ridge.data.materials.append(wood_mat)
+    objects.append(ridge)
+
+    # Cross beams (rafters) — A-frame shape
+    for py_off in [-0.3, 0.0, 0.3]:
+        for angle, x_off in [(30, -0.3), (-30, 0.3)]:
+            bpy.ops.mesh.primitive_cylinder_add(
+                radius=0.035, depth=0.8,
+                location=(barn_x + x_off, barn_y + py_off, 1.1)
+            )
+            rafter = bpy.context.active_object
+            rafter.name = "BarnRafter"
+            rafter.rotation_euler = (0, math.radians(angle), 0)
+            bpy.ops.object.transform_apply(rotation=True)
+            rafter.data.materials.append(wood_mat)
+            objects.append(rafter)
+
+    if stage < 3:
+        print(f"  Built farm stage {stage}: barn frame")
+        return objects
+
+    # --- Barn walls + roof (stage 3+) ---
+    # Walls — box body (larger)
+    bpy.ops.mesh.primitive_cube_add(
+        size=1, location=(barn_x, barn_y, 0.6)
+    )
+    walls = bpy.context.active_object
+    walls.name = "BarnWalls"
+    walls.scale = (1.0, 0.8, 0.5)
+    bpy.ops.object.transform_apply(scale=True)
+    walls.data.materials.append(wall_mat)
+    objects.append(walls)
+
+    # Roof — 4-sided cone (pyramid), taller and more prominent
+    bpy.ops.mesh.primitive_cone_add(
+        vertices=4, radius1=0.9, depth=0.7,
+        location=(barn_x, barn_y, 1.25)
+    )
+    roof = bpy.context.active_object
+    roof.name = "BarnRoof"
+    roof.scale = (1.2, 1.0, 0.6)
+    roof.rotation_euler = (0, 0, math.radians(45))
+    bpy.ops.object.transform_apply(scale=True, rotation=True)
+    roof.data.materials.append(roof_mat)
+    objects.append(roof)
+
+    # Magenta door on front face of barn
+    bpy.ops.mesh.primitive_cube_add(
+        size=1, location=(barn_x, barn_y - 0.41, 0.4)
+    )
+    door = bpy.context.active_object
+    door.name = "BarnDoor"
+    door.scale = (0.22, 0.02, 0.35)
+    bpy.ops.object.transform_apply(scale=True)
+    door.data.materials.append(magenta_mat)
+    objects.append(door)
+
+    if stage < 4:
+        print(f"  Built farm stage {stage}: barn complete")
+        return objects
+
+    # --- Crops (stage 4) ---
+    # Wheat stalks along furrow rows (avoiding barn area)
+    for i in range(num_furrows):
+        fy = -1.3 + (2.6 / (num_furrows - 1)) * i
+        # Skip rows that overlap with the barn
+        if fy > 0.4 and True:
+            continue
+        # Place wheat clumps along each row
+        for cx in [-1.3, -0.85, -0.4, 0.05, 0.5]:
+            # Skip positions that overlap with barn
+            if cx > 0.3 and fy > 0.2:
+                continue
+            # Alternate wheat colors for variety
+            mat = wheat_mat if (i + int(cx * 10)) % 2 == 0 else wheat_dark_mat
+            # Wheat head — wider cone on top of thin stalk
+            # Stalk
+            bpy.ops.mesh.primitive_cylinder_add(
+                radius=0.03, depth=0.45,
+                location=(cx, fy, 0.35)
+            )
+            stalk = bpy.context.active_object
+            stalk.name = "WheatStalk"
+            stalk.data.materials.append(stalk_mat)
+            objects.append(stalk)
+            # Wheat head
+            bpy.ops.mesh.primitive_cone_add(
+                vertices=8, radius1=0.1, depth=0.2,
+                location=(cx, fy, 0.62)
+            )
+            head = bpy.context.active_object
+            head.name = "WheatHead"
+            # Slight tilt for organic feel
+            tilt = math.sin(cx * 5 + fy * 3) * math.radians(10)
+            head.rotation_euler = (tilt, 0, 0)
+            head.data.materials.append(mat)
+            objects.append(head)
+
+    print(f"  Built farm stage {stage}: complete with crops")
+    return objects
+
+
+def build_farm():
+    """Build the complete farm (stage 4). Convenience wrapper."""
+    return build_farm_stage(4)
+
+
+def render_building_stages(cam_obj, directions, num_stages, output_dir,
+                           subject, build_fn):
+    """Render a building at each construction stage.
+
+    Clears model objects between stages, rebuilds at each stage, and renders.
+    Output naming: {subject}_{direction}_stage_{NN}.png
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    total_rendered = 0
+
+    for stage in range(1, num_stages + 1):
+        _clear_model_objects()
+        build_fn(stage)
+
+        for dir_name in directions:
+            azimuth = DIRECTIONS[dir_name]
+            _position_camera(cam_obj, azimuth)
+
+            fname = f"{subject}_{dir_name}_stage_{stage:02d}.png"
+            filepath = os.path.join(output_dir, fname)
+            bpy.context.scene.render.filepath = filepath
+            bpy.ops.render.render(write_still=True)
+            total_rendered += 1
+            print(f"  Rendered: {filepath}")
+
+    print(f"  Total: {total_rendered} stage renders")
+    return total_rendered
+
+
+# ---------------------------------------------------------------------------
 # Geometric archer model
 # ---------------------------------------------------------------------------
 
@@ -618,6 +868,10 @@ def parse_args():
         "--frames-per-anim", type=str, default=None,
         help="Comma-separated frame counts per animation (e.g., 4,8,6,6)"
     )
+    parser.add_argument(
+        "--building-stages", type=int, default=0,
+        help="Render N construction stages (e.g., 4 for farm build sequence)"
+    )
 
     return parser.parse_args(argv)
 
@@ -658,7 +912,12 @@ def main():
                   file=sys.stderr)
             sys.exit(1)
 
-    total_frames = sum(f * len(args.directions) for f in frames_per_anim) if frames_per_anim else len(args.directions)
+    if args.building_stages > 0:
+        total_frames = args.building_stages * len(args.directions)
+    elif frames_per_anim:
+        total_frames = sum(f * len(args.directions) for f in frames_per_anim)
+    else:
+        total_frames = len(args.directions)
 
     print("=== Blender Isometric Render ===")
     print(f"  Subject:    {args.subject}")
@@ -699,6 +958,12 @@ def main():
     elif args.subject == "poc_house" or args.poc:
         build_poc_house()
         print("  Built PoC house model")
+    elif args.subject == "farm" and args.building_stages > 0:
+        # Farm stages are rendered below in the stage loop — skip building here
+        pass
+    elif args.subject == "farm":
+        build_farm()
+        print("  Built farm model (complete)")
     elif args.subject == "archer" and asset_type == "unit":
         archer_root = build_geometric_archer()
     else:
@@ -706,8 +971,21 @@ def main():
         print(f"  Expected: {blend_path}")
         print(f"  Rendering empty scene.")
 
-    # Render
-    if animations and archer_root:
+    # Render — building stages take priority
+    if args.building_stages > 0:
+        # Map subjects to their stage builder functions
+        stage_builders = {
+            "farm": build_farm_stage,
+        }
+        build_fn = stage_builders.get(args.subject)
+        if build_fn:
+            render_building_stages(cam, args.directions, args.building_stages,
+                                   output_dir, args.subject, build_fn)
+        else:
+            print(f"  ERROR: No stage builder for '{args.subject}'",
+                  file=sys.stderr)
+            sys.exit(1)
+    elif animations and archer_root:
         # Geometric archer: procedural animation
         render_animated_unit(cam, args.directions, animations,
                              frames_per_anim, output_dir, args.subject,
