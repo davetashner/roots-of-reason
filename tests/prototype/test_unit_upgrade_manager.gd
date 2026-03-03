@@ -271,3 +271,65 @@ func test_no_effect_on_wrong_player() -> void:
 	mgr.on_tech_researched(0, "bronze_working", _bronze_working_effects())
 	assert_bool(p1_unit.stats.has_modifier("attack", "tech:bronze_working")).is_false()
 	assert_float(p1_unit.stats.get_stat("attack")).is_equal(p1_base)
+
+
+# -- Carry capacity sync to gatherer --
+
+
+func _gillnets_effects() -> Dictionary:
+	return {"stat_modifiers": {"fishing_carry": 5}}
+
+
+func test_gillnets_syncs_carry_capacity_to_gatherer() -> void:
+	var mgr := _create_manager()
+	var scene_root := Node.new()
+	add_child(scene_root)
+	auto_free(scene_root)
+	mgr.setup(scene_root)
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "fishing_boat"
+	unit.owner_id = 0
+	scene_root.add_child(unit)
+	auto_free(unit)
+	var base_carry: int = unit._gatherer.carry_capacity
+	mgr.on_tech_researched(0, "gillnets", _gillnets_effects())
+	assert_int(unit._gatherer.carry_capacity).is_equal(base_carry + 5)
+
+
+func test_gillnets_new_unit_gets_carry_upgrade() -> void:
+	var mgr := _create_manager()
+	var scene_root := Node.new()
+	add_child(scene_root)
+	auto_free(scene_root)
+	mgr.setup(scene_root)
+	# Research before unit exists
+	mgr.on_tech_researched(0, "gillnets", _gillnets_effects())
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "fishing_boat"
+	unit.owner_id = 0
+	scene_root.add_child(unit)
+	auto_free(unit)
+	var base_carry: int = int(unit.stats.get_base_stat("carry_capacity"))
+	mgr.apply_upgrades_to_unit(unit, 0)
+	assert_int(unit._gatherer.carry_capacity).is_equal(base_carry + 5)
+
+
+func test_gillnets_regression_reverts_carry_capacity() -> void:
+	var mgr := _create_manager()
+	var scene_root := Node.new()
+	add_child(scene_root)
+	auto_free(scene_root)
+	mgr.setup(scene_root)
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "fishing_boat"
+	unit.owner_id = 0
+	scene_root.add_child(unit)
+	auto_free(unit)
+	var base_carry: int = unit._gatherer.carry_capacity
+	mgr.on_tech_researched(0, "gillnets", _gillnets_effects())
+	assert_int(unit._gatherer.carry_capacity).is_equal(base_carry + 5)
+	mgr.on_tech_regressed(0, "gillnets", {})
+	assert_int(unit._gatherer.carry_capacity).is_equal(base_carry)

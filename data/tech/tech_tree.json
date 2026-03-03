@@ -158,6 +158,18 @@
     "flavor_text": "The horizon beckons."
   },
   {
+    "id": "gillnets",
+    "name": "Gillnets",
+    "age": 1,
+    "cost": { "food": 150, "wood": 100 },
+    "research_time": 45,
+    "prerequisites": ["sailing"],
+    "effects": {
+      "stat_modifiers": { "fishing_carry": 5 }
+    },
+    "flavor_text": "Woven nets haul a richer catch."
+  },
+  {
     "id": "the_wheel",
     "name": "The Wheel",
     "age": 1,

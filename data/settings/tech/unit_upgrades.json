@@ -39,6 +39,11 @@
       "stat": "speed",
       "type": "percent",
       "unit_types": ["infantry", "cavalry", "archer", "villager", "hand_cannoneer", "artillery"]
+    },
+    "fishing_carry": {
+      "stat": "carry_capacity",
+      "type": "flat",
+      "unit_types": ["fishing_boat"]
     }
   }
 }

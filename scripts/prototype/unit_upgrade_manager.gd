@@ -57,6 +57,7 @@ func on_tech_regressed(player_id: int, tech_id: String, _tech_data: Dictionary) 
 			if child.owner_id != player_id:
 				continue
 			child.stats.remove_all_from_source(source)
+			_sync_gatherer_stat(child, "carry_capacity")
 	# Remove from applied upgrades
 	if player_id in _applied_upgrades:
 		_applied_upgrades[player_id] = _applied_upgrades[player_id].filter(
@@ -73,6 +74,7 @@ func apply_upgrades_to_unit(unit: Node2D, player_id: int) -> void:
 			continue
 		var source: String = "tech:" + entry["tech_id"]
 		unit.stats.add_modifier(entry["stat"], source, entry["value"], entry["type"])
+		_sync_gatherer_stat(unit, entry["stat"])
 
 
 func save_state() -> Dictionary:
@@ -112,6 +114,12 @@ func _apply_to_matching_units(
 		if child.unit_type not in unit_types:
 			continue
 		child.stats.add_modifier(stat, source, value, mod_type)
+		_sync_gatherer_stat(child, stat)
+
+
+func _sync_gatherer_stat(unit: Node, stat: String) -> void:
+	if stat == "carry_capacity" and "_gatherer" in unit and unit._gatherer != null:
+		unit._gatherer.carry_capacity = int(unit.stats.get_stat("carry_capacity"))
 
 
 func _is_unit(child: Node) -> bool:
