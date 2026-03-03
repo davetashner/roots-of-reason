@@ -364,7 +364,7 @@ func _load_build_config() -> void:
 
 
 func _load_gather_config() -> void:
-	var unit_cfg := _dl_unit_stats("villager")
+	var unit_cfg := _dl_unit_stats(unit_type)
 	var gather_cfg := GameUtils.dl_settings("gathering")
 	_gatherer.load_config(unit_cfg, gather_cfg)
 
