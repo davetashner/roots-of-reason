@@ -429,6 +429,44 @@ func test_context_command_resolve_gather() -> void:
 	assert_str(cmd).is_equal("gather")
 
 
+func _create_building(pos: Vector2) -> Node2D:
+	var building := Node2D.new()
+	building.set_script(BuildingScript)
+	building.position = pos
+	building.global_position = pos
+	building.owner_id = 0
+	return auto_free(building)
+
+
+# -- Box select building filter --
+
+
+func test_box_select_units_and_building_selects_only_units() -> void:
+	var handler := _create_handler()
+	var u1 := _create_unit(Vector2(50, 50))
+	var u2 := _create_unit(Vector2(60, 60))
+	var b1 := _create_building(Vector2(70, 70))
+	_register_units(handler, [u1, u2, b1])
+	handler._box_start = Vector2(40, 40)
+	handler._box_end = Vector2(80, 80)
+	handler._do_box_select()
+	assert_bool(u1.selected).is_true()
+	assert_bool(u2.selected).is_true()
+	assert_bool(b1.selected).is_false()
+	assert_int(handler.get_selected_count()).is_equal(2)
+
+
+func test_box_select_only_building_selects_building() -> void:
+	var handler := _create_handler()
+	var b1 := _create_building(Vector2(50, 50))
+	_register_units(handler, [b1])
+	handler._box_start = Vector2(40, 40)
+	handler._box_end = Vector2(60, 60)
+	handler._do_box_select()
+	assert_bool(b1.selected).is_true()
+	assert_int(handler.get_selected_count()).is_equal(1)
+
+
 func test_context_command_resolve_garrison() -> void:
 	var handler := _setup_context_handler(_context_table)
 	var unit := _create_unit(Vector2(50, 50))
