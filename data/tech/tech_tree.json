@@ -1281,5 +1281,112 @@
     },
     "flavor_text": "The fearsome war dance strikes terror into enemies and emboldens warriors with ferocious spirit.",
     "civ_exclusive": "polynesia"
+  },
+  {
+    "id": "papermaking",
+    "name": "Papermaking",
+    "age": 2,
+    "cost": { "knowledge": 150, "gold": 75 },
+    "research_time": 45.0,
+    "prerequisites": ["writing"],
+    "effects": {
+      "research_cost_reduction": 0.10
+    },
+    "flavor_text": "Lightweight paper replaces cumbersome bamboo slips, spreading knowledge faster and cheaper.",
+    "civ_exclusive": "china"
+  },
+  {
+    "id": "gunpowder_mastery",
+    "name": "Gunpowder Mastery",
+    "age": 4,
+    "cost": { "knowledge": 350, "gold": 200 },
+    "research_time": 80.0,
+    "prerequisites": ["engineering"],
+    "effects": {
+      "gunpowder_unit_age_unlock": -1
+    },
+    "flavor_text": "Centuries of alchemical refinement grant access to devastating gunpowder weapons before any rival.",
+    "civ_exclusive": "china"
+  },
+  {
+    "id": "hieroglyphics",
+    "name": "Hieroglyphics",
+    "age": 2,
+    "cost": { "knowledge": 150, "gold": 75 },
+    "research_time": 45.0,
+    "prerequisites": ["writing"],
+    "effects": {
+      "research_bonus": 0.10
+    },
+    "flavor_text": "Sacred carvings preserve knowledge for eternity, accelerating the pace of discovery.",
+    "civ_exclusive": "egypt"
+  },
+  {
+    "id": "nile_flooding",
+    "name": "Nile Flooding",
+    "age": 3,
+    "cost": { "knowledge": 200, "gold": 100 },
+    "research_time": 60.0,
+    "prerequisites": ["agriculture"],
+    "effects": {
+      "economic_bonus": {
+        "farm_food_rate": 0.25
+      }
+    },
+    "flavor_text": "Mastery of the annual flood cycle transforms the Nile valley into the breadbasket of the ancient world.",
+    "civ_exclusive": "egypt"
+  },
+  {
+    "id": "long_count_calendar",
+    "name": "Long Count Calendar",
+    "age": 2,
+    "cost": { "knowledge": 150, "gold": 75 },
+    "research_time": 45.0,
+    "prerequisites": ["writing"],
+    "effects": {
+      "age_advancement_cost_reduction": 0.15
+    },
+    "flavor_text": "A precise calendar spanning millennia allows the Maya to plan their civilization's advancement with cosmic precision.",
+    "civ_exclusive": "maya"
+  },
+  {
+    "id": "star_chart",
+    "name": "Star Chart",
+    "age": 3,
+    "cost": { "knowledge": 200, "gold": 100 },
+    "research_time": 60.0,
+    "prerequisites": ["astronomy"],
+    "effects": {
+      "map_reveal_bonus": 0.20,
+      "los_bonus": 2
+    },
+    "flavor_text": "Detailed maps of the night sky grant unparalleled navigational awareness and strategic foresight.",
+    "civ_exclusive": "maya"
+  },
+  {
+    "id": "longship_navigation",
+    "name": "Longship Navigation",
+    "age": 2,
+    "cost": { "knowledge": 150, "gold": 75 },
+    "research_time": 50.0,
+    "prerequisites": ["sailing"],
+    "effects": {
+      "naval_speed_bonus": 0.40
+    },
+    "flavor_text": "Superior hull design and fearless seamanship allow Viking longships to outrun any vessel on the open sea.",
+    "civ_exclusive": "vikings"
+  },
+  {
+    "id": "berserkergang",
+    "name": "Berserkergang",
+    "age": 3,
+    "cost": { "knowledge": 200, "gold": 100 },
+    "research_time": 60.0,
+    "prerequisites": ["iron_working"],
+    "effects": {
+      "rage_ability_unlocked": true
+    },
+    "flavor_text": "Warriors channel a battle fury so intense that pain becomes meaningless and every strike lands with terrible force.",
+    "civ_exclusive": "vikings"
   }
 ]

@@ -143,12 +143,12 @@ func test_unique_techs_have_costs() -> void:
 		assert_dict(data["cost"]).is_not_empty()
 
 
-# -- Total tech count (87 base + 6 unique = 93) --
+# -- Total tech count (87 base + 14 unique = 101) --
 
 
-func test_total_tech_count_is_93() -> void:
+func test_total_tech_count_is_101() -> void:
 	var data: Variant = DataLoader.load_json("res://data/tech/tech_tree.json")
-	assert_int(data.size()).is_equal(93)
+	assert_int(data.size()).is_equal(101)
 
 
 # -- Mesopotamia civ data references unique techs --
@@ -294,3 +294,87 @@ func test_polynesia_civ_has_unique_techs_array() -> void:
 	assert_int(techs.size()).is_equal(2)
 	assert_bool("wayfinding" in techs).is_true()
 	assert_bool("haka" in techs).is_true()
+
+
+# -- China civ-exclusive techs --
+
+
+func test_papermaking_is_china_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("papermaking")
+	assert_str(data.get("civ_exclusive", "")).is_equal("china")
+
+
+func test_gunpowder_mastery_is_china_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("gunpowder_mastery")
+	assert_str(data.get("civ_exclusive", "")).is_equal("china")
+
+
+func test_china_civ_has_unique_techs_array() -> void:
+	var civ_data: Dictionary = DataLoader.get_civ_data("china")
+	var techs: Array = civ_data["unique_techs"]
+	assert_int(techs.size()).is_equal(2)
+	assert_bool("papermaking" in techs).is_true()
+	assert_bool("gunpowder_mastery" in techs).is_true()
+
+
+# -- Egypt civ-exclusive techs --
+
+
+func test_hieroglyphics_is_egypt_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("hieroglyphics")
+	assert_str(data.get("civ_exclusive", "")).is_equal("egypt")
+
+
+func test_nile_flooding_is_egypt_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("nile_flooding")
+	assert_str(data.get("civ_exclusive", "")).is_equal("egypt")
+
+
+func test_egypt_civ_has_unique_techs_array() -> void:
+	var civ_data: Dictionary = DataLoader.get_civ_data("egypt")
+	var techs: Array = civ_data["unique_techs"]
+	assert_int(techs.size()).is_equal(2)
+	assert_bool("hieroglyphics" in techs).is_true()
+	assert_bool("nile_flooding" in techs).is_true()
+
+
+# -- Maya civ-exclusive techs --
+
+
+func test_long_count_calendar_is_maya_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("long_count_calendar")
+	assert_str(data.get("civ_exclusive", "")).is_equal("maya")
+
+
+func test_star_chart_is_maya_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("star_chart")
+	assert_str(data.get("civ_exclusive", "")).is_equal("maya")
+
+
+func test_maya_civ_has_unique_techs_array() -> void:
+	var civ_data: Dictionary = DataLoader.get_civ_data("maya")
+	var techs: Array = civ_data["unique_techs"]
+	assert_int(techs.size()).is_equal(2)
+	assert_bool("long_count_calendar" in techs).is_true()
+	assert_bool("star_chart" in techs).is_true()
+
+
+# -- Vikings civ-exclusive techs --
+
+
+func test_longship_navigation_is_vikings_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("longship_navigation")
+	assert_str(data.get("civ_exclusive", "")).is_equal("vikings")
+
+
+func test_berserkergang_is_vikings_exclusive() -> void:
+	var data: Dictionary = DataLoader.get_tech_data("berserkergang")
+	assert_str(data.get("civ_exclusive", "")).is_equal("vikings")
+
+
+func test_vikings_civ_has_unique_techs_array() -> void:
+	var civ_data: Dictionary = DataLoader.get_civ_data("vikings")
+	var techs: Array = civ_data["unique_techs"]
+	assert_int(techs.size()).is_equal(2)
+	assert_bool("longship_navigation" in techs).is_true()
+	assert_bool("berserkergang" in techs).is_true()

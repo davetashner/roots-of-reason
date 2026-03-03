@@ -426,17 +426,17 @@ func _check_no_cycle(tech_id: String, path: Dictionary) -> bool:
 # -- Total tech count --
 
 
-func test_total_tech_count_is_93() -> void:
+func test_total_tech_count_is_101() -> void:
 	var data: Variant = DataLoader.load_json("res://data/tech/tech_tree.json")
-	assert_int(data.size()).is_equal(93)
+	assert_int(data.size()).is_equal(101)
 
 
-# -- Full DAG cycle check (all 93 techs) --
+# -- Full DAG cycle check (all 101 techs) --
 
 
 func test_no_circular_prereqs_full_tree() -> void:
 	## Verifies that no tech in the entire tech tree participates in a
-	## prerequisite cycle. Iterates all 93 techs and runs the same DFS-based
+	## prerequisite cycle. Iterates all 101 techs and runs the same DFS-based
 	## cycle check used by test_no_circular_prereqs_in_new_techs.
 	var all_techs: Variant = DataLoader.load_json("res://data/tech/tech_tree.json")
 	for tech_entry in all_techs:
