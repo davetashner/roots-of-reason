@@ -92,7 +92,7 @@ When tests fail, check these first before debugging from scratch:
 
 - **Explore thoroughly, then implement decisively.** Read existing code and understand integration points before writing new code — skipping exploration leads to rewrites. But keep exploration focused: know what question each file read is answering. Once you have enough context to start, start. If a session includes both exploration and implementation, try to ship at least one concrete deliverable before the session ends.
 - **Never push directly to main** — always create a PR
-- **Run `bd sync` before pushing** to keep beads backlog in sync
+- **Run `bd export` before pushing** to export beads state (then stage `issues.jsonl` if changed)
 - **Reference beads issue IDs** in commit messages (e.g., `feat: add camera [roots-of-reason-317.1]`)
 - **Run `./tools/ror lint` before committing** — CI enforces zero warnings
 - **Sign off commits** with `git commit -s`
@@ -123,15 +123,30 @@ When a session includes multiple tasks, **complete the first task fully through 
 
 ## Beads (Issue Tracking)
 
+Beads uses Dolt (a versioned database) internally. The git-portable state lives in `.beads/issues.jsonl`.
+
 ```bash
 bd ready              # Find available work
 bd show <id>          # View issue details
 bd update <id> --status in_progress  # Claim work
 bd close <id>         # Complete work
-bd sync               # Sync with git
+bd export             # Export Dolt state to issues.jsonl
 bd orphans            # Surface stale blockers
 bd blocked            # Show blocked issues
 ```
+
+### Beads + Git Workflow
+
+- **No auto-commit:** The pre-commit hook exports state but does NOT auto-stage `issues.jsonl`. This prevents noisy `bd: backup` commits.
+- **Manual sync:** When you want to commit backlog changes, explicitly stage and commit:
+  ```bash
+  bd export
+  git add .beads/issues.jsonl .beads/metadata.json
+  git commit -s -m "chore: sync beads backlog"
+  ```
+- **Batch with features:** Prefer including backlog changes in feature PR commits rather than standalone sync commits. Add `issues.jsonl` to the same commit as the feature work.
+- **Pre-push warning:** The pre-push hook will warn (not block) if `issues.jsonl` has uncommitted changes.
+- **`bd sync` is deprecated** — use `bd export` to write state and `bd import` to read it.
 
 ## Architecture
 
