@@ -50,6 +50,7 @@ var _opponent_panel: PanelContainer = null
 func _ready() -> void:
 	visible = false
 	_build_ui()
+	_ensure_fullscreen()
 
 
 func setup(tech_manager: Node, player_id: int = 0) -> void:
@@ -57,7 +58,11 @@ func setup(tech_manager: Node, player_id: int = 0) -> void:
 	_player_id = player_id
 	_load_visibility_config()
 	_load_tech_data()
+	if _all_tech_ids.is_empty():
+		push_warning("TechTreeViewer: No techs loaded from tech_tree.json")
 	_populate_grid()
+	if _tech_buttons.is_empty():
+		push_warning("TechTreeViewer: No tech buttons created (tech count: %d)" % _all_tech_ids.size())
 	_check_opponent_unlock()
 	refresh()
 	if _tech_manager.has_signal("tech_researched"):
@@ -78,6 +83,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func toggle_visible() -> void:
 	visible = not visible
 	if visible:
+		_ensure_fullscreen()
 		refresh()
 
 
@@ -135,6 +141,12 @@ func is_showing_opponent() -> bool:
 
 func get_age_column(age_index: int) -> VBoxContainer:
 	return _age_columns.get(age_index, null)
+
+
+func _ensure_fullscreen() -> void:
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_offsets_preset(Control.PRESET_FULL_RECT)
+	set_deferred("size", get_viewport_rect().size)
 
 
 func _build_ui() -> void:
