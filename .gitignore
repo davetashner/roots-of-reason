@@ -33,3 +33,7 @@ blender/renders/
 
 # Backlog visualizer (generated, not committed)
 backlog-graph.html
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

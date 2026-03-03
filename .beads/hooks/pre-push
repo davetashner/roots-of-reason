@@ -1,9 +1,11 @@
 #!/usr/bin/env sh
-# --- BEGIN BEADS INTEGRATION v0.57.0 ---
-# This section is managed by beads. Do not remove these markers.
+# --- BEGIN BEADS INTEGRATION v0.57.0 (modified) ---
+# Modified: warn if issues.jsonl has uncommitted changes, but don't
+# block the push. The developer decides when to commit backlog state.
 if command -v bd >/dev/null 2>&1; then
-  export BD_GIT_HOOK=1
-  bd hooks run pre-push "$@"
-  _bd_exit=$?; if [ $_bd_exit -ne 0 ]; then exit $_bd_exit; fi
+  if git diff --name-only .beads/issues.jsonl 2>/dev/null | grep -q .; then
+    echo "[beads] Note: .beads/issues.jsonl has uncommitted changes."
+    echo "[beads] Run 'git add .beads/issues.jsonl && git commit -s -m \"chore: sync beads backlog\"' to include them."
+  fi
 fi
 # --- END BEADS INTEGRATION ---
