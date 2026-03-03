@@ -475,16 +475,32 @@ func _do_box_select() -> void:
 		return
 	if not Input.is_key_pressed(KEY_SHIFT):
 		_deselect_all()
-	var count := get_selected_count()
+	# Collect candidates inside the rectangle
+	var candidates: Array[Node] = []
 	for unit in _units:
-		if count >= _max_selection_size:
-			break
 		if "owner_id" in unit and unit.owner_id != 0:
 			continue
 		if rect.has_point(unit.global_position):
-			if unit.has_method("select"):
-				unit.select()
-				count += 1
+			candidates.append(unit)
+	# If any non-building units are in the box, exclude buildings (AoE-style)
+	var has_units := false
+	for c in candidates:
+		if not _is_building(c):
+			has_units = true
+			break
+	var count := get_selected_count()
+	for c in candidates:
+		if count >= _max_selection_size:
+			break
+		if has_units and _is_building(c):
+			continue
+		if c.has_method("select"):
+			c.select()
+			count += 1
+
+
+func _is_building(node: Node) -> bool:
+	return "entity_category" in node and node.entity_category == "own_building"
 
 
 func _get_world_mouse(motion: InputEventMouseMotion) -> Vector2:
