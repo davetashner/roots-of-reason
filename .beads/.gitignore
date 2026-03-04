@@ -50,3 +50,7 @@ daemon.pid
 # They would override fork protection in .git/info/exclude.
 # Config files (metadata.json, config.yaml) are tracked by git by default
 # since no pattern above ignores them.
+
+# Backup directory (bd auto-commits these causing noise on main)
+# Backups are local-only; use bd export for portable state
+backup/

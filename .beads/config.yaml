@@ -3,6 +3,11 @@
 # All settings can also be set via environment variables (BD_* prefix)
 # or overridden with command-line flags
 
+
+# Sandbox mode: disable automatic git commit/push after bd operations.
+# We manage git commits manually via bd export + git add/commit.
+sandbox: true
+
 # Issue prefix for this repository (used by bd init)
 # If not set, bd init will auto-detect from directory name
 # Example: issue-prefix: "myproject" creates issues like "myproject-1", "myproject-2", etc.
