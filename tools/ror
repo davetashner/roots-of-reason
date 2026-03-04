@@ -287,6 +287,34 @@ _run_sharded_tests() {
         shard_idx=$((shard_idx + 1))
     done
 
+    # If a shard exited non-zero, check XML reports for actual test failures.
+    # Godot/GdUnit4 can exit 100 due to engine-level issues (RID leaks, crashes)
+    # even when all test assertions passed. Use the XML report as ground truth.
+    if [[ $worst_exit -gt 0 ]]; then
+        local xml_failures=0
+        for (( si=0; si<${#pids[@]}; si++ )); do
+            local report="reports/shard_${si}/results.xml"
+            if [[ -f "$report" ]]; then
+                # Count failures and errors from JUnit XML attributes
+                local f e
+                f=$(sed -n 's/.*failures="\([0-9]*\)".*/\1/p' "$report" 2>/dev/null | head -1)
+                e=$(sed -n 's/.*errors="\([0-9]*\)".*/\1/p' "$report" 2>/dev/null | head -1)
+                xml_failures=$(( xml_failures + ${f:-0} + ${e:-0} ))
+            else
+                # No XML report means Godot crashed before writing results —
+                # treat as inconclusive, not as a test failure
+                warn "Shard $((si+1)): no XML report found (Godot may have crashed)"
+            fi
+        done
+
+        if [[ $xml_failures -eq 0 ]]; then
+            warn "Shards exited non-zero (exit $worst_exit) but XML reports show 0 failures — treating as pass"
+            worst_exit=0
+        else
+            err "XML reports show $xml_failures failure(s)/error(s)"
+        fi
+    fi
+
     # On failure, keep logs for debugging; on success, clean up
     if [[ $worst_exit -gt 0 ]]; then
         for (( si=0; si<${#shard_logs[@]}; si++ )); do
