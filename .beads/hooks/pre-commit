@@ -1,11 +1,22 @@
 #!/usr/bin/env sh
 # --- BEGIN BEADS INTEGRATION v0.57.0 (modified) ---
-# Modified: export beads state but do NOT auto-stage issues.jsonl.
-# This prevents "bd: backup" noise commits. Run `bd export` and
-# `git add .beads/issues.jsonl` manually when you want to commit
-# backlog changes (typically as part of a feature PR).
-if command -v bd >/dev/null 2>&1; then
-  export BD_GIT_HOOK=1
-  bd export --quiet 2>/dev/null || true
+# Block automatic "bd: backup" commits that bd creates internally.
+# These noise commits pollute main and cause rebase conflicts.
+# Beads state should be committed manually via:
+#   bd export && git add .beads/issues.jsonl && git commit
+if [ "$BD_GIT_HOOK" != "1" ]; then
+  # This commit was NOT initiated by a git hook — it may be bd's
+  # internal backup. Check the commit message via .git/COMMIT_EDITMSG.
+  # If the hooks path points here, .git is the main repo's .git.
+  _commit_msg_file="$(git rev-parse --git-dir)/COMMIT_EDITMSG"
+  if [ -f "$_commit_msg_file" ]; then
+    _msg="$(head -1 "$_commit_msg_file")"
+    case "$_msg" in
+      "bd: backup"*|"bd: auto"*|"bd: sync"*)
+        # Silently reject the backup commit
+        exit 1
+        ;;
+    esac
+  fi
 fi
 # --- END BEADS INTEGRATION ---

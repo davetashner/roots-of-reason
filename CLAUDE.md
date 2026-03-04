@@ -137,16 +137,17 @@ bd blocked            # Show blocked issues
 
 ### Beads + Git Workflow
 
-- **No auto-commit:** The pre-commit hook exports state but does NOT auto-stage `issues.jsonl`. This prevents noisy `bd: backup` commits.
-- **Manual sync:** When you want to commit backlog changes, explicitly stage and commit:
+- **No auto-commit:** The pre-commit hook blocks `bd: backup` commits that `bd` tries to create automatically. Config `sandbox: true` and `.beads/backup/` gitignored as defense-in-depth.
+- **Manual sync:** When you want to commit backlog changes, explicitly export and stage:
   ```bash
   bd export
   git add .beads/issues.jsonl .beads/metadata.json
   git commit -s -m "chore: sync beads backlog"
   ```
-- **Batch with features:** Prefer including backlog changes in feature PR commits rather than standalone sync commits. Add `issues.jsonl` to the same commit as the feature work.
+- **Batch with features:** Prefer including backlog changes in feature PR commits rather than standalone sync commits.
 - **Pre-push warning:** The pre-push hook will warn (not block) if `issues.jsonl` has uncommitted changes.
-- **`bd sync` is deprecated** — use `bd export` to write state and `bd import` to read it.
+- **`bd sync` is deprecated** — use `bd export` to write state.
+- **`--allow-stale` flag:** After pulling new code, `bd` may warn about stale data. Use `bd backup restore` to re-sync, or pass `--allow-stale` to skip the check.
 
 ## Architecture
 

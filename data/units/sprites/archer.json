@@ -3,7 +3,7 @@
     "archer"
   ],
   "base_path": "res://assets/sprites/units",
-  "scale": 0.5,
+  "scale": 1.0,
   "offset_y": -16.0,
   "frame_duration": 0.3,
   "directions": [
