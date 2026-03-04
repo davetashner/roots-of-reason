@@ -111,10 +111,12 @@ func on_building_construction_complete(building: Node2D) -> void:
 		_root._game_stats_tracker.record_building_built(building.owner_id, building.building_name)
 	_bootstrapper.try_attach_production_queue(building)
 	_apply_building_effects(building)
+	_try_spawn_farm_food(building)
 	_check_singularity_building_alert(building)
 
 
 func on_building_destroyed(building: Node2D) -> void:
+	_cleanup_farm_food(building)
 	_remove_building_effects(building)
 	_root._entity_registry.unregister(building)
 	if _root._population_manager != null and "owner_id" in building:
@@ -436,6 +438,35 @@ func find_town_center_pos(player_id: int) -> Vector2:
 		if "building_name" in bld and bld.building_name == "town_center":
 			return bld.position
 	return Vector2.ZERO
+
+
+func _try_spawn_farm_food(building: Node2D) -> void:
+	## Spawn an invisible food resource node for a completed farm building.
+	if not building.has_method("_spawn_farm_food_node"):
+		return
+	var stats: Dictionary = DataLoader.get_building_stats(building.building_name)
+	var max_food: int = int(stats.get("max_food", 0))
+	if max_food <= 0:
+		return
+	building._spawn_farm_food_node()
+	if building._farm_food_node == null:
+		return
+	_root.add_child(building._farm_food_node)
+	building._farm_food_node.depleted.connect(on_resource_depleted)
+	if _root._target_detector != null:
+		_root._target_detector.register_entity(building._farm_food_node)
+
+
+func _cleanup_farm_food(building: Node2D) -> void:
+	## Remove and free the farm's food resource node when the building is destroyed.
+	if not ("_farm_food_node" in building) or building._farm_food_node == null:
+		return
+	var food_node: Node2D = building._farm_food_node
+	if _root._target_detector != null:
+		_root._target_detector.unregister_entity(food_node)
+	building._farm_food_node = null
+	if is_instance_valid(food_node):
+		food_node.queue_free()
 
 
 func _spawn_wolf_carcass(world_pos: Vector2) -> void:
