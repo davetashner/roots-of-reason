@@ -119,7 +119,7 @@ func _process(delta: float) -> void:
 
 
 func _refresh_idle_count() -> void:
-	var count := _idle_finder.get_idle_count()
+	var count: int = _idle_finder.get_idle_count()
 	_idle_button.text = "Idle: %d %s" % [count, _hotkey_label]
 	if count > 0:
 		_idle_button.add_theme_color_override("font_color", _badge_color)
