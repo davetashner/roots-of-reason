@@ -199,7 +199,12 @@ func _teardown_scene_entities() -> void:
 	if _building_placer != null and "_placed_buildings" in _building_placer:
 		for entry: Dictionary in _building_placer._placed_buildings:
 			var node: Node2D = entry.get("node")
-			if is_instance_valid(node) and node not in to_remove:
+			if not is_instance_valid(node):
+				continue
+			# Clear farm food node references before teardown
+			if "_farm_food_node" in node:
+				node._farm_food_node = null
+			if node not in to_remove:
 				to_remove.append(node)
 		_building_placer._placed_buildings.clear()
 	for node in to_remove:
@@ -241,6 +246,7 @@ func _apply_full_building_state(buildings_full: Array) -> void:
 			if _victory_manager != null and node.building_name == "town_center":
 				if not node.under_construction and _victory_manager.has_method("register_town_center"):
 					_victory_manager.register_town_center(node.owner_id, node)
+			_try_restore_farm_food(node, bstate)
 			break
 
 
@@ -263,6 +269,26 @@ func _try_attach_production_queue(building: Node2D, bstate: Dictionary) -> void:
 	pq.unit_produced.connect(_root._on_unit_produced)
 	if bstate.has("production_queue"):
 		pq.load_state(bstate["production_queue"])
+
+
+func _try_restore_farm_food(building: Node2D, bstate: Dictionary) -> void:
+	## Restore the farm's food resource node from saved state.
+	if building.under_construction:
+		return
+	var saved_total: int = int(bstate.get("farm_food_total_yield", 0))
+	if saved_total <= 0:
+		return
+	if not building.has_method("_spawn_farm_food_node"):
+		return
+	building._spawn_farm_food_node()
+	if building._farm_food_node == null:
+		return
+	building._farm_food_node.current_yield = int(bstate.get("farm_food_current_yield", saved_total))
+	building._farm_food_node.total_yield = saved_total
+	_root.add_child(building._farm_food_node)
+	building._farm_food_node.depleted.connect(_root._on_resource_depleted)
+	if _target_detector != null:
+		_target_detector.register_entity(building._farm_food_node)
 
 
 func _restore_units(units_data: Array) -> void:

@@ -16,7 +16,8 @@
       "own_transport": "embark",
       "resource_node": "gather",
       "construction_site": "build",
-      "wild_fauna": "attack"
+      "wild_fauna": "attack",
+      "farm": "gather"
     }
   },
   "cursor_labels": {

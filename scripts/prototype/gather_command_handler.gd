@@ -17,16 +17,20 @@ func can_handle(cmd: String, target: Node, _selected: Array[Node], _world_pos: V
 func execute(cmd: String, target: Node, selected: Array[Node], _world_pos: Vector2) -> bool:
 	if cmd != "gather" or target == null:
 		return false
+	# Redirect farm buildings to their invisible food resource node
+	var gather_node: Node = target
+	if "_farm_food_node" in target and target._farm_food_node != null:
+		gather_node = target._farm_food_node
 	var gatherers: Array[Node] = []
 	for unit in selected:
 		if unit.has_method("assign_gather_target"):
 			gatherers.append(unit)
 	if gatherers.is_empty():
 		return true
-	var offsets: Array[Vector2] = _compute_gather_offsets(target, gatherers.size())
+	var offsets: Array[Vector2] = _compute_gather_offsets(gather_node, gatherers.size())
 	for i in gatherers.size():
 		var offset_pos: Vector2 = offsets[i] if i < offsets.size() else Vector2.ZERO
-		gatherers[i].assign_gather_target(target, offset_pos)
+		gatherers[i].assign_gather_target(gather_node, offset_pos)
 	return true
 
 

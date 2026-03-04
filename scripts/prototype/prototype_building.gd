@@ -45,6 +45,8 @@ var _garrison_config: Dictionary = {}
 var _pending_garrison_names: Array[String] = []
 
 var _dog_los_bonus: int = 0
+var _farm_food_node: Node2D = null
+var _farm_max_food: int = 0
 
 var _combat_config: Dictionary = {}
 var _construction_alpha: float = 0.4
@@ -308,6 +310,8 @@ func get_entity_category() -> String:
 		return "ruins"
 	if under_construction:
 		return "construction_site"
+	if _farm_food_node != null and is_instance_valid(_farm_food_node) and _farm_food_node.current_yield > 0:
+		return "farm"
 	return entity_category
 
 
@@ -337,6 +341,27 @@ func _complete_construction() -> void:
 	build_progress = 1.0
 	queue_redraw()
 	construction_complete.emit(self)
+
+
+func _spawn_farm_food_node() -> void:
+	## Create an invisible PrototypeResourceNode for villagers to gather from.
+	## The caller is responsible for adding the node to the scene tree.
+	if _farm_max_food <= 0:
+		var stats: Dictionary = DataLoader.get_building_stats(building_name)
+		_farm_max_food = int(stats.get("max_food", 0))
+	if _farm_max_food <= 0:
+		return
+	var node := Node2D.new()
+	node.name = "FarmFood_%s" % name
+	node.set_script(load("res://scripts/prototype/prototype_resource_node.gd"))
+	node.resource_name = "farm_food"
+	node.resource_type = "food"
+	node.total_yield = _farm_max_food
+	node.current_yield = _farm_max_food
+	node.position = global_position
+	node.grid_position = grid_pos
+	node.visible = false
+	_farm_food_node = node
 
 
 func select() -> void:
@@ -680,7 +705,7 @@ func save_state() -> Dictionary:
 	for unit in _garrison_load_queue:
 		if is_instance_valid(unit):
 			garrisoned_names.append(str(unit.name))
-	return {
+	var state := {
 		"building_name": building_name,
 		"grid_pos": [grid_pos.x, grid_pos.y],
 		"owner_id": owner_id,
@@ -699,6 +724,10 @@ func save_state() -> Dictionary:
 		"los": los,
 		"dog_los_bonus": _dog_los_bonus,
 	}
+	if _farm_food_node != null and is_instance_valid(_farm_food_node):
+		state["farm_food_current_yield"] = _farm_food_node.current_yield
+		state["farm_food_total_yield"] = _farm_food_node.total_yield
+	return state
 
 
 func load_state(data: Dictionary) -> void:
@@ -726,6 +755,7 @@ func load_state(data: Dictionary) -> void:
 	var g_names: Array = data.get("garrisoned_units", [])
 	for n in g_names:
 		_pending_garrison_names.append(str(n))
+	_farm_max_food = int(data.get("farm_food_total_yield", 0))
 	if _is_ruins:
 		entity_category = "ruins"
 		set_process(true)
