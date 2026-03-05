@@ -44,7 +44,7 @@ func _load_config(config_path: String = "") -> void:
 
 func _create_sprite(player_color: Color) -> void:
 	_sprite = Sprite2D.new()
-	_sprite.z_index = 0
+	_sprite.z_index = -1
 	_sprite.centered = true
 	var offset_y: float = float(_config.get("offset_y", -16.0))
 	_sprite.offset = Vector2(0.0, offset_y)
@@ -208,6 +208,15 @@ func _is_mirrored_direction(_dir: String) -> bool:
 
 func has_death_animation() -> bool:
 	return _has_death_anim
+
+
+func get_sprite_rect() -> Rect2:
+	if _sprite == null or _sprite.texture == null:
+		return Rect2()
+	var tex_size := Vector2(_sprite.texture.get_width(), _sprite.texture.get_height())
+	var scaled := tex_size * _sprite.scale
+	var pos := _sprite.offset - scaled / 2.0
+	return Rect2(pos, scaled)
 
 
 func get_sprite() -> Sprite2D:
