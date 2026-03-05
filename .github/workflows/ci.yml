@@ -128,7 +128,7 @@ jobs:
 
       - name: Cache Godot binary
         id: cache-godot
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: /usr/local/bin/godot
           key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
@@ -161,7 +161,7 @@ jobs:
 
       - name: Publish test report
         if: always()
-        uses: mikepenz/action-junit-report@3585e9575db828022551b4231f165eb59a0e74e3 # v5
+        uses: mikepenz/action-junit-report@49b2ca06f62aa7ef83ae6769a2179271e160d8e4 # v6.3.1
         with:
           report_paths: reports/merged/*.xml
           check_name: test-report.xml
