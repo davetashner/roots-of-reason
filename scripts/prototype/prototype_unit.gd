@@ -817,7 +817,12 @@ func resolve_embarked(scene_root: Node) -> void:
 
 func _draw() -> void:
 	if selected:
-		draw_arc(Vector2.ZERO, SELECTION_RING_RADIUS, 0, TAU, 32, Color(0, 1, 0, 0.8), 2.0)
+		var points := PackedVector2Array()
+		for i in 33:
+			var angle := TAU * float(i) / 32.0
+			var pt := Vector2(cos(angle) * SELECTION_RING_RADIUS, sin(angle) * SELECTION_RING_RADIUS * 0.5)
+			points.append(pt)
+		draw_polyline(points, Color(0, 1, 0, 0.8), 2.0)
 	# Skip circle + arrow when sprite handler is active
 	if _sprite_handler == null:
 		var draw_radius := RADIUS
@@ -926,7 +931,12 @@ func deselect() -> void:
 func is_point_inside(point: Vector2) -> bool:
 	if _is_dead:
 		return false
-	return point.distance_to(global_position) <= RADIUS * 1.5
+	if point.distance_to(global_position) <= RADIUS * 1.5:
+		return true
+	if _sprite_handler != null and _sprite_handler.has_method("get_sprite_rect"):
+		var rect: Rect2 = _sprite_handler.get_sprite_rect()
+		return rect.has_point(point - global_position)
+	return false
 
 
 func get_entity_category() -> String:
