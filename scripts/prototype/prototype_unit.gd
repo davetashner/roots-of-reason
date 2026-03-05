@@ -817,10 +817,14 @@ func resolve_embarked(scene_root: Node) -> void:
 
 func _draw() -> void:
 	if selected:
+		var ellipse_y := 0.0
+		if _sprite_handler != null and _sprite_handler.has_method("get_sprite_rect"):
+			var rect: Rect2 = _sprite_handler.get_sprite_rect()
+			ellipse_y = rect.end.y
 		var points := PackedVector2Array()
 		for i in 33:
 			var angle := TAU * float(i) / 32.0
-			var pt := Vector2(cos(angle) * SELECTION_RING_RADIUS, sin(angle) * SELECTION_RING_RADIUS * 0.5)
+			var pt := Vector2(cos(angle) * SELECTION_RING_RADIUS, ellipse_y + sin(angle) * SELECTION_RING_RADIUS * 0.5)
 			points.append(pt)
 		draw_polyline(points, Color(0, 1, 0, 0.8), 2.0)
 	# Skip circle + arrow when sprite handler is active
