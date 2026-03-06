@@ -4,14 +4,29 @@ extends PanelContainer
 ## When nothing is selected, shows resource node info on hover.
 
 const PANEL_WIDTH: float = 400.0
+const VILLAGER_PANEL_WIDTH: float = 640.0
 const PANEL_HEIGHT: float = 120.0
 const PANEL_HEIGHT_WITH_QUEUE: float = 180.0
 const PORTRAIT_SIZE: float = 64.0
 const QUEUE_ICON_SIZE: float = 32.0
+const BUILD_CATEGORIES := ["civilian", "military", "economy"]
+const BUILD_GRID_COLUMNS: int = 3
+const BUILD_BUTTON_SIZE: int = 48
+const BUILD_BUTTON_MARGIN: int = 4
+const MAX_BUILD_SLOTS: int = 12
+
+const RESOURCE_NAME_TO_TYPE: Dictionary = {
+	"food": ResourceManager.ResourceType.FOOD,
+	"wood": ResourceManager.ResourceType.WOOD,
+	"stone": ResourceManager.ResourceType.STONE,
+	"gold": ResourceManager.ResourceType.GOLD,
+	"knowledge": ResourceManager.ResourceType.KNOWLEDGE,
+}
 
 var _input_handler: Node = null
 var _target_detector: Node = null
 var _river_transport: Node = null
+var _building_placer: Node = null
 var _tracked_entity: Node = null
 var _tracked_entities: Array = []
 var _is_multi: bool = false
@@ -25,6 +40,7 @@ var _hp_green_threshold: float = 0.6
 var _hp_yellow_threshold: float = 0.3
 
 # Child nodes
+var _root_hbox: HBoxContainer = null
 var _portrait: ColorRect = null
 var _portrait_texture: TextureRect = null
 var _name_label: Label = null
@@ -42,6 +58,15 @@ var _queue_icons_container: HBoxContainer = null
 var _queue_eta_label: Label = null
 var _tracked_queue: Node = null
 var _main_vbox: VBoxContainer = null
+
+# Build section (villager mode)
+var _build_separator: VSeparator = null
+var _build_section: VBoxContainer = null
+var _build_tab_bar: HBoxContainer = null
+var _build_grid: GridContainer = null
+var _build_tab: String = "civilian"
+var _is_villager_mode: bool = false
+var _player_id: int = 0
 
 
 func _ready() -> void:
@@ -74,10 +99,11 @@ func _build_ui() -> void:
 	grow_vertical = Control.GROW_DIRECTION_BEGIN
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var hbox := HBoxContainer.new()
-	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_theme_constant_override("separation", 12)
-	add_child(hbox)
+	_root_hbox = HBoxContainer.new()
+	_root_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root_hbox.add_theme_constant_override("separation", 12)
+	add_child(_root_hbox)
+	var hbox := _root_hbox
 
 	# Portrait
 	_portrait = ColorRect.new()
@@ -149,6 +175,7 @@ func _build_ui() -> void:
 
 	_main_vbox = vbox
 	_build_queue_section(vbox)
+	_build_build_section()
 
 
 func _build_queue_section(parent: VBoxContainer) -> void:
@@ -202,11 +229,13 @@ func setup(
 	target_detector: Node = null,
 	river_transport: Node = null,
 	trade_manager: Node = null,
+	building_placer: Node = null,
 ) -> void:
 	_input_handler = input_handler
 	_target_detector = target_detector
 	_river_transport = river_transport
 	_trade_manager = trade_manager
+	_building_placer = building_placer
 
 
 func show_unit(unit: Node2D) -> void:
@@ -217,6 +246,12 @@ func show_unit(unit: Node2D) -> void:
 	_clear_thumbnail()
 	_hide_queue_section()
 	visible = true
+	# Villager build panel
+	var is_villager: bool = "unit_type" in unit and unit.unit_type == "villager"
+	if is_villager and _building_placer != null:
+		_show_build_section()
+	else:
+		_hide_build_section()
 	# Portrait color
 	if "unit_color" in unit:
 		_portrait.color = unit.unit_color
@@ -250,6 +285,7 @@ func show_building(building: Node2D) -> void:
 	_tracked_entities.clear()
 	_is_multi = false
 	_clear_hover()
+	_hide_build_section()
 	visible = true
 	# Check ruins state
 	var is_ruins: bool = "_is_ruins" in building and building._is_ruins
@@ -326,6 +362,7 @@ func show_barge(barge: Node2D) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
+	_hide_build_section()
 	visible = true
 	# Portrait color
 	if barge.owner_id == 0:
@@ -357,6 +394,7 @@ func show_multi_select(units: Array) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
+	_hide_build_section()
 	visible = true
 	# Portrait: use first unit's color
 	if not units.is_empty() and "unit_color" in units[0]:
@@ -405,6 +443,7 @@ func clear() -> void:
 	_is_multi = false
 	_clear_hover()
 	_hide_queue_section()
+	_hide_build_section()
 	visible = false
 
 
@@ -568,6 +607,7 @@ func _update_resource_hover() -> void:
 
 
 func _update() -> void:
+	_update_build_button_states()
 	if _is_multi:
 		_update_multi_hp(_tracked_entities)
 		return
@@ -898,9 +938,330 @@ func _resource_type_name(res_type: int) -> String:
 	return "Res%d" % res_type
 
 
-func save_state() -> Dictionary:
+# -- Build section (villager mode) --
+
+
+func _build_build_section() -> void:
+	_build_separator = VSeparator.new()
+	_build_separator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build_separator.visible = false
+	_root_hbox.add_child(_build_separator)
+
+	_build_section = VBoxContainer.new()
+	_build_section.name = "BuildSection"
+	_build_section.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build_section.add_theme_constant_override("separation", 2)
+	_build_section.visible = false
+	_root_hbox.add_child(_build_section)
+
+	_build_tab_bar = HBoxContainer.new()
+	_build_tab_bar.name = "BuildTabBar"
+	_build_tab_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build_section.add_child(_build_tab_bar)
+	_rebuild_build_tabs()
+
+	_build_grid = GridContainer.new()
+	_build_grid.name = "BuildGrid"
+	_build_grid.columns = BUILD_GRID_COLUMNS
+	_build_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build_section.add_child(_build_grid)
+
+
+func _rebuild_build_tabs() -> void:
+	for child in _build_tab_bar.get_children():
+		child.queue_free()
+	for cat: String in BUILD_CATEGORIES:
+		var tab_btn := Button.new()
+		tab_btn.name = "Tab_%s" % cat
+		tab_btn.text = cat.capitalize()
+		tab_btn.custom_minimum_size = Vector2(60, 20)
+		tab_btn.clip_text = true
+		tab_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		tab_btn.add_theme_font_size_override("font_size", 10)
+		_style_build_tab(tab_btn, cat == _build_tab)
+		tab_btn.pressed.connect(_on_build_tab_pressed.bind(cat))
+		_build_tab_bar.add_child(tab_btn)
+
+
+func _style_build_tab(btn: Button, active: bool) -> void:
+	var style := StyleBoxFlat.new()
+	if active:
+		style.bg_color = Color(0.3, 0.3, 0.5, 0.9)
+	else:
+		style.bg_color = Color(0.15, 0.15, 0.2, 0.7)
+	style.set_corner_radius_all(2)
+	btn.add_theme_stylebox_override("normal", style)
+	var hover_style := StyleBoxFlat.new()
+	hover_style.bg_color = Color(0.35, 0.35, 0.55, 0.9)
+	hover_style.set_corner_radius_all(2)
+	btn.add_theme_stylebox_override("hover", hover_style)
+
+
+func _on_build_tab_pressed(category: String) -> void:
+	if _build_tab == category:
+		return
+	_build_tab = category
+	for child in _build_tab_bar.get_children():
+		if child is Button:
+			var cat: String = child.name.replace("Tab_", "")
+			_style_build_tab(child, cat == _build_tab)
+	if _is_villager_mode:
+		_render_build_grid()
+
+
+func _show_build_section() -> void:
+	_is_villager_mode = true
+	if _build_separator != null:
+		_build_separator.visible = true
+	if _build_section != null:
+		_build_section.visible = true
+	_set_panel_width(VILLAGER_PANEL_WIDTH)
+	_render_build_grid()
+
+
+func _hide_build_section() -> void:
+	if not _is_villager_mode:
+		return
+	_is_villager_mode = false
+	if _build_separator != null:
+		_build_separator.visible = false
+	if _build_section != null:
+		_build_section.visible = false
+	_set_panel_width(PANEL_WIDTH)
+
+
+func _set_panel_width(w: float) -> void:
+	custom_minimum_size.x = w
+	size.x = w
+	offset_left = -w / 2.0
+	offset_right = w / 2.0
+
+
+func _render_build_grid() -> void:
+	_clear_build_grid()
+	var commands: Array = _get_build_commands()
+	var hotkeys: Array = [["Q", "W", "E"], ["A", "S", "D"], ["Z", "X", "C"], ["R", "F", "V"]]
+	for i in commands.size():
+		var cmd: Dictionary = commands[i]
+		@warning_ignore("integer_division")
+		var row: int = i / BUILD_GRID_COLUMNS
+		var col: int = i % BUILD_GRID_COLUMNS
+		var hotkey: String = ""
+		if row < hotkeys.size() and col < hotkeys[row].size():
+			hotkey = hotkeys[row][col]
+		var btn := _create_build_button(cmd, hotkey)
+		_build_grid.add_child(btn)
+
+
+func _get_build_commands() -> Array:
+	var all_ids: Array = _get_all_building_ids()
+	var unlocked: Array = []
+	for building_id: String in all_ids:
+		if _is_civ_unique_for_other(building_id):
+			continue
+		var resolved: String = CivBonusManager.get_resolved_building_id(_player_id, building_id)
+		var stats: Dictionary = _load_building_data(resolved)
+		if stats.is_empty():
+			continue
+		var cat: String = str(stats.get("category", ""))
+		if cat != _build_tab:
+			continue
+		if not _is_build_unlocked(building_id):
+			continue
+		var cmd := {
+			"id": "build_%s" % resolved,
+			"label": str(stats.get("name", resolved)),
+			"tooltip": _build_cost_tooltip(resolved, stats),
+			"action": "build",
+			"building": building_id,
+		}
+		unlocked.append(cmd)
+	var start: int = 0
+	var end: int = mini(start + MAX_BUILD_SLOTS, unlocked.size())
+	if start >= unlocked.size():
+		return []
+	return unlocked.slice(start, end)
+
+
+func _get_all_building_ids() -> Array:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_all_building_ids()
+	var dl: Node = null
+	if is_instance_valid(Engine.get_main_loop()):
+		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+	if dl != null and dl.has_method("get_all_building_ids"):
+		return dl.get_all_building_ids()
+	return []
+
+
+func _is_civ_unique_for_other(building_id: String) -> bool:
+	var stats: Dictionary = _load_building_data(building_id)
+	if stats.is_empty():
+		return false
+	var all_civs: Array = _get_all_civ_ids()
+	for civ_id: String in all_civs:
+		var civ_data: Dictionary = _load_civ_data(civ_id)
+		var unique: Dictionary = civ_data.get("unique_building", {})
+		if unique.is_empty():
+			continue
+		var unique_name: String = str(unique.get("name", "")).to_lower().replace(" ", "_")
+		if unique_name == building_id:
+			var player_civ: String = CivBonusManager.get_active_civ(_player_id)
+			return player_civ != civ_id
+	return false
+
+
+func _get_all_civ_ids() -> Array:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_all_civ_ids()
+	var dl: Node = null
+	if is_instance_valid(Engine.get_main_loop()):
+		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+	if dl != null and dl.has_method("get_all_civ_ids"):
+		return dl.get_all_civ_ids()
+	return []
+
+
+func _load_civ_data(civ_id: String) -> Dictionary:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_civ_data(civ_id)
+	var dl: Node = null
+	if is_instance_valid(Engine.get_main_loop()):
+		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+	if dl != null and dl.has_method("get_civ_data"):
+		return dl.get_civ_data(civ_id)
 	return {}
 
 
-func load_state(_data: Dictionary) -> void:
-	pass
+func _load_building_data(building_name: String) -> Dictionary:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.get_building_stats(building_name)
+	var dl: Node = null
+	if is_instance_valid(Engine.get_main_loop()):
+		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+	if dl != null and dl.has_method("get_building_stats"):
+		return dl.get_building_stats(building_name)
+	return {}
+
+
+func _is_build_unlocked(building_id: String) -> bool:
+	if _building_placer != null and _building_placer.has_method("is_building_unlocked"):
+		return _building_placer.is_building_unlocked(building_id, _player_id)
+	return true
+
+
+func _build_cost_tooltip(building_id: String, stats: Dictionary) -> String:
+	var tip: String = "Build %s" % str(stats.get("name", building_id))
+	var costs: Dictionary = stats.get("build_cost", {})
+	if not costs.is_empty():
+		var parts: Array[String] = []
+		for res: String in costs:
+			parts.append("%d %s" % [int(costs[res]), res.capitalize()])
+		tip += " (%s)" % ", ".join(parts)
+	return tip
+
+
+func _create_build_button(command: Dictionary, hotkey: String) -> Button:
+	var btn := Button.new()
+	btn.custom_minimum_size = Vector2(BUILD_BUTTON_SIZE, BUILD_BUTTON_SIZE)
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	var label_text: String = command.get("label", "?")
+	if hotkey != "":
+		label_text = "[%s] %s" % [hotkey, label_text]
+	btn.text = label_text
+	var tip: String = command.get("tooltip", "")
+	if hotkey != "":
+		tip += " (%s)" % hotkey
+	btn.tooltip_text = tip
+	btn.clip_text = true
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.2, 0.2, 0.3, 0.9)
+	style.set_corner_radius_all(3)
+	btn.add_theme_stylebox_override("normal", style)
+	var hover_style := StyleBoxFlat.new()
+	hover_style.bg_color = Color(0.3, 0.3, 0.5, 0.9)
+	hover_style.set_corner_radius_all(3)
+	btn.add_theme_stylebox_override("hover", hover_style)
+	var pressed_style := StyleBoxFlat.new()
+	pressed_style.bg_color = Color(0.15, 0.15, 0.25, 0.9)
+	pressed_style.set_corner_radius_all(3)
+	btn.add_theme_stylebox_override("pressed", pressed_style)
+	var disabled_style := StyleBoxFlat.new()
+	disabled_style.bg_color = Color(0.15, 0.15, 0.15, 0.5)
+	disabled_style.set_corner_radius_all(3)
+	btn.add_theme_stylebox_override("disabled", disabled_style)
+	btn.add_theme_font_size_override("font_size", 10)
+	if not _check_build_affordability(command):
+		btn.disabled = true
+	btn.pressed.connect(_on_build_pressed.bind(command))
+	btn.set_meta("command", command)
+	return btn
+
+
+func _on_build_pressed(command: Dictionary) -> void:
+	var building_name: String = command.get("building", "")
+	if building_name != "" and _building_placer != null:
+		_building_placer.start_placement(building_name, _player_id)
+
+
+func _check_build_affordability(command: Dictionary) -> bool:
+	var building_name: String = command.get("building", "")
+	if building_name == "":
+		return true
+	var stats: Dictionary = _load_building_data(building_name)
+	if stats.is_empty():
+		return true
+	var raw_costs: Dictionary = stats.get("build_cost", {})
+	var multiplier: float = 1.0
+	if _building_placer != null and _building_placer.has_method("get_building_cost_multiplier"):
+		multiplier = _building_placer.get_building_cost_multiplier()
+	var costs: Dictionary = {}
+	for key: String in raw_costs:
+		var lower_key := key.to_lower()
+		if RESOURCE_NAME_TO_TYPE.has(lower_key):
+			costs[RESOURCE_NAME_TO_TYPE[lower_key]] = int(int(raw_costs[key]) * multiplier)
+	return ResourceManager.can_afford(_player_id, costs)
+
+
+func _update_build_button_states() -> void:
+	if _build_grid == null or not _is_villager_mode:
+		return
+	for child in _build_grid.get_children():
+		if child is Button and child.has_meta("command"):
+			var cmd: Dictionary = child.get_meta("command")
+			child.disabled = not _check_build_affordability(cmd)
+
+
+func _clear_build_grid() -> void:
+	if _build_grid == null:
+		return
+	for child in _build_grid.get_children():
+		child.queue_free()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _is_villager_mode or _build_grid == null or _build_grid.get_child_count() == 0:
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		var key := event as InputEventKey
+		var key_char := char(key.keycode).to_upper()
+		var hotkeys: Array = [["Q", "W", "E"], ["A", "S", "D"], ["Z", "X", "C"], ["R", "F", "V"]]
+		for row_idx in hotkeys.size():
+			var row: Array = hotkeys[row_idx]
+			for col_idx in row.size():
+				if row[col_idx] == key_char:
+					var btn_index: int = row_idx * BUILD_GRID_COLUMNS + col_idx
+					if btn_index < _build_grid.get_child_count():
+						var btn: Button = _build_grid.get_child(btn_index) as Button
+						if btn != null and not btn.disabled:
+							btn.emit_signal("pressed")
+							get_viewport().set_input_as_handled()
+					return
+
+
+func save_state() -> Dictionary:
+	return {"build_tab": _build_tab}
+
+
+func load_state(data: Dictionary) -> void:
+	_build_tab = str(data.get("build_tab", "civilian"))
