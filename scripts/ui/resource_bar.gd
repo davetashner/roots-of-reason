@@ -12,6 +12,10 @@ var _population_label: Label
 var _age_label: Label
 var _corruption_item: HBoxContainer
 var _corruption_label: Label
+var _research_item: HBoxContainer
+var _research_label: Label
+var _research_progress_bar: ProgressBar
+var _tech_manager: Node = null
 var _river_transport: Node = null
 
 
@@ -154,6 +158,51 @@ func _build_layout() -> void:
 	_age_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(_age_label)
 
+	# Separator before research
+	var sep3 := VSeparator.new()
+	sep3.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(sep3)
+
+	# Research indicator (hidden when idle)
+	_research_item = HBoxContainer.new()
+	_research_item.name = "ResearchItem"
+	_research_item.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_research_item.add_theme_constant_override("separation", 4)
+	_research_item.visible = false
+
+	var research_icon := ColorRect.new()
+	research_icon.name = "Icon"
+	research_icon.custom_minimum_size = Vector2(icon_size, icon_size)
+	research_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	research_icon.color = Color(0.3, 0.6, 1.0)
+	_research_item.add_child(research_icon)
+
+	_research_label = Label.new()
+	_research_label.name = "ResearchLabel"
+	_research_label.text = ""
+	_research_label.add_theme_font_size_override("font_size", font_size)
+	_research_label.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
+	_research_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_research_item.add_child(_research_label)
+
+	_research_progress_bar = ProgressBar.new()
+	_research_progress_bar.name = "ResearchProgress"
+	_research_progress_bar.custom_minimum_size = Vector2(80, 14)
+	_research_progress_bar.min_value = 0.0
+	_research_progress_bar.max_value = 1.0
+	_research_progress_bar.value = 0.0
+	_research_progress_bar.show_percentage = false
+	_research_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bar_bg := StyleBoxFlat.new()
+	bar_bg.bg_color = Color(0.15, 0.15, 0.2, 0.8)
+	_research_progress_bar.add_theme_stylebox_override("background", bar_bg)
+	var bar_fill := StyleBoxFlat.new()
+	bar_fill.bg_color = Color(0.3, 0.6, 1.0, 0.9)
+	_research_progress_bar.add_theme_stylebox_override("fill", bar_fill)
+	_research_item.add_child(_research_progress_bar)
+
+	hbox.add_child(_research_item)
+
 	# Right spacer to push content left
 	var right_spacer := Control.new()
 	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -280,6 +329,71 @@ func update_age() -> void:
 func _update_age() -> void:
 	if _age_label != null:
 		_age_label.text = GameManager.get_age_name()
+
+
+func setup_tech_manager(tech_manager: Node) -> void:
+	_tech_manager = tech_manager
+	if _tech_manager == null:
+		return
+	_tech_manager.tech_research_started.connect(_on_research_started)
+	_tech_manager.research_progress.connect(_on_research_progress)
+	_tech_manager.tech_researched.connect(_on_tech_researched)
+	_tech_manager.research_queue_changed.connect(_on_research_queue_changed)
+	# Show current research if already in progress
+	_refresh_research_indicator()
+
+
+func _on_research_started(player_id: int, tech_id: String) -> void:
+	if player_id != PLAYER_ID:
+		return
+	_show_research(tech_id, 0.0)
+
+
+func _on_research_progress(player_id: int, _tech_id: String, progress: float) -> void:
+	if player_id != PLAYER_ID:
+		return
+	if _research_progress_bar != null:
+		_research_progress_bar.value = progress
+
+
+func _on_tech_researched(player_id: int, _tech_id: String, _effects: Dictionary) -> void:
+	if player_id != PLAYER_ID:
+		return
+	_refresh_research_indicator()
+
+
+func _on_research_queue_changed(player_id: int) -> void:
+	if player_id != PLAYER_ID:
+		return
+	_refresh_research_indicator()
+
+
+func _refresh_research_indicator() -> void:
+	if _tech_manager == null:
+		_hide_research()
+		return
+	var tech_id: String = _tech_manager.get_current_research(PLAYER_ID)
+	if tech_id == "":
+		_hide_research()
+		return
+	var progress: float = _tech_manager.get_research_progress(PLAYER_ID)
+	_show_research(tech_id, progress)
+
+
+func _show_research(tech_id: String, progress: float) -> void:
+	if _research_item == null:
+		return
+	var tech_data: Dictionary = _tech_manager.get_tech_data(tech_id)
+	var tech_name: String = tech_data.get("name", tech_id)
+	_research_label.text = tech_name
+	_research_progress_bar.value = progress
+	_research_item.visible = true
+
+
+func _hide_research() -> void:
+	if _research_item == null:
+		return
+	_research_item.visible = false
 
 
 func _resource_name_to_type(resource_name: String) -> int:
