@@ -27,7 +27,9 @@ var _node_color: Color = Color(0.2, 0.8, 0.2)
 var _sprite: Sprite2D = null
 var _sprite_textures: Dictionary = {}  # state_name -> Texture2D
 var _sprite_scales: Dictionary = {}  # state_name -> float (per-state scale override)
+var _three_quarter_threshold: float = 0.75
 var _half_threshold: float = 0.5
+var _quarter_threshold: float = 0.25
 var _sprite_offset_y: float = 0.0
 
 
@@ -72,7 +74,9 @@ func _setup_sprite(cfg: Dictionary) -> void:
 			_sprite_textures[state_name] = load(full_path)
 	if _sprite_textures.is_empty():
 		return
+	_three_quarter_threshold = float(sprite_cfg.get("three_quarter_threshold", 0.75))
 	_half_threshold = float(sprite_cfg.get("half_threshold", 0.5))
+	_quarter_threshold = float(sprite_cfg.get("quarter_threshold", 0.25))
 	_sprite_offset_y = float(sprite_cfg.get("offset_y", 0.0))
 	var scales: Dictionary = sprite_cfg.get("scales", {})
 	for state_name_s: String in scales:
@@ -90,12 +94,24 @@ func _update_sprite() -> void:
 	var state: String = "full"
 	if _is_regrowing or current_yield <= 0:
 		state = "stump"
-	elif total_yield > 0 and float(current_yield) / float(total_yield) <= _half_threshold:
-		state = "half"
+	elif total_yield > 0:
+		var ratio: float = float(current_yield) / float(total_yield)
+		if ratio <= _quarter_threshold:
+			state = "stump"
+		elif ratio <= _half_threshold:
+			state = "half"
+		elif ratio <= _three_quarter_threshold:
+			state = "three_quarter"
+	# Fall back through states for resources with fewer phases
+	if not _sprite_textures.has(state):
+		if state == "three_quarter" and _sprite_textures.has("full"):
+			state = "full"
+		elif state == "stump" and _sprite_textures.has("half"):
+			state = "half"
+		elif _sprite_textures.has("full"):
+			state = "full"
 	if _sprite_textures.has(state):
 		_sprite.texture = _sprite_textures[state]
-	elif _sprite_textures.has("full"):
-		_sprite.texture = _sprite_textures["full"]
 	var s: float = _sprite_scales.get(state, 1.0)
 	_sprite.scale = Vector2(s, s)
 

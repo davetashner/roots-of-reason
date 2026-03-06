@@ -27,7 +27,9 @@
             "items": { "type": "string" }
           }
         },
+        "three_quarter_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
         "half_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+        "quarter_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
         "offset_y": { "type": "number" },
         "scales": {
           "type": "object",
