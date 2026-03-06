@@ -462,6 +462,9 @@ func _process(delta: float) -> void:
 		_visual_dirty = true
 	_tick_build(game_delta)
 	_gatherer.tick(game_delta)
+	# Keep gathering villagers visible above resource sprites (z_index 2)
+	var is_gathering: bool = _gatherer.gather_state != GathererComponentScript.GatherState.NONE
+	z_index = 4 if is_gathering else 3
 	_combatant.tick(game_delta)
 	_heal_feed.tick(game_delta)
 	_explorer.tick(game_delta)
