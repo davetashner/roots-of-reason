@@ -410,6 +410,8 @@ func setup_hud() -> void:
 	_root._notification_panel.name = "NotificationPanel"
 	_root._notification_panel.set_script(NotificationPanelScript)
 	notif_layer.add_child(_root._notification_panel)
+	if _root._tech_manager != null:
+		_root._tech_manager.tech_researched.connect(_on_tech_researched_notify)
 	_root._knowledge_burning_vfx = Node.new()
 	_root._knowledge_burning_vfx.name = "KnowledgeBurningVFX"
 	_root._knowledge_burning_vfx.set_script(KnowledgeBurningVFXScript)
@@ -506,6 +508,16 @@ func _setup_resource_bar() -> void:
 		_root._corruption_manager.corruption_changed.connect(_root._on_corruption_changed)
 	if _root._river_transport != null:
 		_root._resource_bar.setup_transit(_root._river_transport)
+	if _root._tech_manager != null:
+		_root._resource_bar.setup_tech_manager(_root._tech_manager)
+
+
+func _on_tech_researched_notify(player_id: int, tech_id: String, _effects: Dictionary) -> void:
+	if player_id != 0 or _root._notification_panel == null:
+		return
+	var tech_data: Dictionary = DataLoader.get_tech_data(tech_id)
+	var tech_name: String = tech_data.get("name", tech_id)
+	_root._notification_panel.notify("Research complete: %s" % tech_name, "info")
 
 
 func try_attach_production_queue(building: Node2D) -> void:
