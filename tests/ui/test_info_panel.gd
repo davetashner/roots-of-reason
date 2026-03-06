@@ -283,3 +283,105 @@ func test_clear_thumbnail_sets_texture_null() -> void:
 	var panel := _create_panel()
 	panel._clear_thumbnail()
 	assert_object(panel._portrait_texture.texture).is_null()
+
+
+# -- Villager build section --
+
+
+class StubBuildingPlacer:
+	extends Node
+	var last_building: String = ""
+	var last_player_id: int = -1
+
+	func start_placement(building_name: String, player_id: int) -> bool:
+		last_building = building_name
+		last_player_id = player_id
+		return true
+
+	func is_active() -> bool:
+		return false
+
+	func is_building_unlocked(_building_name: String, _player_id: int) -> bool:
+		return true
+
+	func get_building_cost_multiplier() -> float:
+		return 1.0
+
+
+func _create_villager() -> Node2D:
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "villager"
+	unit.owner_id = 0
+	unit.hp = 25
+	unit.max_hp = 25
+	add_child(unit)
+	auto_free(unit)
+	return unit
+
+
+func test_villager_shows_build_section() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	panel._building_placer = placer
+	var unit := _create_villager()
+	panel.show_unit(unit)
+	assert_bool(panel._is_villager_mode).is_true()
+	assert_bool(panel._build_section.visible).is_true()
+
+
+func test_non_villager_hides_build_section() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	panel._building_placer = placer
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "archer"
+	unit.owner_id = 0
+	unit.hp = 50
+	unit.max_hp = 50
+	add_child(unit)
+	auto_free(unit)
+	panel.show_unit(unit)
+	assert_bool(panel._is_villager_mode).is_false()
+	assert_bool(panel._build_section.visible).is_false()
+
+
+func test_villager_panel_is_wider() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	panel._building_placer = placer
+	var unit := _create_villager()
+	panel.show_unit(unit)
+	assert_float(panel.custom_minimum_size.x).is_greater(400.0)
+
+
+func test_clear_hides_build_section() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	panel._building_placer = placer
+	var unit := _create_villager()
+	panel.show_unit(unit)
+	panel.clear()
+	assert_bool(panel._is_villager_mode).is_false()
+	assert_bool(panel._build_section.visible).is_false()
+
+
+func test_build_button_calls_placer() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	panel._building_placer = placer
+	var command := {"id": "build_house", "action": "build", "building": "house"}
+	panel._on_build_pressed(command)
+	assert_str(placer.last_building).is_equal("house")
+	assert_int(placer.last_player_id).is_equal(0)

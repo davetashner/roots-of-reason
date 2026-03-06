@@ -386,7 +386,17 @@ func setup_hud() -> void:
 	_root._info_panel.name = "InfoPanelWidget"
 	_root._info_panel.set_script(load("res://scripts/ui/info_panel.gd"))
 	info_panel_layer.add_child(_root._info_panel)
-	_root._info_panel.setup(_root._input_handler, _root._target_detector, _root._river_transport, _root._trade_manager)
+	(
+		_root
+		. _info_panel
+		. setup(
+			_root._input_handler,
+			_root._target_detector,
+			_root._river_transport,
+			_root._trade_manager,
+			_root._building_placer,
+		)
+	)
 	var cmd_panel_layer := CanvasLayer.new()
 	cmd_panel_layer.name = "CommandPanel"
 	cmd_panel_layer.layer = 10

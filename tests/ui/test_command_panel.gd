@@ -79,14 +79,15 @@ func _create_panel() -> PanelContainer:
 # -- Villager dynamic build menu --
 
 
-func test_villager_selection_shows_tab_bar() -> void:
+func test_villager_selection_hides_tab_bar_in_command_panel() -> void:
+	# Build menu moved to InfoPanel — command panel no longer shows tab bar
 	var panel := _create_panel()
 	var unit := StubUnit.new()
 	unit.unit_type = "villager"
 	add_child(unit)
 	auto_free(unit)
 	panel.update_commands([unit])
-	assert_bool(panel._tab_bar.visible).is_true()
+	assert_bool(panel._tab_bar.visible).is_false()
 	assert_bool(panel._is_villager_mode).is_true()
 
 
@@ -101,7 +102,8 @@ func test_non_villager_selection_hides_tab_bar() -> void:
 	assert_bool(panel._is_villager_mode).is_false()
 
 
-func test_dynamic_build_menu_shows_unlocked_civilian_buildings() -> void:
+func test_villager_in_command_panel_shows_default_not_build() -> void:
+	# Build menu moved to InfoPanel — command panel shows stop/hold for villagers
 	var panel := _create_panel()
 	var placer := StubBuildingPlacer.new()
 	placer._unlocked = {"house": true, "farm": true, "town_center": true}
@@ -111,46 +113,21 @@ func test_dynamic_build_menu_shows_unlocked_civilian_buildings() -> void:
 	add_child(handler)
 	auto_free(handler)
 	panel.setup(handler, placer)
-	panel._build_tab = "civilian"
 	GameManager.current_age = 0
 	var unit := StubUnit.new()
 	unit.unit_type = "villager"
 	add_child(unit)
 	auto_free(unit)
 	panel.update_commands([unit])
-	# Should have buttons in the grid
 	var grid: GridContainer = panel._grid
-	assert_that(grid.get_child_count()).is_greater(0)
-	# Check that at least one button has a build action
+	# Should have default commands, not build commands
 	var found_build := false
 	for child in grid.get_children():
 		if child is Button and child.has_meta("command"):
 			var cmd: Dictionary = child.get_meta("command")
 			if cmd.get("action", "") == "build":
 				found_build = true
-				break
-	assert_bool(found_build).is_true()
-
-
-func test_dynamic_build_menu_filters_locked_buildings() -> void:
-	var panel := _create_panel()
-	var placer := StubBuildingPlacer.new()
-	# Only house is unlocked — barracks, market etc should be hidden
-	placer._unlocked = {"house": true, "farm": true}
-	add_child(placer)
-	auto_free(placer)
-	var handler := StubInputHandler.new()
-	add_child(handler)
-	auto_free(handler)
-	panel.setup(handler, placer)
-	panel._build_tab = "military"
-	var unit := StubUnit.new()
-	unit.unit_type = "villager"
-	add_child(unit)
-	auto_free(unit)
-	panel.update_commands([unit])
-	# Military tab should have zero buttons since none unlocked
-	assert_that(panel._grid.get_child_count()).is_equal(0)
+	assert_bool(found_build).is_false()
 
 
 func test_tab_switching_re_renders_grid() -> void:
@@ -242,7 +219,8 @@ func test_get_commands_for_default_unit_returns_stop_hold() -> void:
 	assert_that(ids).contains(["hold"])
 
 
-func test_update_commands_creates_buttons() -> void:
+func test_update_commands_creates_default_buttons_for_villager() -> void:
+	# Villager build menu is now in InfoPanel — command panel shows stop/hold
 	var panel := _create_panel()
 	var placer := StubBuildingPlacer.new()
 	add_child(placer)
@@ -259,6 +237,14 @@ func test_update_commands_creates_buttons() -> void:
 	panel.update_commands([unit])
 	var grid: GridContainer = panel._grid
 	assert_that(grid.get_child_count()).is_greater(0)
+	# Should have stop/hold commands, not build commands
+	var has_stop := false
+	for child in grid.get_children():
+		if child is Button and child.has_meta("command"):
+			var cmd: Dictionary = child.get_meta("command")
+			if cmd.get("action", "") == "stop":
+				has_stop = true
+	assert_bool(has_stop).is_true()
 
 
 func test_update_commands_clears_on_empty_selection() -> void:

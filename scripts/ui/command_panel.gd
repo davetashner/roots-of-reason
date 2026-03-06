@@ -172,11 +172,8 @@ func _compute_selection_hash(units: Array) -> int:
 func update_commands(units: Array) -> void:
 	_clear_grid()
 	_is_villager_mode = _is_villager_selection(units)
-	_tab_bar.visible = _is_villager_mode
-	if _is_villager_mode:
-		_build_page = 0
-		_render_build_commands()
-		return
+	# Villager build menu is now in the InfoPanel — show default commands only
+	_tab_bar.visible = false
 	var commands: Array = _get_commands_for_selection(units)
 	if commands.is_empty():
 		return
