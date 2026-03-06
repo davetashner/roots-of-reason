@@ -34,6 +34,19 @@ func generate(
 	# Track all placed positions globally to prevent overlap
 	var occupied: Dictionary = {}  # Vector2i -> true
 
+	# Exclude building footprints around starting positions (TC=3x3, houses)
+	var building_exclusions: Array = _config.get("building_exclusions", [])
+	for start_pos in starting_positions:
+		var sp: Vector2i = start_pos as Vector2i
+		for excl in building_exclusions:
+			var ox: int = int(excl.get("offset_x", 0))
+			var oy: int = int(excl.get("offset_y", 0))
+			var fw: int = int(excl.get("footprint_w", 1))
+			var fh: int = int(excl.get("footprint_h", 1))
+			for dx in range(fw):
+				for dy in range(fh):
+					occupied[Vector2i(sp.x + ox + dx, sp.y + oy + dy)] = true
+
 	for res_name in placement_order:
 		var res_name_str: String = str(res_name)
 		var res_cfg: Dictionary = resources_cfg.get(res_name_str, {})

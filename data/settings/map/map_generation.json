@@ -146,7 +146,12 @@
       "berry_bush": 2,
       "tree": 4,
       "fish": 0
-    }
+    },
+    "building_exclusions": [
+      { "offset_x": -1, "offset_y": -1, "footprint_w": 5, "footprint_h": 5 },
+      { "offset_x": 4,  "offset_y": -1, "footprint_w": 4, "footprint_h": 4 },
+      { "offset_x": 7,  "offset_y": -1, "footprint_w": 4, "footprint_h": 4 }
+    ]
   },
   "fauna_generation": {
     "fauna_types": {
