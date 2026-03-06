@@ -333,6 +333,8 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 
 func _unit_at(world_pos: Vector2) -> Node:
 	for unit in _units:
+		if not is_instance_valid(unit):
+			continue
 		if "owner_id" in unit and unit.owner_id != 0:
 			continue
 		if unit.has_method("is_point_inside") and unit.is_point_inside(world_pos):
