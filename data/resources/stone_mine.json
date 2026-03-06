@@ -2,5 +2,18 @@
   "resource_type": "stone",
   "total_yield": 350,
   "color": [0.6, 0.6, 0.6],
-  "regenerates": false
+  "regenerates": false,
+  "sprite": {
+    "base_path": "res://assets/sprites/resources/stone_mine",
+    "states": {
+      "full": "stone_mine_01.png",
+      "three_quarter": "stone_mine_02.png",
+      "half": "stone_mine_03.png",
+      "stump": "stone_mine_04.png"
+    },
+    "three_quarter_threshold": 0.75,
+    "half_threshold": 0.5,
+    "quarter_threshold": 0.25,
+    "offset_y": -10.0
+  }
 }
