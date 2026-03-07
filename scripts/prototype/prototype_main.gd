@@ -40,6 +40,7 @@ var _victory_screen: PanelContainer = null
 var _knowledge_burning_vfx: Node = null
 var _tech_tree_viewer: PanelContainer = null
 var _singularity_regression: Node = null
+var _age_advancement: Node = null
 var _ai_singularity: Node = null
 var _civ_selection_screen: PanelContainer = null
 var _pause_menu: PanelContainer = null
@@ -459,6 +460,10 @@ func _on_barge_destroyed_with_resources(barge: Node2D, resources: Dictionary) ->
 
 func _on_tech_researched_spillover(player_id: int, tech_id: String, effects: Dictionary) -> void:
 	_flow.on_tech_researched_spillover(player_id, tech_id, effects)
+
+
+func _on_age_advancement_completed(new_age: int) -> void:
+	EventBus.emit_age_advanced(0, new_age)
 
 
 func _on_corruption_changed(player_id: int, rate: float) -> void:

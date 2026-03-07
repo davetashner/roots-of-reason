@@ -138,7 +138,17 @@ func _get_age_prerequisites() -> Array:
 	if next_age >= ages_data.size():
 		return []
 	var age_entry: Dictionary = ages_data[next_age]
-	return age_entry.get("advance_prerequisites", [])
+	var prereqs = age_entry.get("advance_prerequisites", [])
+	if prereqs is String and prereqs == "all_previous_age":
+		var result: Array = []
+		var tech_tree: Array = DataLoader.get_tech_tree()
+		for tech: Dictionary in tech_tree:
+			if int(tech.get("age", -1)) == GameManager.current_age:
+				result.append(str(tech["id"]))
+		return result
+	if prereqs is Array:
+		return prereqs
+	return []
 
 
 func _find_personality_tech(current_queue: Array, age: int) -> String:

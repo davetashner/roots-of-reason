@@ -76,6 +76,10 @@ var _build_tab: String = "civilian"
 var _is_villager_mode: bool = false
 var _player_id: int = 0
 
+# Age advancement section (Town Center)
+var _age_section: VBoxContainer = null
+var _age_advancement: Node = null
+
 
 func _ready() -> void:
 	_load_config()
@@ -192,6 +196,7 @@ func _build_ui() -> void:
 
 	_main_vbox = vbox
 	_build_queue_section(vbox)
+	_build_age_section(vbox)
 	_build_build_section()
 
 
@@ -241,18 +246,28 @@ func _build_queue_section(parent: VBoxContainer) -> void:
 	_queue_section.add_child(_queue_eta_label)
 
 
+func _build_age_section(parent: VBoxContainer) -> void:
+	_age_section = VBoxContainer.new()
+	_age_section.set_script(load("res://scripts/ui/age_advancement_section.gd"))
+	parent.add_child(_age_section)
+
+
 func setup(
 	input_handler: Node,
 	target_detector: Node = null,
 	river_transport: Node = null,
 	trade_manager: Node = null,
 	building_placer: Node = null,
+	age_advancement: Node = null,
 ) -> void:
 	_input_handler = input_handler
 	_target_detector = target_detector
 	_river_transport = river_transport
 	_trade_manager = trade_manager
 	_building_placer = building_placer
+	_age_advancement = age_advancement
+	if _age_section != null and _age_advancement != null:
+		_age_section.setup(_age_advancement)
 
 
 func _all_villagers(units: Array) -> bool:
@@ -383,6 +398,7 @@ func show_building(building: Node2D) -> void:
 		_stats_label.text = stats_text
 	_update_building_hp(building)
 	_update_queue_display(building)
+	_update_age_section(building)
 
 
 func show_barge(barge: Node2D) -> void:
@@ -696,6 +712,7 @@ func _update() -> void:
 				new_stats += "\n" + state_text
 			_stats_label.text = new_stats
 		_update_queue_display(_tracked_entity as Node2D)
+		_update_age_section(_tracked_entity as Node2D)
 	else:
 		var unit: Node2D = _tracked_entity as Node2D
 		var stats := _get_unit_stats(unit)
@@ -926,9 +943,25 @@ func _hide_queue_section() -> void:
 	if _queue_section != null:
 		_queue_section.visible = false
 	_tracked_queue = null
+	_hide_age_section()
 	custom_minimum_size.y = PANEL_HEIGHT
 	size.y = PANEL_HEIGHT
 	offset_top = -PANEL_HEIGHT
+
+
+func _update_age_section(building: Node2D) -> void:
+	if _age_section == null:
+		return
+	_age_section.update_display(building)
+	if _age_section.visible:
+		custom_minimum_size.y = PANEL_HEIGHT_WITH_QUEUE
+		size.y = PANEL_HEIGHT_WITH_QUEUE
+		offset_top = -PANEL_HEIGHT_WITH_QUEUE
+
+
+func _hide_age_section() -> void:
+	if _age_section != null:
+		_age_section.visible = false
 
 
 func _is_building(entity: Node) -> bool:

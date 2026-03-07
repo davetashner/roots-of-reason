@@ -198,6 +198,11 @@ func setup_tech() -> void:
 		_root._tech_manager.tech_researched.connect(_root._population_manager._on_tech_researched)
 	if _root._building_placer != null:
 		_root._building_placer._tech_manager = _root._tech_manager
+	_root._age_advancement = Node.new()
+	_root._age_advancement.name = "AgeAdvancement"
+	_root._age_advancement.set_script(load("res://scripts/prototype/age_advancement.gd"))
+	_root.add_child(_root._age_advancement)
+	_root._age_advancement.advancement_completed.connect(_root._on_age_advancement_completed)
 
 
 func setup_corruption() -> void:
@@ -396,6 +401,7 @@ func setup_hud() -> void:
 			_root._river_transport,
 			_root._trade_manager,
 			_root._building_placer,
+			_root._age_advancement,
 		)
 	)
 	_root._cursor_overlay = CanvasLayer.new()

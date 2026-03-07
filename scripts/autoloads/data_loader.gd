@@ -98,6 +98,12 @@ func get_ages_data() -> Array:
 	return data
 
 
+func get_tech_tree() -> Array:
+	if _tech_index.is_empty():
+		_build_tech_index()
+	return _tech_index.values()
+
+
 func get_civ_data(civ_name: String) -> Dictionary:
 	var data: Variant = load_json("res://data/civilizations/%s.json" % civ_name)
 	if data == null:
