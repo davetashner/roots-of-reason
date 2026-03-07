@@ -19,6 +19,8 @@ const PANEL_WIDTH: float = 460.0
 const PANEL_HEIGHT: float = 600.0
 const SLIDE_DURATION: float = 0.3
 
+var slide_target_x: float = -1.0
+
 var _tech_textures: Dictionary = {}
 var _current_tech_id: String = ""
 var _slide_tween: Tween = null
@@ -204,7 +206,7 @@ func show_tech(
 	var research_btn: Button = vbox.get_node("DetailResearchBtn")
 	research_btn.visible = state == "available"
 
-	slide_in()
+	slide_in(slide_target_x)
 
 
 func update_progress(ratio: float) -> void:
@@ -219,12 +221,14 @@ func hide_panel() -> void:
 	_kill_slide_tween()
 
 
-func slide_in() -> void:
-	## Animate the panel sliding in from the left to center.
+func slide_in(target_x: float = -1.0) -> void:
+	## Animate the panel sliding in from the left to target_x.
+	## If target_x is negative, defaults to viewport center.
 	_kill_slide_tween()
 	visible = true
-	var viewport_size := get_viewport_rect().size
-	var target_x: float = (viewport_size.x - size.x) / 2.0
+	if target_x < 0.0:
+		var viewport_size := get_viewport_rect().size
+		target_x = (viewport_size.x - size.x) / 2.0
 	position.x = -size.x
 	_slide_tween = create_tween()
 	_slide_tween.set_ease(Tween.EASE_OUT)
@@ -286,6 +290,7 @@ func _build_contents() -> void:
 	close_btn.text = "X"
 	close_btn.custom_minimum_size = Vector2(32, 32)
 	close_btn.pressed.connect(func() -> void: close_requested.emit())
+	_style_close_button(close_btn)
 	close_row.add_child(close_btn)
 
 	# Tech name
@@ -355,8 +360,9 @@ func _build_contents() -> void:
 	var research_btn := Button.new()
 	research_btn.name = "DetailResearchBtn"
 	research_btn.text = "Research"
-	research_btn.custom_minimum_size = Vector2(0, 40)
+	research_btn.custom_minimum_size = Vector2(0, 44)
 	research_btn.pressed.connect(func() -> void: research_requested.emit(_current_tech_id))
+	_style_research_button(research_btn)
 	vbox.add_child(research_btn)
 
 
@@ -376,6 +382,52 @@ func _add_section_header(parent: VBoxContainer, lbl_name: String, text: String, 
 	lbl.add_theme_font_size_override("font_size", 16)
 	lbl.add_theme_color_override("font_color", color)
 	parent.add_child(lbl)
+
+
+func _style_research_button(btn: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = COLOR_AVAILABLE.darkened(0.5)
+	normal.border_color = COLOR_AVAILABLE
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(6)
+	btn.add_theme_stylebox_override("normal", normal)
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = COLOR_AVAILABLE.darkened(0.3)
+	hover.border_color = COLOR_AVAILABLE.lightened(0.2)
+	hover.set_border_width_all(2)
+	hover.set_corner_radius_all(6)
+	hover.set_content_margin_all(6)
+	btn.add_theme_stylebox_override("hover", hover)
+	var pressed_style := StyleBoxFlat.new()
+	pressed_style.bg_color = COLOR_AVAILABLE.darkened(0.2)
+	pressed_style.border_color = COLOR_AVAILABLE
+	pressed_style.set_border_width_all(2)
+	pressed_style.set_corner_radius_all(6)
+	pressed_style.set_content_margin_all(6)
+	btn.add_theme_stylebox_override("pressed", pressed_style)
+	btn.add_theme_color_override("font_color", Color.WHITE)
+	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+	btn.add_theme_font_size_override("font_size", 16)
+
+
+func _style_close_button(btn: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.15, 0.15, 0.25, 0.8)
+	normal.border_color = Color(0.4, 0.4, 0.6, 0.6)
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(4)
+	normal.set_content_margin_all(4)
+	btn.add_theme_stylebox_override("normal", normal)
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = Color(0.3, 0.15, 0.15, 0.9)
+	hover.border_color = Color(0.8, 0.3, 0.3)
+	hover.set_border_width_all(1)
+	hover.set_corner_radius_all(4)
+	hover.set_content_margin_all(4)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.4, 0.4))
 
 
 func _format_effects(effects: Dictionary) -> String:
