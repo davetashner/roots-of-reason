@@ -219,6 +219,14 @@ func get_sprite_rect() -> Rect2:
 	return Rect2(pos, scaled)
 
 
+func get_selection_y() -> float:
+	## Returns the Y position for the selection ellipse. Uses the configurable
+	## "selection_y" field if present, otherwise falls back to the sprite bottom.
+	if _config.has("selection_y"):
+		return float(_config["selection_y"])
+	return get_sprite_rect().end.y
+
+
 func get_sprite() -> Sprite2D:
 	return _sprite
 

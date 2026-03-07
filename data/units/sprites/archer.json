@@ -5,6 +5,7 @@
   "base_path": "res://assets/sprites/units",
   "scale": 1.0,
   "offset_y": -16.0,
+  "selection_y": -8.0,
   "frame_duration": 0.3,
   "directions": [
     "s",
