@@ -238,6 +238,17 @@ func setup(
 	_building_placer = building_placer
 
 
+func _all_villagers(units: Array) -> bool:
+	if units.is_empty():
+		return false
+	for unit in units:
+		if not is_instance_valid(unit):
+			continue
+		if not ("unit_type" in unit and unit.unit_type == "villager"):
+			return false
+	return true
+
+
 func show_unit(unit: Node2D) -> void:
 	_tracked_entity = unit
 	_tracked_entities.clear()
@@ -394,7 +405,11 @@ func show_multi_select(units: Array) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
-	_hide_build_section()
+	# Show build menu when all selected units are villagers
+	if _all_villagers(units) and _building_placer != null:
+		_show_build_section()
+	else:
+		_hide_build_section()
 	visible = true
 	# Portrait: use first unit's color
 	if not units.is_empty() and "unit_color" in units[0]:
