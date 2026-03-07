@@ -1,0 +1,311 @@
+extends PanelContainer
+## Tech detail side panel showing illustration, name, status, description,
+## cost, effects, prerequisites, leads-to, and a research button.
+## Extracted from tech_tree_viewer.gd to keep files under 1000 lines.
+
+signal research_requested(tech_id: String)
+signal close_requested
+
+const COLOR_RESEARCHED := Color("#FFD700")
+const COLOR_AVAILABLE := Color("#4CAF50")
+const COLOR_UNAFFORDABLE := Color("#2196F3")
+const COLOR_LOCKED := Color("#666666")
+const COLOR_RESEARCHING := Color("#FFA726")
+
+const DETAIL_IMAGE_SIZE := Vector2(256, 256)
+const TECH_SPRITE_PATH := "res://assets/sprites/tech/%s.png"
+
+var _tech_textures: Dictionary = {}
+var _current_tech_id: String = ""
+
+
+func _init() -> void:
+	name = "DetailPanel"
+	visible = false
+	custom_minimum_size = Vector2(320, 0)
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.15, 0.95)
+	style.border_color = Color(0.4, 0.4, 0.6)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(6)
+	style.set_content_margin_all(12)
+	add_theme_stylebox_override("panel", style)
+
+
+func _ready() -> void:
+	_build_contents()
+
+
+func get_current_tech_id() -> String:
+	return _current_tech_id
+
+
+func get_tech_texture(tech_id: String) -> Texture2D:
+	if tech_id in _tech_textures:
+		return _tech_textures[tech_id]
+	var path: String = TECH_SPRITE_PATH % tech_id
+	if ResourceLoader.exists(path):
+		var tex: Texture2D = load(path)
+		_tech_textures[tech_id] = tex
+		return tex
+	_tech_textures[tech_id] = null
+	return null
+
+
+func show_tech(tech_id: String, data: Dictionary, state: String, prereq_info: Array, leads_to_info: Array) -> void:
+	_current_tech_id = tech_id
+	var vbox: VBoxContainer = get_node("DetailScroll/DetailVBox")
+
+	# Name
+	var name_lbl: Label = vbox.get_node("DetailName")
+	name_lbl.text = data.get("name", tech_id)
+
+	# Illustration image
+	var image_rect: TextureRect = vbox.get_node("DetailImageContainer/DetailImageBg/DetailImage")
+	var image_container: CenterContainer = vbox.get_node("DetailImageContainer")
+	var tex: Texture2D = get_tech_texture(tech_id)
+	if tex != null:
+		image_rect.texture = tex
+		image_rect.visible = true
+		image_container.visible = true
+	else:
+		image_rect.texture = null
+		image_rect.visible = false
+		image_container.visible = false
+
+	# Status
+	var status_lbl: Label = vbox.get_node("DetailStatus")
+	var status_color: Color
+	var status_text: String
+	match state:
+		"researched":
+			status_text = "RESEARCHED"
+			status_color = COLOR_RESEARCHED
+		"researching":
+			status_text = "RESEARCHING"
+			status_color = COLOR_RESEARCHING
+		"available":
+			status_text = "AVAILABLE"
+			status_color = COLOR_AVAILABLE
+		"unaffordable":
+			status_text = "NEED RESOURCES"
+			status_color = COLOR_UNAFFORDABLE
+		_:
+			status_text = "LOCKED"
+			status_color = COLOR_LOCKED
+	status_lbl.text = status_text
+	status_lbl.add_theme_color_override("font_color", status_color)
+
+	# Description
+	var desc_lbl: Label = vbox.get_node("DetailDescription")
+	desc_lbl.text = data.get("description", "")
+	desc_lbl.visible = desc_lbl.text != ""
+
+	# Flavor
+	var flavor_lbl: Label = vbox.get_node("DetailFlavor")
+	var flavor: String = data.get("flavor_text", "")
+	flavor_lbl.text = '"%s"' % flavor if flavor != "" else ""
+	flavor_lbl.visible = flavor != ""
+
+	# Cost
+	var cost_lbl: Label = vbox.get_node("DetailCost")
+	var cost: Dictionary = data.get("cost", {})
+	if not cost.is_empty():
+		var cost_parts: Array[String] = []
+		for resource: String in cost:
+			cost_parts.append("%s: %d" % [resource.capitalize(), int(cost[resource])])
+		cost_lbl.text = "Cost: %s" % ", ".join(cost_parts)
+		cost_lbl.visible = true
+	else:
+		cost_lbl.visible = false
+
+	# Time
+	var time_lbl: Label = vbox.get_node("DetailTime")
+	var research_time: int = int(data.get("research_time", 0))
+	time_lbl.text = "Research Time: %ds" % research_time if research_time > 0 else ""
+	time_lbl.visible = research_time > 0
+
+	# Effects
+	var effects: Dictionary = data.get("effects", {})
+	var effects_lbl: Label = vbox.get_node("DetailEffects")
+	var effects_header: Label = vbox.get_node("DetailEffectsHeader")
+	if not effects.is_empty():
+		effects_lbl.text = _format_effects(effects)
+		effects_header.visible = true
+		effects_lbl.visible = true
+	else:
+		effects_header.visible = false
+		effects_lbl.visible = false
+
+	# Prerequisites
+	var prereq_header: Label = vbox.get_node("DetailPrereqHeader")
+	var prereq_lbl: Label = vbox.get_node("DetailPrereqs")
+	if not prereq_info.is_empty():
+		prereq_lbl.text = "\n".join(prereq_info)
+		prereq_header.visible = true
+		prereq_lbl.visible = true
+	else:
+		prereq_header.visible = false
+		prereq_lbl.visible = false
+
+	# Leads to
+	var leads_header: Label = vbox.get_node("DetailLeadsToHeader")
+	var leads_lbl: Label = vbox.get_node("DetailLeadsTo")
+	if not leads_to_info.is_empty():
+		leads_lbl.text = "\n".join(leads_to_info)
+		leads_header.visible = true
+		leads_lbl.visible = true
+	else:
+		leads_header.visible = false
+		leads_lbl.visible = false
+
+	# Research button
+	var research_btn: Button = vbox.get_node("DetailResearchBtn")
+	research_btn.visible = state == "available"
+
+	visible = true
+
+
+func hide_panel() -> void:
+	_current_tech_id = ""
+	visible = false
+
+
+func play_image_reveal() -> void:
+	var vbox: VBoxContainer = get_node("DetailScroll/DetailVBox")
+	var image_rect: TextureRect = vbox.get_node("DetailImageContainer/DetailImageBg/DetailImage")
+	if not image_rect.visible or image_rect.texture == null:
+		return
+	image_rect.modulate = Color(0.3, 0.3, 0.3, 1.0)
+	var tween := create_tween()
+	tween.tween_property(image_rect, "modulate", Color(1.8, 1.6, 0.8, 1.0), 0.5).set_ease(Tween.EASE_IN)
+	tween.tween_property(image_rect, "modulate", Color.WHITE, 0.6).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+
+func _build_contents() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.name = "DetailScroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "DetailVBox"
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 8)
+	scroll.add_child(vbox)
+
+	# Close button row
+	var close_row := HBoxContainer.new()
+	close_row.name = "DetailCloseRow"
+	vbox.add_child(close_row)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	close_row.add_child(spacer)
+	var close_btn := Button.new()
+	close_btn.name = "DetailCloseBtn"
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(32, 32)
+	close_btn.pressed.connect(func() -> void: close_requested.emit())
+	close_row.add_child(close_btn)
+
+	# Tech name
+	var name_lbl := Label.new()
+	name_lbl.name = "DetailName"
+	name_lbl.add_theme_font_size_override("font_size", 22)
+	name_lbl.add_theme_color_override("font_color", Color(0.95, 0.9, 0.7))
+	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(name_lbl)
+
+	# Tech illustration image with dark background to blend white-bg art
+	var image_container := CenterContainer.new()
+	image_container.name = "DetailImageContainer"
+	vbox.add_child(image_container)
+	var image_bg := PanelContainer.new()
+	image_bg.name = "DetailImageBg"
+	var img_style := StyleBoxFlat.new()
+	img_style.bg_color = Color(0.12, 0.12, 0.18, 1.0)
+	img_style.set_corner_radius_all(8)
+	img_style.set_content_margin_all(8)
+	image_bg.add_theme_stylebox_override("panel", img_style)
+	image_container.add_child(image_bg)
+	var image_rect := TextureRect.new()
+	image_rect.name = "DetailImage"
+	image_rect.custom_minimum_size = DETAIL_IMAGE_SIZE
+	image_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image_rect.visible = false
+	image_bg.add_child(image_rect)
+
+	# Status label
+	var status_lbl := Label.new()
+	status_lbl.name = "DetailStatus"
+	status_lbl.add_theme_font_size_override("font_size", 14)
+	status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(status_lbl)
+
+	vbox.add_child(HSeparator.new())
+
+	_add_label(vbox, "DetailDescription", 14, Color(0.85, 0.85, 0.85))
+	_add_label(vbox, "DetailFlavor", 13, Color(0.6, 0.6, 0.5))
+	vbox.add_child(HSeparator.new())
+	_add_label(vbox, "DetailCost", 14, Color.WHITE)
+	_add_label(vbox, "DetailTime", 14, Color.WHITE)
+	vbox.add_child(HSeparator.new())
+	_add_section_header(vbox, "DetailEffectsHeader", "Benefits", Color(0.7, 0.9, 0.7))
+	_add_label(vbox, "DetailEffects", 13, Color(0.8, 0.8, 0.8))
+	vbox.add_child(HSeparator.new())
+	_add_section_header(vbox, "DetailPrereqHeader", "Requires", Color(0.7, 0.7, 0.9))
+	_add_label(vbox, "DetailPrereqs", 13, Color(0.8, 0.8, 0.8))
+	_add_section_header(vbox, "DetailLeadsToHeader", "Leads To", Color(0.9, 0.8, 0.6))
+	_add_label(vbox, "DetailLeadsTo", 13, Color(0.8, 0.8, 0.8))
+	vbox.add_child(HSeparator.new())
+
+	# Research button
+	var research_btn := Button.new()
+	research_btn.name = "DetailResearchBtn"
+	research_btn.text = "Research"
+	research_btn.custom_minimum_size = Vector2(0, 40)
+	research_btn.pressed.connect(func() -> void: research_requested.emit(_current_tech_id))
+	vbox.add_child(research_btn)
+
+
+func _add_label(parent: VBoxContainer, lbl_name: String, font_size: int, color: Color) -> void:
+	var lbl := Label.new()
+	lbl.name = lbl_name
+	lbl.add_theme_font_size_override("font_size", font_size)
+	lbl.add_theme_color_override("font_color", color)
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	parent.add_child(lbl)
+
+
+func _add_section_header(parent: VBoxContainer, lbl_name: String, text: String, color: Color) -> void:
+	var lbl := Label.new()
+	lbl.name = lbl_name
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 16)
+	lbl.add_theme_color_override("font_color", color)
+	parent.add_child(lbl)
+
+
+func _format_effects(effects: Dictionary) -> String:
+	var parts: Array[String] = []
+	for key: String in effects:
+		var value: Variant = effects[key]
+		var label: String = key.replace("_", " ").capitalize()
+		if value is Dictionary:
+			var sub_parts: Array[String] = []
+			for sub_key: String in value:
+				var sub_label: String = sub_key.replace("_", " ").capitalize()
+				sub_parts.append("%s: %s" % [sub_label, str(value[sub_key])])
+			parts.append("%s: %s" % [label, ", ".join(sub_parts)])
+		elif value is Array:
+			var names: Array[String] = []
+			for item: Variant in value:
+				names.append(str(item).replace("_", " ").capitalize())
+			parts.append("%s: %s" % [label, ", ".join(names)])
+		else:
+			parts.append("%s: %s" % [label, str(value)])
+	return "\n".join(parts)

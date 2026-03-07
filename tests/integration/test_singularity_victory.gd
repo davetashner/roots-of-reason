@@ -233,7 +233,7 @@ func test_singularity_victory_stone_to_agi_core() -> void:
 
 	# 3. Verify building unlock gates BEFORE any research
 	assert_bool(_placer.is_building_unlocked("house", pid)).is_true()
-	assert_bool(_placer.is_building_unlocked("farm", pid)).is_true()
+	assert_bool(_placer.is_building_unlocked("farm", pid)).is_false()  # requires agriculture
 	# Age-gated buildings should be locked
 	assert_bool(_placer.is_building_unlocked("barracks", pid)).is_false()
 	assert_bool(_placer.is_building_unlocked("gpu_foundry", pid)).is_false()

@@ -2,5 +2,6 @@
   "database": "dolt",
   "backend": "dolt",
   "dolt_mode": "server",
-  "dolt_database": "beads_roots-of-reason"
+  "dolt_database": "beads_roots-of-reason",
+  "project_id": "42bc49e0-c59a-447a-8559-2d31790e0c4c"
 }
