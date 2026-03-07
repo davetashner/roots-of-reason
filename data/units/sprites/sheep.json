@@ -2,14 +2,13 @@
   "variants": ["sheep"],
   "base_path": "res://assets/sprites/units",
   "scale": 0.5,
-  "offset_y": -12.0,
-  "frame_duration": 0.4,
+  "offset_y": -16.0,
+  "frame_duration": 0.25,
   "directions": ["s", "se", "e", "ne", "n", "nw", "w", "sw"],
   "animation_map": {
     "sheep": {
       "idle": ["idle"],
-      "walk": ["idle"],
-      "attack": ["idle"],
+      "walk": ["walk_a", "walk_b", "walk_c", "walk_d"],
       "death": ["idle"]
     }
   }
