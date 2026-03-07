@@ -113,6 +113,7 @@ func on_building_construction_complete(building: Node2D) -> void:
 	_apply_building_effects(building)
 	_try_spawn_farm_food(building)
 	_check_singularity_building_alert(building)
+	_auto_gather_after_build(building)
 
 
 func on_building_destroyed(building: Node2D) -> void:
@@ -440,6 +441,51 @@ func find_town_center_pos(player_id: int) -> Vector2:
 		if "building_name" in bld and bld.building_name == "town_center":
 			return bld.position
 	return Vector2.ZERO
+
+
+func _auto_gather_after_build(building: Node2D) -> void:
+	## After a drop-off building completes, send its builders to gather
+	## the nearest matching resource.
+	if "is_drop_off" not in building or not building.is_drop_off:
+		return
+	if "drop_off_types" not in building or building.drop_off_types.is_empty():
+		return
+	if "owner_id" not in building:
+		return
+	var owner_id: int = int(building.owner_id)
+	var types: Array = building.drop_off_types
+	# Collect villagers that were building this structure (their _build_target
+	# still points here because the signal fires before _tick_build clears it).
+	var builders: Array[Node2D] = []
+	for unit in _root._entity_registry.get_by_owner(owner_id):
+		if "unit_type" not in unit or unit.unit_type != "villager":
+			continue
+		if "_build_target" in unit and unit._build_target == building:
+			builders.append(unit)
+	if builders.is_empty():
+		return
+	var resource := _find_nearest_resource_of_types(building.global_position, types)
+	if resource == null:
+		return
+	for unit in builders:
+		unit.assign_gather_target(resource)
+
+
+func _find_nearest_resource_of_types(from_pos: Vector2, types: Array) -> Node2D:
+	var best: Node2D = null
+	var best_dist := INF
+	for child in _root.get_children():
+		if "entity_category" not in child or child.entity_category != "resource_node":
+			continue
+		if "resource_type" not in child or not types.has(child.resource_type):
+			continue
+		if child.has_method("is_harvestable") and not child.is_harvestable():
+			continue
+		var dist: float = from_pos.distance_to(child.global_position)
+		if dist < best_dist:
+			best_dist = dist
+			best = child
+	return best
 
 
 func _try_spawn_farm_food(building: Node2D) -> void:
