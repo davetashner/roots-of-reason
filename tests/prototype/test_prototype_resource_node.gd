@@ -339,3 +339,24 @@ func test_variant_index_backward_compat() -> void:
 	var n := _create_node()
 	n.load_state(state)
 	assert_int(n.variant_index).is_equal(0)
+
+
+# -- Selection --
+
+
+func test_selected_defaults_false() -> void:
+	var n := _create_node("food", 100)
+	assert_bool(n.selected).is_false()
+
+
+func test_select_sets_selected() -> void:
+	var n := _create_node("food", 100)
+	n.select()
+	assert_bool(n.selected).is_true()
+
+
+func test_deselect_clears_selected() -> void:
+	var n := _create_node("food", 100)
+	n.select()
+	n.deselect()
+	assert_bool(n.selected).is_false()

@@ -336,6 +336,8 @@ func _restore_resources(resources_data: Array) -> void:
 		res_node.depleted.connect(_root._on_resource_depleted)
 		if _target_detector != null:
 			_target_detector.register_entity(res_node)
+		if _input_handler != null and _input_handler.has_method("register_unit"):
+			_input_handler.register_unit(res_node)
 
 
 func _restore_fauna(fauna_data: Array) -> void:

@@ -423,14 +423,8 @@ func show_resource_node(node: Node2D) -> void:
 	var display_name: String = str(node.resource_name).replace("_", " ").capitalize()
 	_name_label.text = display_name
 	# Regen status text
-	var regen_text := ""
-	if "regenerates" in node and node.regenerates:
-		if "_is_regrowing" in node and node._is_regrowing:
-			regen_text = " — Regrowing..."
-		else:
-			regen_text = " — Regenerates"
 	var type_label: String = str(node.resource_type).capitalize()
-	_stats_label.text = type_label + regen_text
+	_stats_label.text = type_label + _get_regen_text(node)
 	# Yield bar
 	var cur: int = int(node.current_yield)
 	var tot: int = int(node.total_yield)
@@ -505,6 +499,9 @@ func _process(_delta: float) -> void:
 	# Determine what to show
 	if selected.size() == 1:
 		var entity: Node = selected[0]
+		if _is_resource_node(entity):
+			show_resource_node(entity as Node2D)
+			return
 		if _is_multi or _tracked_entity != entity:
 			if _is_barge(entity):
 				show_barge(entity as Node2D)
@@ -596,14 +593,19 @@ func _update_resource_hover() -> void:
 	var tot: int = int(node.total_yield)
 	_set_yield_bar(float(cur) / float(tot) if tot > 0 else 0.0, cur, tot)
 	# Update regen status
-	var regen_text := ""
-	if "regenerates" in node and node.regenerates:
-		if "_is_regrowing" in node and node._is_regrowing:
-			regen_text = " — Regrowing..."
-		else:
-			regen_text = " — Regenerates"
 	var type_label: String = str(node.resource_type).capitalize()
-	_stats_label.text = type_label + regen_text
+	_stats_label.text = type_label + _get_regen_text(node)
+
+
+func _get_regen_text(node: Node2D) -> String:
+	if "regenerates" not in node or not node.regenerates:
+		return ""
+	if "_is_regrowing" in node and node._is_regrowing:
+		var pct := 0
+		if "total_yield" in node and int(node.total_yield) > 0:
+			pct = int(float(node.current_yield) / float(node.total_yield) * 100.0)
+		return " — Regrowing %d%%" % pct
+	return " — Regenerates"
 
 
 func _update() -> void:
@@ -914,6 +916,10 @@ func _hide_queue_section() -> void:
 
 func _is_building(entity: Node) -> bool:
 	return "building_name" in entity
+
+
+func _is_resource_node(entity: Node) -> bool:
+	return "entity_category" in entity and entity.entity_category == "resource_node"
 
 
 func _is_barge(entity: Node) -> bool:
