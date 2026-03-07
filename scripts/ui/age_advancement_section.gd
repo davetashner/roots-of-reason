@@ -15,8 +15,6 @@ var _player_id: int = 0
 
 var _button: Button = null
 var _progress_bar: ProgressBar = null
-var _cost_label: Label = null
-var _missing_label: Label = null
 
 
 func _ready() -> void:
@@ -50,17 +48,6 @@ func _ready() -> void:
 	_progress_bar.visible = false
 	btn_row.add_child(_progress_bar)
 
-	_cost_label = Label.new()
-	_cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_cost_label.add_theme_font_size_override("font_size", 11)
-	add_child(_cost_label)
-
-	_missing_label = Label.new()
-	_missing_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_missing_label.add_theme_font_size_override("font_size", 10)
-	_missing_label.add_theme_color_override("font_color", Color(0.9, 0.4, 0.3))
-	add_child(_missing_label)
-
 
 func setup(age_advancement: Node, player_id: int = 0) -> void:
 	_age_advancement = age_advancement
@@ -80,36 +67,32 @@ func update_display(building: Node2D) -> void:
 	if GameManager.current_age >= AgeAdvancement.MAX_AGE:
 		visible = false
 		return
-	visible = true
 	var next_age: int = GameManager.current_age + 1
 	var age_name: String = GameManager.AGE_NAMES[next_age]
 	if _age_advancement.is_advancing():
+		visible = true
 		_button.text = "Cancel"
+		_button.tooltip_text = "Cancel age advancement"
 		_button.disabled = false
 		_progress_bar.visible = true
 		_progress_bar.value = _age_advancement.get_advance_progress() * 100.0
-		_cost_label.text = "Advancing to %s..." % age_name
-		_missing_label.text = ""
 	else:
+		var missing: Array[String] = _age_advancement.get_missing_techs(_player_id)
+		if not missing.is_empty():
+			visible = false
+			return
+		visible = true
 		_button.text = "Advance to %s" % age_name
 		_progress_bar.visible = false
 		var raw_costs: Dictionary = _age_advancement.get_advance_cost_raw(next_age)
 		var cost_parts: Array[String] = []
 		for res_name: String in raw_costs:
 			cost_parts.append("%s: %d" % [res_name.capitalize(), int(raw_costs[res_name])])
-		_cost_label.text = "Cost: " + ", ".join(cost_parts) if not cost_parts.is_empty() else ""
-		var missing: Array[String] = _age_advancement.get_missing_techs(_player_id)
-		if not missing.is_empty():
-			var names: Array[String] = []
-			for tid: String in missing:
-				names.append(tid.replace("_", " ").capitalize())
-			_missing_label.text = "Need: " + ", ".join(names)
-			_button.disabled = true
-		elif not ResourceManager.can_afford(_player_id, _age_advancement.get_advance_cost(next_age)):
-			_missing_label.text = "Not enough resources"
+		var cost_str: String = ", ".join(cost_parts) if not cost_parts.is_empty() else ""
+		_button.tooltip_text = "Advance to %s\nCost: %s" % [age_name, cost_str]
+		if not ResourceManager.can_afford(_player_id, _age_advancement.get_advance_cost(next_age)):
 			_button.disabled = true
 		else:
-			_missing_label.text = ""
 			_button.disabled = false
 
 
