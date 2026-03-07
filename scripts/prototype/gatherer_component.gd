@@ -161,7 +161,7 @@ func _find_nearest_drop_off(res_type: String) -> Node2D:
 		return null
 	var best: Node2D = null
 	var best_dist := INF
-	for child in root.get_children():
+	for child in _iter_entities(root):
 		if not child.has_method("save_state"):
 			continue
 		if "is_drop_off" not in child or not child.is_drop_off:
@@ -230,6 +230,20 @@ func _try_find_replacement_resource() -> void:
 		_start_drop_off_trip()
 	else:
 		cancel()
+
+
+## Return all game-entity children of root, including those nested inside
+## sub-layers (e.g. BuildingLayer used for y-sorting).
+static func _iter_entities(root: Node) -> Array:
+	var result: Array = []
+	for child in root.get_children():
+		if child.has_method("save_state"):
+			result.append(child)
+		else:
+			for grandchild in child.get_children():
+				if grandchild.has_method("save_state"):
+					result.append(grandchild)
+	return result
 
 
 static func _is_target_harvestable(target: Node2D) -> bool:
