@@ -57,7 +57,14 @@ func get_tech_texture(tech_id: String) -> Texture2D:
 	return null
 
 
-func show_tech(tech_id: String, data: Dictionary, state: String, prereq_info: Array, leads_to_info: Array) -> void:
+func show_tech(
+	tech_id: String,
+	data: Dictionary,
+	state: String,
+	prereq_info: Array,
+	leads_to_info: Array,
+	progress: float = 0.0,
+) -> void:
 	_current_tech_id = tech_id
 	var vbox: VBoxContainer = get_node("DetailScroll/DetailVBox")
 
@@ -101,6 +108,15 @@ func show_tech(tech_id: String, data: Dictionary, state: String, prereq_info: Ar
 	status_lbl.text = status_text
 	status_lbl.add_theme_color_override("font_color", status_color)
 
+	# Progress bar (visible only when researching)
+	var progress_bar: ProgressBar = vbox.get_node("DetailProgressBar")
+	if state == "researching":
+		progress_bar.value = progress * 100.0
+		progress_bar.visible = true
+	else:
+		progress_bar.value = 0.0
+		progress_bar.visible = false
+
 	# Description
 	var desc_lbl: Label = vbox.get_node("DetailDescription")
 	desc_lbl.text = data.get("description", "")
@@ -134,13 +150,33 @@ func show_tech(tech_id: String, data: Dictionary, state: String, prereq_info: Ar
 	var effects: Dictionary = data.get("effects", {})
 	var effects_lbl: Label = vbox.get_node("DetailEffects")
 	var effects_header: Label = vbox.get_node("DetailEffectsHeader")
-	if not effects.is_empty():
-		effects_lbl.text = _format_effects(effects)
+	var formatted_effects: String = _format_effects(effects)
+	if formatted_effects != "":
+		effects_lbl.text = formatted_effects
 		effects_header.visible = true
 		effects_lbl.visible = true
 	else:
 		effects_header.visible = false
 		effects_lbl.visible = false
+
+	# Buildings unlocked
+	var unlock_buildings: Array = effects.get("unlock_buildings", [])
+	var unlocks_header: Label = vbox.get_node("DetailUnlocksHeader")
+	var unlocks_lbl: Label = vbox.get_node("DetailUnlocks")
+	var unlock_parts: Array[String] = []
+	for bldg_name: Variant in unlock_buildings:
+		unlock_parts.append(str(bldg_name).replace("_", " ").capitalize())
+	# Units unlocked
+	var unlock_units: Array = effects.get("unlock_units", [])
+	for unit_name: Variant in unlock_units:
+		unlock_parts.append(str(unit_name).replace("_", " ").capitalize())
+	if not unlock_parts.is_empty():
+		unlocks_lbl.text = "\n".join(unlock_parts)
+		unlocks_header.visible = true
+		unlocks_lbl.visible = true
+	else:
+		unlocks_header.visible = false
+		unlocks_lbl.visible = false
 
 	# Prerequisites
 	var prereq_header: Label = vbox.get_node("DetailPrereqHeader")
@@ -169,6 +205,12 @@ func show_tech(tech_id: String, data: Dictionary, state: String, prereq_info: Ar
 	research_btn.visible = state == "available"
 
 	slide_in()
+
+
+func update_progress(ratio: float) -> void:
+	var vbox: VBoxContainer = get_node("DetailScroll/DetailVBox")
+	var progress_bar: ProgressBar = vbox.get_node("DetailProgressBar")
+	progress_bar.value = ratio * 100.0
 
 
 func hide_panel() -> void:
@@ -282,6 +324,14 @@ func _build_contents() -> void:
 	status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(status_lbl)
 
+	# Progress bar (shown when researching)
+	var progress_bar := ProgressBar.new()
+	progress_bar.name = "DetailProgressBar"
+	progress_bar.custom_minimum_size = Vector2(0, 16)
+	progress_bar.value = 0.0
+	progress_bar.visible = false
+	vbox.add_child(progress_bar)
+
 	vbox.add_child(HSeparator.new())
 
 	_add_label(vbox, "DetailDescription", 14, Color(0.85, 0.85, 0.85))
@@ -292,6 +342,8 @@ func _build_contents() -> void:
 	vbox.add_child(HSeparator.new())
 	_add_section_header(vbox, "DetailEffectsHeader", "Benefits", Color(0.7, 0.9, 0.7))
 	_add_label(vbox, "DetailEffects", 13, Color(0.8, 0.8, 0.8))
+	_add_section_header(vbox, "DetailUnlocksHeader", "Unlocks", Color(0.9, 0.75, 0.5))
+	_add_label(vbox, "DetailUnlocks", 13, Color(0.8, 0.8, 0.8))
 	vbox.add_child(HSeparator.new())
 	_add_section_header(vbox, "DetailPrereqHeader", "Requires", Color(0.7, 0.7, 0.9))
 	_add_label(vbox, "DetailPrereqs", 13, Color(0.8, 0.8, 0.8))
@@ -327,15 +379,18 @@ func _add_section_header(parent: VBoxContainer, lbl_name: String, text: String, 
 
 
 func _format_effects(effects: Dictionary) -> String:
+	const SKIP_KEYS: Array[String] = ["unlock_buildings", "unlock_units"]
 	var parts: Array[String] = []
 	for key: String in effects:
+		if key in SKIP_KEYS:
+			continue
 		var value: Variant = effects[key]
 		var label: String = key.replace("_", " ").capitalize()
 		if value is Dictionary:
 			var sub_parts: Array[String] = []
 			for sub_key: String in value:
 				var sub_label: String = sub_key.replace("_", " ").capitalize()
-				sub_parts.append("%s: %s" % [sub_label, str(value[sub_key])])
+				sub_parts.append("%s: %s" % [sub_label, _format_value(value[sub_key])])
 			parts.append("%s: %s" % [label, ", ".join(sub_parts)])
 		elif value is Array:
 			var names: Array[String] = []
@@ -343,5 +398,15 @@ func _format_effects(effects: Dictionary) -> String:
 				names.append(str(item).replace("_", " ").capitalize())
 			parts.append("%s: %s" % [label, ", ".join(names)])
 		else:
-			parts.append("%s: %s" % [label, str(value)])
+			parts.append("%s: %s" % [label, _format_value(value)])
 	return "\n".join(parts)
+
+
+func _format_value(value: Variant) -> String:
+	## Formats a numeric value as a percentage if it is a decimal fraction,
+	## otherwise returns the value as a string.
+	if value is float or value is int:
+		var f: float = float(value)
+		if f != 0.0 and f > -1.0 and f < 1.0:
+			return "%d%%" % int(f * 100.0)
+	return str(value)
