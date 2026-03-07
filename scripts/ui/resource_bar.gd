@@ -4,6 +4,14 @@ extends PanelContainer
 
 const PLAYER_ID: int = 0
 const RESOURCE_ORDER: Array[String] = ["Food", "Wood", "Stone", "Gold", "Knowledge"]
+const RESOURCE_ICON_DIR: String = "res://assets/sprites/ui/resources/"
+const RESOURCE_ICON_FILES: Dictionary = {
+	"Food": "food.png",
+	"Wood": "wood.png",
+	"Stone": "stone.png",
+	"Gold": "gold.png",
+	"Knowledge": "knowledge.png",
+}
 
 var _config: Dictionary = {}
 var _resource_labels: Dictionary = {}
@@ -71,13 +79,7 @@ func _build_layout() -> void:
 		item.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		item.add_theme_constant_override("separation", 4)
 
-		var icon := ColorRect.new()
-		icon.name = "Icon"
-		icon.custom_minimum_size = Vector2(icon_size, icon_size)
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if colors.has(resource_name):
-			var c: Array = colors[resource_name]
-			icon.color = Color(c[0], c[1], c[2])
+		var icon: Control = _create_resource_icon(resource_name, icon_size, colors)
 		item.add_child(icon)
 
 		var lbl := Label.new()
@@ -208,6 +210,30 @@ func _build_layout() -> void:
 	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(right_spacer)
+
+
+func _create_resource_icon(resource_name: String, icon_size: int, colors: Dictionary) -> Control:
+	if RESOURCE_ICON_FILES.has(resource_name):
+		var path: String = RESOURCE_ICON_DIR + RESOURCE_ICON_FILES[resource_name]
+		if ResourceLoader.exists(path):
+			var tex: Texture2D = load(path)
+			var tex_rect := TextureRect.new()
+			tex_rect.name = "Icon"
+			tex_rect.texture = tex
+			tex_rect.custom_minimum_size = Vector2(icon_size, icon_size)
+			tex_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tex_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			return tex_rect
+	# Fallback to colored square
+	var icon := ColorRect.new()
+	icon.name = "Icon"
+	icon.custom_minimum_size = Vector2(icon_size, icon_size)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if colors.has(resource_name):
+		var c: Array = colors[resource_name]
+		icon.color = Color(c[0], c[1], c[2])
+	return icon
 
 
 func _connect_signals() -> void:
