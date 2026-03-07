@@ -883,8 +883,11 @@ func _spawn_resource(root: Node, res_name: String, gp: Vector2i, wp: Vector2) ->
 	rn.set_script(ResourceNodeScript)
 	rn.position = wp
 	rn.grid_position = gp
-	rn.z_index = 2
-	root.add_child(rn)
+	var building_layer: Node = root.get_node_or_null("BuildingLayer")
+	if building_layer != null:
+		building_layer.add_child(rn)
+	else:
+		root.add_child(rn)
 	rn.setup(res_name)
 	if rn.has_signal("depleted") and root.has_method("_on_resource_depleted"):
 		rn.depleted.connect(root._on_resource_depleted)
