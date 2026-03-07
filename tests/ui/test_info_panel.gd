@@ -385,3 +385,36 @@ func test_build_button_calls_placer() -> void:
 	panel._on_build_pressed(command)
 	assert_str(placer.last_building).is_equal("house")
 	assert_int(placer.last_player_id).is_equal(0)
+
+
+func test_multi_villager_select_shows_build_section() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	panel._building_placer = placer
+	var v1 := _create_villager()
+	var v2 := _create_villager()
+	panel.show_multi_select([v1, v2])
+	assert_bool(panel._is_villager_mode).is_true()
+	assert_bool(panel._build_section.visible).is_true()
+
+
+func test_multi_mixed_select_hides_build_section() -> void:
+	var panel := _create_panel()
+	var placer := StubBuildingPlacer.new()
+	add_child(placer)
+	auto_free(placer)
+	panel._building_placer = placer
+	var v1 := _create_villager()
+	var archer := Node2D.new()
+	archer.set_script(UnitScript)
+	archer.unit_type = "archer"
+	archer.owner_id = 0
+	archer.hp = 50
+	archer.max_hp = 50
+	add_child(archer)
+	auto_free(archer)
+	panel.show_multi_select([v1, archer])
+	assert_bool(panel._is_villager_mode).is_false()
+	assert_bool(panel._build_section.visible).is_false()
