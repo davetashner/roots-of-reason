@@ -473,6 +473,8 @@ func _do_box_select() -> void:
 	# Collect candidates inside the rectangle (skip resource nodes)
 	var candidates: Array[Node] = []
 	for unit in _units:
+		if not is_instance_valid(unit):
+			continue
 		if _is_resource_node(unit):
 			continue
 		if "owner_id" in unit and unit.owner_id != 0:
@@ -557,6 +559,8 @@ func save_state() -> Dictionary:
 	# Build selected unit indices
 	var selected_indices: Array[int] = []
 	for i in _units.size():
+		if not is_instance_valid(_units[i]):
+			continue
 		if "selected" in _units[i] and _units[i].selected:
 			selected_indices.append(i)
 	# Control groups are session-only — intentionally NOT saved
