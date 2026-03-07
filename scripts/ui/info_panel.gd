@@ -76,6 +76,9 @@ var _build_tab: String = "civilian"
 var _is_villager_mode: bool = false
 var _player_id: int = 0
 
+# Train buttons section (buildings with units_produced)
+var _train_section: HBoxContainer = null
+
 # Age advancement section (Town Center)
 var _age_section: VBoxContainer = null
 var _age_advancement: Node = null
@@ -195,6 +198,9 @@ func _build_ui() -> void:
 	_build_cmd_buttons()
 
 	_main_vbox = vbox
+	_train_section = HBoxContainer.new()
+	_train_section.set_script(load("res://scripts/ui/train_buttons_section.gd"))
+	vbox.add_child(_train_section)
 	_build_queue_section(vbox)
 	_build_age_section(vbox)
 	_build_build_section()
@@ -288,6 +294,7 @@ func show_unit(unit: Node2D) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
+	_hide_train_section()
 	_show_cmd_row()
 	visible = true
 	# Villager build panel
@@ -397,6 +404,7 @@ func show_building(building: Node2D) -> void:
 			stats_text += "\n" + state_text
 		_stats_label.text = stats_text
 	_update_building_hp(building)
+	_update_train_section(building)
 	_update_queue_display(building)
 	_update_age_section(building)
 
@@ -408,6 +416,7 @@ func show_barge(barge: Node2D) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
+	_hide_train_section()
 	_toggle_build_section(false)
 	_show_cmd_row()
 	visible = true
@@ -441,6 +450,7 @@ func show_multi_select(units: Array) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
+	_hide_train_section()
 	_show_cmd_row()
 	# Show build menu when all selected units are villagers
 	if _all_villagers(units) and _building_placer != null:
@@ -465,6 +475,7 @@ func show_resource_node(node: Node2D) -> void:
 	_hovered_entity = node
 	_is_hovering_resource = true
 	_clear_thumbnail()
+	_hide_train_section()
 	_hide_cmd_row()
 	visible = true
 	# Portrait color from node
@@ -490,6 +501,7 @@ func clear() -> void:
 	_is_multi = false
 	_clear_hover()
 	_hide_queue_section()
+	_hide_train_section()
 	_toggle_build_section(false)
 	_hide_cmd_row()
 	visible = false
@@ -711,6 +723,7 @@ func _update() -> void:
 			if state_text != "":
 				new_stats += "\n" + state_text
 			_stats_label.text = new_stats
+		_update_train_section(_tracked_entity as Node2D)
 		_update_queue_display(_tracked_entity as Node2D)
 		_update_age_section(_tracked_entity as Node2D)
 	else:
@@ -957,6 +970,16 @@ func _update_age_section(building: Node2D) -> void:
 		custom_minimum_size.y = PANEL_HEIGHT_WITH_QUEUE
 		size.y = PANEL_HEIGHT_WITH_QUEUE
 		offset_top = -PANEL_HEIGHT_WITH_QUEUE
+
+
+func _update_train_section(building: Node2D) -> void:
+	if _train_section != null:
+		_train_section.update_for_building(building)
+
+
+func _hide_train_section() -> void:
+	if _train_section != null:
+		_train_section.visible = false
 
 
 func _hide_age_section() -> void:
@@ -1291,6 +1314,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var key := event as InputEventKey
 	var key_char := char(key.keycode).to_upper()
+	# Train button hotkeys for buildings with production
+	if _train_section != null and _train_section.visible and _train_section.try_hotkey(key_char):
+		get_viewport().set_input_as_handled()
+		return
 	# Stop/Hold/Explore hotkeys for non-villager units
 	if _cmd_row != null and _cmd_row.visible and not _is_villager_mode:
 		var cmd_keys := ["Q", "W", "E"]
