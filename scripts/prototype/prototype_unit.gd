@@ -823,7 +823,9 @@ func resolve_embarked(scene_root: Node) -> void:
 func _draw() -> void:
 	if selected:
 		var ellipse_y := 0.0
-		if _sprite_handler != null and _sprite_handler.has_method("get_sprite_rect"):
+		if _sprite_handler != null and _sprite_handler.has_method("get_selection_y"):
+			ellipse_y = _sprite_handler.get_selection_y()
+		elif _sprite_handler != null and _sprite_handler.has_method("get_sprite_rect"):
 			var rect: Rect2 = _sprite_handler.get_sprite_rect()
 			ellipse_y = rect.end.y
 		var points := PackedVector2Array()
