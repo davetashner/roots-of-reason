@@ -488,7 +488,10 @@ func _get_effective_speed(player_id: int) -> float:
 		war_bonus = _war_bonus_node.get_war_bonus(player_id)
 	var tech_bonuses: float = _event_research_bonus.get(player_id, 0.0)
 	tech_bonuses += _building_research_bonus.get(player_id, 0.0)
-	return ResearchSpeed.get_effective_speed(1.0, GameManager.current_age, _research_config, war_bonus, tech_bonuses)
+	var base_speed: float = CivBonusManager.get_bonus_value(player_id, "research_speed")
+	return ResearchSpeed.get_effective_speed(
+		base_speed, GameManager.current_age, _research_config, war_bonus, tech_bonuses
+	)
 
 
 func set_event_research_bonus(player_id: int, bonus: float) -> void:

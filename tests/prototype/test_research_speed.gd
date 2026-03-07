@@ -59,3 +59,16 @@ func test_effective_time_zero_speed() -> void:
 func test_empty_config_defaults_to_one() -> void:
 	var speed: float = ResearchSpeed.get_effective_speed(1.0, 0, {})
 	assert_float(speed).is_equal_approx(1.0, 0.001)
+
+
+func test_civ_base_speed_multiplier() -> void:
+	# China's research_speed bonus = 1.20 base_speed
+	var speed: float = ResearchSpeed.get_effective_speed(1.20, 0, RESEARCH_CONFIG)
+	assert_float(speed).is_equal_approx(1.20, 0.001)
+
+
+func test_civ_base_speed_with_age_and_war() -> void:
+	# base=1.20 (China), age 4=1.5x, war=0.10 -> 1.1x
+	# expected: 1.20 * 1.5 * 1.0 * 1.1 = 1.98
+	var speed: float = ResearchSpeed.get_effective_speed(1.20, 4, RESEARCH_CONFIG, 0.10)
+	assert_float(speed).is_equal_approx(1.98, 0.001)
