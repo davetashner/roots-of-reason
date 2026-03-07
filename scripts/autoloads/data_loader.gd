@@ -35,7 +35,6 @@ const SETTINGS_PATHS: Dictionary = {
 	"tech_visibility": "tech/tech_visibility",
 	"unit_upgrades": "tech/unit_upgrades",
 	"camera": "ui/camera",
-	"command_panel": "ui/command_panel",
 	"commands": "ui/commands",
 	"hud": "ui/hud",
 	"idle_villager_finder": "ui/idle_villager_finder",

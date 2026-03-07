@@ -163,13 +163,6 @@ func _handle_key(key: InputEventKey) -> void:
 		if _river_overlay != null and _river_overlay.has_method("toggle"):
 			_river_overlay.toggle()
 		return
-	# Explore command
-	if keycode == KEY_E:
-		var selected := _get_selected_units()
-		for unit in selected:
-			if unit.has_method("start_explore"):
-				unit.start_explore()
-		return
 	# Escape cancels modes
 	if keycode == KEY_ESCAPE:
 		_attack_move_mode = false
