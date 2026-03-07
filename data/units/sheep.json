@@ -1,0 +1,13 @@
+{
+  "name": "Sheep",
+  "hp": 8,
+  "attack": 0,
+  "defense": 0,
+  "speed": 1.2,
+  "range": 0,
+  "los": 2,
+  "attack_speed": 0,
+  "attack_type": "none",
+  "unit_category": "fauna",
+  "default_stance": "stand_ground"
+}

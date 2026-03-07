@@ -1,0 +1,15 @@
+{
+  "canvas_size": [128, 128],
+  "directions": ["s", "se", "e", "ne", "n", "nw", "w", "sw"],
+  "animations": ["idle"],
+  "sprites": [
+    { "filename": "sheep_idle_s_01.png", "animation": "idle", "direction": "s", "frame": 1 },
+    { "filename": "sheep_idle_se_01.png", "animation": "idle", "direction": "se", "frame": 1 },
+    { "filename": "sheep_idle_e_01.png", "animation": "idle", "direction": "e", "frame": 1 },
+    { "filename": "sheep_idle_ne_01.png", "animation": "idle", "direction": "ne", "frame": 1 },
+    { "filename": "sheep_idle_n_01.png", "animation": "idle", "direction": "n", "frame": 1 },
+    { "filename": "sheep_idle_nw_01.png", "animation": "idle", "direction": "nw", "frame": 1 },
+    { "filename": "sheep_idle_w_01.png", "animation": "idle", "direction": "w", "frame": 1 },
+    { "filename": "sheep_idle_sw_01.png", "animation": "idle", "direction": "sw", "frame": 1 }
+  ]
+}
