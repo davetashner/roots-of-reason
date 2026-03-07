@@ -24,7 +24,8 @@
     ],
     "default": [
       {"id": "stop", "label": "Stop", "tooltip": "Stop current action", "action": "stop"},
-      {"id": "hold", "label": "Hold", "tooltip": "Hold Position", "action": "hold"}
+      {"id": "hold", "label": "Hold", "tooltip": "Hold Position", "action": "hold"},
+      {"id": "explore", "label": "Explore", "tooltip": "Auto-explore the map", "action": "explore"}
     ]
   }
 }

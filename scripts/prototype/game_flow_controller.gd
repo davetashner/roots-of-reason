@@ -424,6 +424,8 @@ func find_nearest_idle_unit(target_pos: Vector2) -> Node2D:
 	var best: Node2D = null
 	var best_dist := INF
 	for unit in _root._entity_registry.get_by_owner(0):
+		if not ("unit_type" in unit and unit.unit_type == "villager"):
+			continue
 		if not unit.has_method("is_idle") or not unit.is_idle():
 			continue
 		var dist: float = unit.global_position.distance_to(target_pos)

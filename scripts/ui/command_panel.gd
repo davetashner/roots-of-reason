@@ -426,8 +426,19 @@ func _on_command_pressed(command: Dictionary) -> void:
 			_issue_unload()
 		"ungarrison":
 			_issue_ungarrison()
+		"explore":
+			_issue_explore()
 		"produce":
 			_execute_production(command)
+
+
+func _issue_explore() -> void:
+	if _input_handler == null:
+		return
+	var selected: Array = _input_handler._get_selected_units()
+	for unit in selected:
+		if is_instance_valid(unit) and unit.has_method("start_explore"):
+			unit.start_explore()
 
 
 func _issue_stop() -> void:
