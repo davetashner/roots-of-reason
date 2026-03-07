@@ -58,7 +58,7 @@ func can_advance(player_id: int) -> bool:
 	var age_data: Dictionary = _get_age_data(next_age)
 	if age_data.is_empty():
 		return false
-	if not _has_prerequisites(age_data):
+	if not _has_prerequisites(age_data, player_id):
 		return false
 	var costs: Dictionary = _parse_costs(age_data.get("advance_cost", {}))
 	if not ResourceManager.can_afford(player_id, costs):
@@ -171,20 +171,88 @@ func _complete_advancement() -> void:
 	advancement_completed.emit(new_age)
 
 
-func _has_prerequisites(age_data: Dictionary) -> bool:
-	var prereqs: Array = age_data.get("advance_prerequisites", [])
-	if prereqs.is_empty():
-		return true
-	# Forward-compatible: if TechManager exists, query it; otherwise allow advancement
-	if has_node("/root/TechManager"):
-		var tech_manager: Node = get_node("/root/TechManager")
-		if tech_manager.has_method("is_tech_researched"):
-			for tech_id: String in prereqs:
-				if not tech_manager.is_tech_researched(tech_id):
-					return false
+func has_prerequisites(player_id: int) -> bool:
+	## Public check — returns true if the player meets all prerequisites
+	## for the next age advancement.
+	var next_age: int = GameManager.current_age + 1
+	var age_data: Dictionary = _get_age_data(next_age)
+	if age_data.is_empty():
+		return false
+	return _has_prerequisites(age_data, player_id)
+
+
+func get_missing_techs(player_id: int) -> Array[String]:
+	## Returns a list of tech IDs the player still needs to research
+	## before advancing to the next age.
+	var current_age: int = GameManager.current_age
+	var next_age_data: Dictionary = _get_age_data(current_age + 1)
+	if next_age_data.is_empty():
+		return []
+	var required: Array[String] = _get_required_tech_ids(next_age_data, current_age)
+	var missing: Array[String] = []
+	var tech_manager: Node = _get_tech_manager()
+	if tech_manager == null:
+		return []
+	for tech_id: String in required:
+		if not tech_manager.is_tech_researched(tech_id, player_id):
+			missing.append(tech_id)
+	return missing
+
+
+func _has_prerequisites(age_data: Dictionary, player_id: int = 0) -> bool:
+	var prereqs = age_data.get("advance_prerequisites", [])
+	if prereqs is String and prereqs == "all_previous_age":
+		return _has_all_age_techs(GameManager.current_age, player_id)
+	if prereqs is Array:
+		if prereqs.is_empty():
 			return true
-	# No tech tracking system yet — allow advancement
+		var tech_manager: Node = _get_tech_manager()
+		if tech_manager == null:
+			return true
+		for tech_id: String in prereqs:
+			if not tech_manager.is_tech_researched(tech_id, player_id):
+				return false
+		return true
 	return true
+
+
+func _has_all_age_techs(age_index: int, player_id: int) -> bool:
+	## Returns true if the player has researched every tech in the given age.
+	var tech_manager: Node = _get_tech_manager()
+	if tech_manager == null:
+		return true
+	var tech_tree: Array = DataLoader.get_tech_tree()
+	for tech: Dictionary in tech_tree:
+		if int(tech.get("age", -1)) == age_index:
+			if not tech_manager.is_tech_researched(str(tech["id"]), player_id):
+				return false
+	return true
+
+
+func _get_required_tech_ids(age_data: Dictionary, current_age: int) -> Array[String]:
+	## Returns the list of tech IDs required for advancement.
+	var prereqs = age_data.get("advance_prerequisites", [])
+	var result: Array[String] = []
+	if prereqs is String and prereqs == "all_previous_age":
+		var tech_tree: Array = DataLoader.get_tech_tree()
+		for tech: Dictionary in tech_tree:
+			if int(tech.get("age", -1)) == current_age:
+				result.append(str(tech["id"]))
+	elif prereqs is Array:
+		for tech_id in prereqs:
+			result.append(str(tech_id))
+	return result
+
+
+func _get_tech_manager() -> Node:
+	if has_node("/root/TechManager"):
+		return get_node("/root/TechManager")
+	var parent: Node = get_parent()
+	if parent != null:
+		var tm: Node = parent.get_node_or_null("TechManager")
+		if tm != null and tm.has_method("is_tech_researched"):
+			return tm
+	return null
 
 
 func _get_age_data(age_index: int) -> Dictionary:

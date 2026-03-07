@@ -28,6 +28,7 @@ var _river_transport: Node = null
 var _war_survival: Node = null
 var _war_bonus: Node = null
 var _singularity_regression: Node = null
+var _age_advancement: Node = null
 var _unit_upgrade_manager: Node = null
 var _ai_economy: Node = null
 var _ai_military: Node = null
@@ -59,6 +60,7 @@ func setup(root: Node2D, overrides: Dictionary = {}) -> void:
 	_war_survival = overrides.get("war_survival", root.get_node_or_null("WarSurvival"))
 	_war_bonus = overrides.get("war_bonus", root.get_node_or_null("WarResearchBonus"))
 	_singularity_regression = overrides.get("singularity_regression", root.get_node_or_null("SingularityRegression"))
+	_age_advancement = overrides.get("age_advancement", root.get_node_or_null("AgeAdvancement"))
 	_unit_upgrade_manager = overrides.get("unit_upgrade_manager", root.get_node_or_null("UnitUpgradeManager"))
 	_ai_economy = overrides.get("ai_economy", root.get_node_or_null("AIEconomy"))
 	_ai_military = overrides.get("ai_military", root.get_node_or_null("AIMilitary"))
@@ -135,6 +137,7 @@ func save_state() -> Dictionary:
 		"war_survival": _save_if(_war_survival),
 		"war_bonus": _save_if(_war_bonus),
 		"singularity_regression": _save_if(_singularity_regression),
+		"age_advancement": _save_if(_age_advancement),
 		"unit_upgrade_manager": _save_if(_unit_upgrade_manager),
 		"ai_economy": _save_if(_ai_economy),
 		"ai_military": _save_if(_ai_military),
@@ -173,6 +176,7 @@ func load_state(data: Dictionary) -> void:
 	_load_if(_war_survival, data, "war_survival")
 	_load_if(_war_bonus, data, "war_bonus")
 	_load_if(_singularity_regression, data, "singularity_regression")
+	_load_if(_age_advancement, data, "age_advancement")
 	_load_if(_unit_upgrade_manager, data, "unit_upgrade_manager")
 	_load_if(_ai_economy, data, "ai_economy")
 	_load_if(_ai_military, data, "ai_military")

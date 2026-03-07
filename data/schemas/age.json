@@ -10,8 +10,10 @@
     "index": { "type": "integer", "minimum": 0 },
     "advance_cost": { "type": "object" },
     "advance_prerequisites": {
-      "type": "array",
-      "items": { "type": "string" }
+      "oneOf": [
+        { "type": "array", "items": { "type": "string" } },
+        { "type": "string", "enum": ["all_previous_age"] }
+      ]
     },
     "research_time": { "type": "number", "minimum": 0 },
     "research_multiplier": { "type": "number", "minimum": 0 },

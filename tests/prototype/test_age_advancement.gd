@@ -32,15 +32,22 @@ func _create_advancement() -> Node:
 	return node
 
 
-func _give_resources(player_id: int, food: int = 0, gold: int = 0, knowledge: int = 0) -> void:
+func _give_resources(
+	player_id: int,
+	food: int = 0,
+	wood: int = 0,
+	stone: int = 0,
+	gold: int = 0,
+	knowledge: int = 0,
+) -> void:
 	(
 		ResourceManager
 		. init_player(
 			player_id,
 			{
 				ResourceManager.ResourceType.FOOD: food,
-				ResourceManager.ResourceType.WOOD: 0,
-				ResourceManager.ResourceType.STONE: 0,
+				ResourceManager.ResourceType.WOOD: wood,
+				ResourceManager.ResourceType.STONE: stone,
 				ResourceManager.ResourceType.GOLD: gold,
 				ResourceManager.ResourceType.KNOWLEDGE: knowledge,
 			}
@@ -53,7 +60,7 @@ func _give_resources(player_id: int, food: int = 0, gold: int = 0, knowledge: in
 
 func test_can_advance_from_stone_age() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	assert_bool(adv.can_advance(0)).is_true()
 
@@ -74,7 +81,7 @@ func test_cannot_advance_at_max_age() -> void:
 
 func test_cannot_advance_while_advancing() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
 	assert_bool(adv.can_advance(0)).is_false()
@@ -85,11 +92,13 @@ func test_cannot_advance_while_advancing() -> void:
 
 func test_start_advancement_spends_resources() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 600)
+	_give_resources(0, 300, 300, 300)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
-	# Bronze Age costs 500 food
+	# Bronze Age costs 200 food/wood/stone
 	assert_int(ResourceManager.get_amount(0, ResourceManager.ResourceType.FOOD)).is_equal(100)
+	assert_int(ResourceManager.get_amount(0, ResourceManager.ResourceType.WOOD)).is_equal(100)
+	assert_int(ResourceManager.get_amount(0, ResourceManager.ResourceType.STONE)).is_equal(100)
 
 
 func test_start_advancement_returns_false_without_resources() -> void:
@@ -101,7 +110,7 @@ func test_start_advancement_returns_false_without_resources() -> void:
 
 func test_start_advancement_sets_advancing_state() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
 	assert_bool(adv.is_advancing()).is_true()
@@ -113,7 +122,7 @@ func test_start_advancement_sets_advancing_state() -> void:
 
 func test_advancement_progress_increases() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
 	# Bronze Age research_time = 40s, simulate 10s of _process calls
@@ -125,7 +134,7 @@ func test_advancement_progress_increases() -> void:
 
 func test_advancement_completes_at_full_progress() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
 	# Simulate enough time to complete (40s for Bronze Age)
@@ -140,7 +149,7 @@ func test_advancement_completes_at_full_progress() -> void:
 
 func test_advancement_emits_started_signal() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	var monitor := monitor_signals(adv)
 	adv.start_advancement(0)
@@ -149,7 +158,7 @@ func test_advancement_emits_started_signal() -> void:
 
 func test_advancement_emits_completed_signal() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	var monitor := monitor_signals(adv)
 	adv.start_advancement(0)
@@ -161,7 +170,7 @@ func test_advancement_emits_completed_signal() -> void:
 
 func test_advancement_emits_cancelled_signal() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	var monitor := monitor_signals(adv)
 	adv.start_advancement(0)
@@ -174,20 +183,22 @@ func test_advancement_emits_cancelled_signal() -> void:
 
 func test_cancel_advancement_refunds_resources() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
-	# Food should be 0 after spending 500
+	# Resources should be 0 after spending 200 each
 	assert_int(ResourceManager.get_amount(0, ResourceManager.ResourceType.FOOD)).is_equal(0)
 	adv.cancel_advancement(0)
-	# Food should be refunded
-	assert_int(ResourceManager.get_amount(0, ResourceManager.ResourceType.FOOD)).is_equal(500)
+	# Resources should be refunded
+	assert_int(ResourceManager.get_amount(0, ResourceManager.ResourceType.FOOD)).is_equal(200)
+	assert_int(ResourceManager.get_amount(0, ResourceManager.ResourceType.WOOD)).is_equal(200)
+	assert_int(ResourceManager.get_amount(0, ResourceManager.ResourceType.STONE)).is_equal(200)
 	assert_bool(adv.is_advancing()).is_false()
 
 
 func test_cancel_advancement_wrong_player_does_nothing() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
 	adv.cancel_advancement(1)
@@ -200,16 +211,20 @@ func test_cancel_advancement_wrong_player_does_nothing() -> void:
 
 func test_get_advance_cost_returns_correct_values() -> void:
 	var adv := _create_advancement()
-	# Bronze Age (index 1) costs 500 food
+	# Bronze Age (index 1) costs 200 food/wood/stone
 	var costs: Dictionary = adv.get_advance_cost(1)
-	assert_int(costs.get(ResourceManager.ResourceType.FOOD, 0)).is_equal(500)
+	assert_int(costs.get(ResourceManager.ResourceType.FOOD, 0)).is_equal(200)
+	assert_int(costs.get(ResourceManager.ResourceType.WOOD, 0)).is_equal(200)
+	assert_int(costs.get(ResourceManager.ResourceType.STONE, 0)).is_equal(200)
 
 
 func test_get_advance_cost_iron_age() -> void:
 	var adv := _create_advancement()
-	# Iron Age (index 2) costs 800 food, 200 gold
+	# Iron Age (index 2) costs 400 food, 400 wood, 200 stone, 200 gold
 	var costs: Dictionary = adv.get_advance_cost(2)
-	assert_int(costs.get(ResourceManager.ResourceType.FOOD, 0)).is_equal(800)
+	assert_int(costs.get(ResourceManager.ResourceType.FOOD, 0)).is_equal(400)
+	assert_int(costs.get(ResourceManager.ResourceType.WOOD, 0)).is_equal(400)
+	assert_int(costs.get(ResourceManager.ResourceType.STONE, 0)).is_equal(200)
 	assert_int(costs.get(ResourceManager.ResourceType.GOLD, 0)).is_equal(200)
 
 
@@ -237,7 +252,7 @@ func test_get_research_time_singularity_age() -> void:
 
 func test_game_speed_affects_advancement() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	GameManager.game_speed = 2.0
 	adv.start_advancement(0)
@@ -250,7 +265,7 @@ func test_game_speed_affects_advancement() -> void:
 
 func test_paused_game_stops_advancement() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
 	GameManager.is_paused = true
@@ -266,7 +281,7 @@ func test_paused_game_stops_advancement() -> void:
 
 func test_save_load_state() -> void:
 	var adv := _create_advancement()
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
 	# Progress a bit
@@ -300,14 +315,14 @@ func test_save_state_when_not_advancing() -> void:
 func test_can_advance_through_multiple_ages() -> void:
 	var adv := _create_advancement()
 	# Start at Stone Age, advance to Bronze
-	_give_resources(0, 500)
+	_give_resources(0, 200, 200, 200)
 	GameManager.current_age = 0
 	adv.start_advancement(0)
 	for i in 41:
 		adv._process(1.0)
 	assert_int(GameManager.current_age).is_equal(1)
-	# Now advance to Iron Age (costs 800 food, 200 gold)
-	_give_resources(0, 800, 200)
+	# Now advance to Iron Age (costs 400 food, 400 wood, 200 stone, 200 gold)
+	_give_resources(0, 400, 400, 200, 200)
 	assert_bool(adv.can_advance(0)).is_true()
 	adv.start_advancement(0)
 	for i in 61:
