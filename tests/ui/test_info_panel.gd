@@ -418,3 +418,43 @@ func test_multi_mixed_select_hides_build_section() -> void:
 	panel.show_multi_select([v1, archer])
 	assert_bool(panel._is_villager_mode).is_false()
 	assert_bool(panel._build_section.visible).is_false()
+
+
+# -- Command row (Stop/Hold) --
+
+
+func test_cmd_row_visible_on_unit_select() -> void:
+	var panel := _create_panel()
+	var unit := _create_villager()
+	panel.show_unit(unit)
+	assert_bool(panel._cmd_row.visible).is_true()
+
+
+func test_cmd_row_hidden_on_building_select() -> void:
+	var panel := _create_panel()
+	var building := Node2D.new()
+	building.set_script(BuildingScript)
+	building.building_name = "house"
+	building.owner_id = 0
+	building.hp = 100
+	building.max_hp = 100
+	add_child(building)
+	auto_free(building)
+	panel.show_building(building)
+	assert_bool(panel._cmd_row.visible).is_false()
+
+
+func test_cmd_row_hidden_after_clear() -> void:
+	var panel := _create_panel()
+	var unit := _create_villager()
+	panel.show_unit(unit)
+	panel.clear()
+	assert_bool(panel._cmd_row.visible).is_false()
+
+
+func test_cmd_row_visible_on_multi_select() -> void:
+	var panel := _create_panel()
+	var v1 := _create_villager()
+	var v2 := _create_villager()
+	panel.show_multi_select([v1, v2])
+	assert_bool(panel._cmd_row.visible).is_true()

@@ -49,8 +49,8 @@ func test_archer_config_loads_frame_duration() -> void:
 func test_archer_config_loads_scale() -> void:
 	_create_handler()
 	var sprite: Sprite2D = _handler.get_sprite()
-	assert_float(sprite.scale.x).is_equal(0.5)
-	assert_float(sprite.scale.y).is_equal(0.5)
+	assert_float(sprite.scale.x).is_equal(1.0)
+	assert_float(sprite.scale.y).is_equal(1.0)
 
 
 func test_archer_config_loads_offset_y() -> void:
@@ -268,3 +268,19 @@ func test_chop_falls_back_through_gather_to_idle() -> void:
 	_handler.update("chop", FACING_VECTORS["e"], 0.0)
 	var sprite: Sprite2D = _handler.get_sprite()
 	assert_object(sprite.texture).is_not_null()
+
+
+# -- Selection Y --
+
+
+func test_archer_selection_y_uses_config_value() -> void:
+	_create_handler()
+	# Archer config has "selection_y": -8.0
+	assert_float(_handler.get_selection_y()).is_equal(-8.0)
+
+
+func test_selection_y_falls_back_to_sprite_bottom() -> void:
+	# Villager config has no selection_y — should fall back to rect.end.y
+	_handler = UnitSpriteHandlerScript.new(_unit, "villager", Color.RED, "res://data/units/sprites/villager.json")
+	var expected_y: float = _handler.get_sprite_rect().end.y
+	assert_float(_handler.get_selection_y()).is_equal(expected_y)
