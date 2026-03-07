@@ -739,3 +739,28 @@ func test_save_load_preserves_gather_offset() -> void:
 	var gc2 := _make_component()
 	gc2.load_state(state)
 	assert_vector(gc2.gather_offset).is_equal_approx(Vector2(30, -15), Vector2(0.01, 0.01))
+
+
+# ---------------------------------------------------------------------------
+# BuildingLayer regression — drop-off inside a sub-layer must be found
+# ---------------------------------------------------------------------------
+
+
+func test_drop_off_found_inside_building_layer() -> void:
+	var layer := Node2D.new()
+	layer.name = "BuildingLayer"
+	_root.add_child(layer)
+	auto_free(layer)
+	var b := BuildingFactory.create_drop_off({position = Vector2(-50, 0), drop_off_types = ["wood"] as Array[String]})
+	layer.add_child(b)
+	auto_free(b)
+	var gc := _make_component()
+	var res := _make_resource(Vector2(50, 0), "wood")
+	gc.assign_target(res)
+	_unit._moving = false
+	_unit.position = res.position
+	gc.gather_state = GathererComponentScript.GatherState.GATHERING
+	gc.carried_amount = gc.carry_capacity
+	gc.tick(1.0)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_DROP_OFF)
+	assert_object(gc.drop_off_target).is_same(b)

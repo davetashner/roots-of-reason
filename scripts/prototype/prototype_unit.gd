@@ -571,7 +571,7 @@ func _find_nearest_construction_site() -> Node2D:
 		return null
 	var best: Node2D = null
 	var best_dist := INF
-	for child in _scene_root.get_children():
+	for child in GathererComponentScript._iter_entities(_scene_root):
 		if child == self:
 			continue
 		if not ("under_construction" in child and child.under_construction):
