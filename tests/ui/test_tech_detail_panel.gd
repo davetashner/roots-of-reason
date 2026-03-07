@@ -573,3 +573,122 @@ func test_opening_second_tech_updates_name_label() -> void:
 	viewer._show_detail_panel("fire_mastery")
 	assert_str(name_lbl.text).is_equal("Fire Mastery")
 	assert_str(viewer.get_detail_tech_id()).is_equal("fire_mastery")
+
+
+# -- Buildings / units unlocked (aceo.13) --
+
+
+func test_detail_panel_shows_unlocked_buildings() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 1000)
+	var viewer := _create_viewer(tm)
+	# stone_tools has unlock_buildings: ["mining_camp"]
+	viewer._show_detail_panel("stone_tools")
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var unlocks_header: Label = vbox.get_node("DetailUnlocksHeader") as Label
+	var unlocks_lbl: Label = vbox.get_node("DetailUnlocks") as Label
+	assert_bool(unlocks_header.visible).is_true()
+	assert_bool(unlocks_lbl.visible).is_true()
+	assert_str(unlocks_lbl.text).contains("Mining Camp")
+
+
+func test_detail_panel_shows_unlocked_units() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 99999, 99999, 99999, 99999, 99999)
+	var viewer := _create_viewer(tm)
+	# bronze_working has unlock_buildings: ["barracks"], unlock_units: ["infantry"]
+	viewer._show_detail_panel("bronze_working")
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var unlocks_lbl: Label = vbox.get_node("DetailUnlocks") as Label
+	assert_bool(unlocks_lbl.visible).is_true()
+	assert_str(unlocks_lbl.text).contains("Infantry")
+	assert_str(unlocks_lbl.text).contains("Barracks")
+
+
+func test_detail_panel_unlocks_hidden_when_none() -> void:
+	var tm := _create_tech_manager()
+	var viewer := _create_viewer(tm)
+	# fire_mastery has no unlock_buildings or unlock_units
+	viewer._show_detail_panel("fire_mastery")
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var unlocks_header: Label = vbox.get_node("DetailUnlocksHeader") as Label
+	var unlocks_lbl: Label = vbox.get_node("DetailUnlocks") as Label
+	assert_bool(unlocks_header.visible).is_false()
+	assert_bool(unlocks_lbl.visible).is_false()
+
+
+func test_unlocks_not_in_benefits_section() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 1000)
+	var viewer := _create_viewer(tm)
+	# stone_tools has unlock_buildings in effects — should NOT appear in Benefits
+	viewer._show_detail_panel("stone_tools")
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var effects_lbl: Label = vbox.get_node("DetailEffects") as Label
+	assert_str(effects_lbl.text).not_contains("Unlock Buildings")
+	assert_str(effects_lbl.text).not_contains("Unlock Units")
+
+
+# -- Percentage formatting (aceo.14) --
+
+
+func test_decimal_fraction_formatted_as_percentage() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 1000)
+	var viewer := _create_viewer(tm)
+	# stone_tools has effects: {economic_bonus: {gather_rate: 0.1}}
+	viewer._show_detail_panel("stone_tools")
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var effects_lbl: Label = vbox.get_node("DetailEffects") as Label
+	assert_str(effects_lbl.text).contains("10%")
+	assert_str(effects_lbl.text).not_contains("0.1")
+
+
+# -- Progress bar (aceo.15) --
+
+
+func test_progress_bar_hidden_when_not_researching() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 1000)
+	var viewer := _create_viewer(tm)
+	viewer._show_detail_panel("stone_tools")
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var progress_bar: ProgressBar = vbox.get_node("DetailProgressBar") as ProgressBar
+	assert_bool(progress_bar.visible).is_false()
+
+
+func test_progress_bar_visible_when_researching() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 1000)
+	var viewer := _create_viewer(tm)
+	tm.start_research(0, "stone_tools")
+	viewer._show_detail_panel("stone_tools")
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var progress_bar: ProgressBar = vbox.get_node("DetailProgressBar") as ProgressBar
+	assert_bool(progress_bar.visible).is_true()
+
+
+func test_progress_bar_reflects_progress_ratio() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 1000)
+	var viewer := _create_viewer(tm)
+	tm.start_research(0, "stone_tools")
+	# Simulate partial progress
+	tm._research_progress[0] = 12.5
+	viewer._show_detail_panel("stone_tools")
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var progress_bar: ProgressBar = vbox.get_node("DetailProgressBar") as ProgressBar
+	assert_float(progress_bar.value).is_greater(0.0)
+
+
+func test_update_progress_updates_bar() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 1000)
+	var viewer := _create_viewer(tm)
+	tm.start_research(0, "stone_tools")
+	viewer._show_detail_panel("stone_tools")
+	var panel: PanelContainer = viewer.get_detail_panel()
+	panel.update_progress(0.75)
+	var vbox: VBoxContainer = _get_detail_vbox(viewer)
+	var progress_bar: ProgressBar = vbox.get_node("DetailProgressBar") as ProgressBar
+	assert_float(progress_bar.value).is_equal_approx(75.0, 0.1)

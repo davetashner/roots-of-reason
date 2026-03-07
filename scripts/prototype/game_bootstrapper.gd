@@ -104,9 +104,8 @@ func setup_demo_entities() -> void:
 			res_node.set_script(ResourceNodeScript)
 			res_node.position = base_screen + offset
 			res_node.grid_position = grid_pos
-			res_node.z_index = 2
 			res_node.variant_index = res_index
-			_root.add_child(res_node)
+			_get_building_layer().add_child(res_node)
 			res_node.setup(res_name)
 			res_node.depleted.connect(_root._on_resource_depleted)
 			_root._target_detector.register_entity(res_node)
