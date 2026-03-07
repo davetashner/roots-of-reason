@@ -638,6 +638,13 @@ func _load_ai_tier_config(difficulty: String) -> Dictionary:
 	return tiers.get(default_tier, {})
 
 
+func _get_building_layer() -> Node:
+	var layer: Node = _root.get_node_or_null("BuildingLayer")
+	if layer != null:
+		return layer
+	return _root
+
+
 func _create_town_center(player_id: int, grid_pos: Vector2i, category: String) -> Node2D:
 	var stats: Dictionary = DataLoader.get_building_stats("town_center")
 	var max_hp: int = int(stats.get("hp", 2400))
@@ -656,7 +663,7 @@ func _create_town_center(player_id: int, grid_pos: Vector2i, category: String) -
 	building.build_progress = 1.0
 	if category != "":
 		building.entity_category = category
-	_root.add_child(building)
+	_get_building_layer().add_child(building)
 	_root._target_detector.register_entity(building)
 	if _root._input_handler != null and _root._input_handler.has_method("register_unit"):
 		_root._input_handler.register_unit(building)
@@ -689,7 +696,7 @@ func _create_house(player_id: int, grid_pos: Vector2i, category: String) -> Node
 	building.build_progress = 1.0
 	if category != "":
 		building.entity_category = category
-	_root.add_child(building)
+	_get_building_layer().add_child(building)
 	_root._target_detector.register_entity(building)
 	if _root._input_handler != null and _root._input_handler.has_method("register_unit"):
 		_root._input_handler.register_unit(building)

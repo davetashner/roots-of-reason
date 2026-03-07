@@ -32,6 +32,7 @@ var _fog_layer: Node = null
 var _river_transport: Node = null
 var _trade_manager: Node = null
 var _notification_panel: Control = null
+var _building_layer: Node2D = null
 var _river_overlay: Node2D = null
 var _victory_manager: Node = null
 var _war_survival: Node = null
@@ -69,6 +70,7 @@ func _ready() -> void:
 	_flow.setup(self, _bootstrapper)
 
 	_setup_map()
+	_setup_building_layer()
 	_setup_fog_of_war()
 	_setup_camera()
 	_setup_pathfinding()
@@ -204,6 +206,14 @@ func _setup_map() -> void:
 	map_layer.position = Vector2(-IsoUtils.HALF_W, -IsoUtils.HALF_H)
 	add_child(map_layer)
 	_map_node = map_layer
+
+
+func _setup_building_layer() -> void:
+	_building_layer = Node2D.new()
+	_building_layer.name = "BuildingLayer"
+	_building_layer.y_sort_enabled = true
+	_building_layer.z_index = 1
+	add_child(_building_layer)
 
 
 func _setup_fog_of_war() -> void:
