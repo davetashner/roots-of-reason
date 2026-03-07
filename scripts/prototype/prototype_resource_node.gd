@@ -198,6 +198,17 @@ func get_entity_category() -> String:
 
 
 func is_point_inside(point: Vector2) -> bool:
+	if _sprite != null and _sprite.texture != null:
+		var tex_size := _sprite.texture.get_size() * _sprite.scale
+		var sprite_world_pos := global_position + _sprite.position
+		var half_w := tex_size.x * 0.5
+		var half_h := tex_size.y * 0.5
+		return (
+			point.x >= sprite_world_pos.x - half_w
+			and point.x <= sprite_world_pos.x + half_w
+			and point.y >= sprite_world_pos.y - half_h
+			and point.y <= sprite_world_pos.y + half_h
+		)
 	return point.distance_to(global_position) <= SIZE * 2.0
 
 
