@@ -1,15 +1,280 @@
 {
-  "canvas_size": [128, 128],
-  "directions": ["s", "se", "e", "ne", "n", "nw", "w", "sw"],
-  "animations": ["idle"],
+  "canvas_size": [
+    128,
+    128
+  ],
+  "directions": [
+    "s",
+    "se",
+    "e",
+    "ne",
+    "n",
+    "nw",
+    "w",
+    "sw"
+  ],
+  "animations": [
+    "idle",
+    "walk_a",
+    "walk_b",
+    "walk_c",
+    "walk_d"
+  ],
   "sprites": [
-    { "filename": "sheep_idle_s_01.png", "animation": "idle", "direction": "s", "frame": 1 },
-    { "filename": "sheep_idle_se_01.png", "animation": "idle", "direction": "se", "frame": 1 },
-    { "filename": "sheep_idle_e_01.png", "animation": "idle", "direction": "e", "frame": 1 },
-    { "filename": "sheep_idle_ne_01.png", "animation": "idle", "direction": "ne", "frame": 1 },
-    { "filename": "sheep_idle_n_01.png", "animation": "idle", "direction": "n", "frame": 1 },
-    { "filename": "sheep_idle_nw_01.png", "animation": "idle", "direction": "nw", "frame": 1 },
-    { "filename": "sheep_idle_w_01.png", "animation": "idle", "direction": "w", "frame": 1 },
-    { "filename": "sheep_idle_sw_01.png", "animation": "idle", "direction": "sw", "frame": 1 }
+    {
+      "filename": "sheep_idle_s_01.png",
+      "animation": "idle",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_idle_se_01.png",
+      "animation": "idle",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_idle_e_01.png",
+      "animation": "idle",
+      "direction": "e",
+      "frame": 1,
+      "mirrored_from": "sheep_idle_w_01.png"
+    },
+    {
+      "filename": "sheep_idle_ne_01.png",
+      "animation": "idle",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_idle_n_01.png",
+      "animation": "idle",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_idle_nw_01.png",
+      "animation": "idle",
+      "direction": "nw",
+      "frame": 1,
+      "mirrored_from": "sheep_idle_ne_01.png"
+    },
+    {
+      "filename": "sheep_idle_w_01.png",
+      "animation": "idle",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_idle_sw_01.png",
+      "animation": "idle",
+      "direction": "sw",
+      "frame": 1,
+      "mirrored_from": "sheep_idle_se_01.png"
+    },
+    {
+      "filename": "sheep_walk_a_s_01.png",
+      "animation": "walk_a",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_a_se_01.png",
+      "animation": "walk_a",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_a_e_01.png",
+      "animation": "walk_a",
+      "direction": "e",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_a_w_01.png"
+    },
+    {
+      "filename": "sheep_walk_a_ne_01.png",
+      "animation": "walk_a",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_a_n_01.png",
+      "animation": "walk_a",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_a_nw_01.png",
+      "animation": "walk_a",
+      "direction": "nw",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_a_ne_01.png"
+    },
+    {
+      "filename": "sheep_walk_a_w_01.png",
+      "animation": "walk_a",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_a_sw_01.png",
+      "animation": "walk_a",
+      "direction": "sw",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_a_se_01.png"
+    },
+    {
+      "filename": "sheep_walk_b_s_01.png",
+      "animation": "walk_b",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_b_se_01.png",
+      "animation": "walk_b",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_b_e_01.png",
+      "animation": "walk_b",
+      "direction": "e",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_b_w_01.png"
+    },
+    {
+      "filename": "sheep_walk_b_ne_01.png",
+      "animation": "walk_b",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_b_n_01.png",
+      "animation": "walk_b",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_b_nw_01.png",
+      "animation": "walk_b",
+      "direction": "nw",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_b_ne_01.png"
+    },
+    {
+      "filename": "sheep_walk_b_w_01.png",
+      "animation": "walk_b",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_b_sw_01.png",
+      "animation": "walk_b",
+      "direction": "sw",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_b_se_01.png"
+    },
+    {
+      "filename": "sheep_walk_c_s_01.png",
+      "animation": "walk_c",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_c_se_01.png",
+      "animation": "walk_c",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_c_e_01.png",
+      "animation": "walk_c",
+      "direction": "e",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_c_w_01.png"
+    },
+    {
+      "filename": "sheep_walk_c_ne_01.png",
+      "animation": "walk_c",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_c_n_01.png",
+      "animation": "walk_c",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_c_nw_01.png",
+      "animation": "walk_c",
+      "direction": "nw",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_c_ne_01.png"
+    },
+    {
+      "filename": "sheep_walk_c_w_01.png",
+      "animation": "walk_c",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_c_sw_01.png",
+      "animation": "walk_c",
+      "direction": "sw",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_c_se_01.png"
+    },
+    {
+      "filename": "sheep_walk_d_s_01.png",
+      "animation": "walk_d",
+      "direction": "s",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_d_se_01.png",
+      "animation": "walk_d",
+      "direction": "se",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_d_e_01.png",
+      "animation": "walk_d",
+      "direction": "e",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_d_w_01.png"
+    },
+    {
+      "filename": "sheep_walk_d_ne_01.png",
+      "animation": "walk_d",
+      "direction": "ne",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_d_n_01.png",
+      "animation": "walk_d",
+      "direction": "n",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_d_nw_01.png",
+      "animation": "walk_d",
+      "direction": "nw",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_d_ne_01.png"
+    },
+    {
+      "filename": "sheep_walk_d_w_01.png",
+      "animation": "walk_d",
+      "direction": "w",
+      "frame": 1
+    },
+    {
+      "filename": "sheep_walk_d_sw_01.png",
+      "animation": "walk_d",
+      "direction": "sw",
+      "frame": 1,
+      "mirrored_from": "sheep_walk_d_se_01.png"
+    }
   ]
 }
