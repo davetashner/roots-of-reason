@@ -79,6 +79,8 @@ func setup(tech_manager: Node, player_id: int = 0) -> void:
 	refresh()
 	if _tech_manager.has_signal("tech_researched"):
 		_tech_manager.tech_researched.connect(_on_tech_researched)
+	if _tech_manager.has_signal("research_progress"):
+		_tech_manager.research_progress.connect(_on_research_progress)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -317,9 +319,14 @@ func _show_detail_panel(tech_id: String) -> void:
 	_detail_panel.position.y = (viewport_size.y - _detail_panel.PANEL_HEIGHT) / 2.0
 	_detail_panel.size = Vector2(_detail_panel.PANEL_WIDTH, _detail_panel.PANEL_HEIGHT)
 
+	# Get research progress if currently researching
+	var progress: float = 0.0
+	if state == "researching" and _tech_manager != null:
+		progress = _tech_manager.get_research_progress(_player_id)
+
 	if _detail_backdrop != null:
 		_detail_backdrop.visible = true
-	_detail_panel.show_tech(tech_id, data, state, prereq_info, leads_to_info)
+	_detail_panel.show_tech(tech_id, data, state, prereq_info, leads_to_info, progress)
 
 
 func _hide_detail_panel() -> void:
@@ -712,6 +719,16 @@ func _on_tech_button_pressed(tech_id: String) -> void:
 	if _showing_opponent:
 		return
 	_show_detail_panel(tech_id)
+
+
+func _on_research_progress(player_id_arg: int, tech_id: String, progress: float) -> void:
+	if player_id_arg != _player_id:
+		return
+	if _detail_panel == null or not _detail_panel.visible:
+		return
+	if _detail_panel.get_current_tech_id() != tech_id:
+		return
+	_detail_panel.update_progress(progress)
 
 
 func _on_tech_researched(_player_id_arg: int, _tech_id: String, _effects: Dictionary) -> void:
