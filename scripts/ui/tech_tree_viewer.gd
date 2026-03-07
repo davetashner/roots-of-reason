@@ -256,6 +256,7 @@ func _build_ui() -> void:
 	legend.name = "Legend"
 	legend.custom_minimum_size = Vector2(0, 30)
 	legend.add_theme_constant_override("separation", 20)
+	legend.alignment = BoxContainer.ALIGNMENT_CENTER
 	outer_vbox.add_child(legend)
 	_add_legend_entry(legend, COLOR_RESEARCHED, "Researched")
 	_add_legend_entry(legend, COLOR_AVAILABLE, "Available")
@@ -314,10 +315,13 @@ func _show_detail_panel(tech_id: String) -> void:
 		var next_data: Dictionary = _tech_cache.get(next_id, {})
 		leads_to_info.append(next_data.get("name", next_id))
 
-	# Position the panel vertically centered before showing
+	# Position the panel vertically centered, horizontally snapped to grid edge
 	var viewport_size := get_viewport_rect().size
 	_detail_panel.position.y = (viewport_size.y - _detail_panel.PANEL_HEIGHT) / 2.0
 	_detail_panel.size = Vector2(_detail_panel.PANEL_WIDTH, _detail_panel.PANEL_HEIGHT)
+	var grid_right: float = _scroll.global_position.x + _grid_container.size.x + 32.0
+	var snap_x: float = minf(grid_right, viewport_size.x - _detail_panel.PANEL_WIDTH - 16.0)
+	_detail_panel.slide_target_x = snap_x
 
 	# Get research progress if currently researching
 	var progress: float = 0.0
