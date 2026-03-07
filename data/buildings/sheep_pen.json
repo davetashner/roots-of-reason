@@ -20,6 +20,7 @@
   ],
   "units_produced": [],
   "age_required": 0,
+  "required_techs": ["animal_husbandry"],
   "placement_constraint": "",
   "food_rate": 5,
   "defense": 0,

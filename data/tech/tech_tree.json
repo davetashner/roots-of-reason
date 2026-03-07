@@ -10,7 +10,7 @@
       "economic_bonus": { "gather_rate": 0.10 },
       "unlock_buildings": ["mining_camp"]
     },
-    "description": "Craft sharpened flint into axes, scrapers, and blades. Improves villager gathering efficiency across all resources.",
+    "description": "Craft sharpened flint into axes, scrapers, and blades. Unlocks the Mining Camp and improves villager gathering efficiency across all resources.",
     "flavor_text": "Sharpened flint changes everything."
   },
   {
@@ -61,9 +61,10 @@
     "research_time": 35,
     "prerequisites": [],
     "effects": {
-      "economic_bonus": { "farm_food_rate": 0.25 }
+      "economic_bonus": { "farm_food_rate": 0.25 },
+      "unlock_buildings": ["farm"]
     },
-    "description": "Cultivate crops instead of relying on foraging. Boosts farm food production rate by 25%, enabling population growth.",
+    "description": "Cultivate crops instead of relying on foraging. Unlocks the Farm building and boosts farm food production rate by 25%, enabling population growth.",
     "flavor_text": "Planted seeds promise a future beyond foraging."
   },
   {
