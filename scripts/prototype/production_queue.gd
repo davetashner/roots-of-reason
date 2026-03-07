@@ -27,6 +27,10 @@ var _paused: bool = false
 var _population_manager: Node = null
 var _tech_manager: Node = null
 var _rally_point_offset: Vector2i = Vector2i(1, 1)
+## Player-set rally target. When set, newly produced units move/gather here.
+var _rally_target_pos: Vector2 = Vector2.ZERO
+var _rally_target_node: Node2D = null  ## Resource node (if rallied to a resource)
+var _has_rally_target: bool = false
 ## Reverse lookup: unit_type -> tech_id that unlocks it (built lazily from tech tree)
 var _unit_tech_requirements: Dictionary = {}
 
@@ -181,6 +185,32 @@ func get_train_time_for(unit_type: String) -> float:
 
 func get_rally_point_offset() -> Vector2i:
 	return _rally_point_offset
+
+
+func set_rally_target(world_pos: Vector2, target_node: Node2D = null) -> void:
+	_rally_target_pos = world_pos
+	_rally_target_node = target_node
+	_has_rally_target = true
+
+
+func clear_rally_target() -> void:
+	_rally_target_pos = Vector2.ZERO
+	_rally_target_node = null
+	_has_rally_target = false
+
+
+func has_rally_target() -> bool:
+	return _has_rally_target
+
+
+func get_rally_target_pos() -> Vector2:
+	return _rally_target_pos
+
+
+func get_rally_target_node() -> Node2D:
+	if is_instance_valid(_rally_target_node):
+		return _rally_target_node
+	return null
 
 
 func _check_pop_cap() -> void:
@@ -375,7 +405,7 @@ func save_state() -> Dictionary:
 					raw[res_name] = int(costs[resource_type])
 					break
 		raw_costs_list.append(raw)
-	return {
+	var state: Dictionary = {
 		"queue": _queue.duplicate(),
 		"costs_queue": raw_costs_list,
 		"progress": _progress,
@@ -383,6 +413,9 @@ func save_state() -> Dictionary:
 		"paused": _paused,
 		"owner_id": _owner_id,
 	}
+	if _has_rally_target:
+		state["rally_target_pos"] = [_rally_target_pos.x, _rally_target_pos.y]
+	return state
 
 
 func load_state(data: Dictionary) -> void:
@@ -398,3 +431,8 @@ func load_state(data: Dictionary) -> void:
 	_current_train_time = float(data.get("current_train_time", 0.0))
 	_paused = bool(data.get("paused", false))
 	_owner_id = int(data.get("owner_id", _owner_id))
+	if data.has("rally_target_pos"):
+		var rtp: Array = data["rally_target_pos"]
+		if rtp.size() >= 2:
+			_rally_target_pos = Vector2(float(rtp[0]), float(rtp[1]))
+			_has_rally_target = true

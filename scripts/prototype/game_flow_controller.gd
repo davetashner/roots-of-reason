@@ -244,6 +244,19 @@ func on_unit_produced(unit_type: String, building: Node2D) -> void:
 		var fish_deposit: Node2D = _find_nearest_fish_deposit(unit.position)
 		if fish_deposit != null:
 			unit.assign_gather_target(fish_deposit)
+	# Rally point: send newly produced unit to the player-set rally target
+	elif pq != null and pq.has_method("has_rally_target") and pq.has_rally_target():
+		_dispatch_rally_target(unit, pq)
+
+
+func _dispatch_rally_target(unit: Node2D, pq: Node) -> void:
+	var target_node: Node2D = pq.get_rally_target_node()
+	if target_node != null and unit.has_method("assign_gather_target"):
+		unit.assign_gather_target(target_node)
+		return
+	var rally_pos: Vector2 = pq.get_rally_target_pos()
+	if unit.has_method("move_to"):
+		unit.move_to(rally_pos)
 
 
 func _find_nearest_fish_deposit(from_pos: Vector2) -> Node2D:
