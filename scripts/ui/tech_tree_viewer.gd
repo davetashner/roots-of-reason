@@ -5,6 +5,8 @@ extends PanelContainer
 ## can't afford), gray (locked), purple (shadowed/undiscovered).
 ## Supports progressive disclosure: techs are hidden until prereqs are met.
 
+const TechDetailPanel := preload("res://scripts/ui/tech_detail_panel.gd")
+
 const COLOR_RESEARCHED := Color("#FFD700")
 const COLOR_AVAILABLE := Color("#4CAF50")
 const COLOR_UNAFFORDABLE := Color("#2196F3")
@@ -21,6 +23,8 @@ const AGE_NAMES: Array[String] = [
 	"Information",
 	"Singularity",
 ]
+
+const THUMB_ICON_SIZE := Vector2(32, 32)
 
 var _tech_manager: Node = null
 var _player_id: int = 0
@@ -48,8 +52,6 @@ var _opponent_toggle_btn: Button = null
 var _opponent_panel: PanelContainer = null
 ## Tech detail side panel
 var _detail_panel: PanelContainer = null
-## Currently selected tech in detail panel
-var _detail_tech_id: String = ""
 ## {tech_id: Array[String]} reverse dependency map (what each tech leads to)
 var _leads_to_map: Dictionary = {}
 
@@ -162,7 +164,9 @@ func get_detail_panel() -> PanelContainer:
 
 
 func get_detail_tech_id() -> String:
-	return _detail_tech_id
+	if _detail_panel == null:
+		return ""
+	return _detail_panel.get_current_tech_id()
 
 
 func get_leads_to(tech_id: String) -> Array:
@@ -240,7 +244,9 @@ func _build_ui() -> void:
 	_scroll.add_child(_grid_container)
 
 	# Detail side panel (hidden by default)
-	_build_detail_panel()
+	_detail_panel = TechDetailPanel.new()
+	_detail_panel.close_requested.connect(_hide_detail_panel)
+	_detail_panel.research_requested.connect(_on_detail_research_pressed)
 	content_hbox.add_child(_detail_panel)
 
 	# Opponent intel panel (hidden by default)
@@ -272,306 +278,43 @@ func _add_legend_entry(parent: HBoxContainer, color: Color, label_text: String) 
 	parent.add_child(lbl)
 
 
-func _build_detail_panel() -> void:
-	_detail_panel = PanelContainer.new()
-	_detail_panel.name = "DetailPanel"
-	_detail_panel.visible = false
-	_detail_panel.custom_minimum_size = Vector2(320, 0)
-	_detail_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.08, 0.15, 0.95)
-	style.border_color = Color(0.4, 0.4, 0.6)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(6)
-	style.set_content_margin_all(12)
-	_detail_panel.add_theme_stylebox_override("panel", style)
-
-	var scroll := ScrollContainer.new()
-	scroll.name = "DetailScroll"
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_detail_panel.add_child(scroll)
-
-	var vbox := VBoxContainer.new()
-	vbox.name = "DetailVBox"
-	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_theme_constant_override("separation", 8)
-	scroll.add_child(vbox)
-
-	# Close button row
-	var close_row := HBoxContainer.new()
-	close_row.name = "DetailCloseRow"
-	vbox.add_child(close_row)
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	close_row.add_child(spacer)
-	var close_btn := Button.new()
-	close_btn.name = "DetailCloseBtn"
-	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(32, 32)
-	close_btn.pressed.connect(_hide_detail_panel)
-	close_row.add_child(close_btn)
-
-	# Tech name
-	var name_lbl := Label.new()
-	name_lbl.name = "DetailName"
-	name_lbl.add_theme_font_size_override("font_size", 22)
-	name_lbl.add_theme_color_override("font_color", Color(0.95, 0.9, 0.7))
-	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(name_lbl)
-
-	# Status label
-	var status_lbl := Label.new()
-	status_lbl.name = "DetailStatus"
-	status_lbl.add_theme_font_size_override("font_size", 14)
-	vbox.add_child(status_lbl)
-
-	vbox.add_child(HSeparator.new())
-
-	# Description
-	var desc_lbl := Label.new()
-	desc_lbl.name = "DetailDescription"
-	desc_lbl.add_theme_font_size_override("font_size", 14)
-	desc_lbl.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
-	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(desc_lbl)
-
-	# Flavor text
-	var flavor_lbl := Label.new()
-	flavor_lbl.name = "DetailFlavor"
-	flavor_lbl.add_theme_font_size_override("font_size", 13)
-	flavor_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.5))
-	flavor_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(flavor_lbl)
-
-	vbox.add_child(HSeparator.new())
-
-	# Cost
-	var cost_lbl := Label.new()
-	cost_lbl.name = "DetailCost"
-	cost_lbl.add_theme_font_size_override("font_size", 14)
-	cost_lbl.add_theme_color_override("font_color", Color.WHITE)
-	cost_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(cost_lbl)
-
-	# Research time
-	var time_lbl := Label.new()
-	time_lbl.name = "DetailTime"
-	time_lbl.add_theme_font_size_override("font_size", 14)
-	time_lbl.add_theme_color_override("font_color", Color.WHITE)
-	vbox.add_child(time_lbl)
-
-	vbox.add_child(HSeparator.new())
-
-	# Effects
-	var effects_header := Label.new()
-	effects_header.name = "DetailEffectsHeader"
-	effects_header.text = "Benefits"
-	effects_header.add_theme_font_size_override("font_size", 16)
-	effects_header.add_theme_color_override("font_color", Color(0.7, 0.9, 0.7))
-	vbox.add_child(effects_header)
-
-	var effects_lbl := Label.new()
-	effects_lbl.name = "DetailEffects"
-	effects_lbl.add_theme_font_size_override("font_size", 13)
-	effects_lbl.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-	effects_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(effects_lbl)
-
-	vbox.add_child(HSeparator.new())
-
-	# Prerequisites
-	var prereq_header := Label.new()
-	prereq_header.name = "DetailPrereqHeader"
-	prereq_header.text = "Requires"
-	prereq_header.add_theme_font_size_override("font_size", 16)
-	prereq_header.add_theme_color_override("font_color", Color(0.7, 0.7, 0.9))
-	vbox.add_child(prereq_header)
-
-	var prereq_lbl := Label.new()
-	prereq_lbl.name = "DetailPrereqs"
-	prereq_lbl.add_theme_font_size_override("font_size", 13)
-	prereq_lbl.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-	prereq_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(prereq_lbl)
-
-	# Leads to
-	var leads_header := Label.new()
-	leads_header.name = "DetailLeadsToHeader"
-	leads_header.text = "Leads To"
-	leads_header.add_theme_font_size_override("font_size", 16)
-	leads_header.add_theme_color_override("font_color", Color(0.9, 0.8, 0.6))
-	vbox.add_child(leads_header)
-
-	var leads_lbl := Label.new()
-	leads_lbl.name = "DetailLeadsTo"
-	leads_lbl.add_theme_font_size_override("font_size", 13)
-	leads_lbl.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-	leads_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(leads_lbl)
-
-	vbox.add_child(HSeparator.new())
-
-	# Research button
-	var research_btn := Button.new()
-	research_btn.name = "DetailResearchBtn"
-	research_btn.text = "Research"
-	research_btn.custom_minimum_size = Vector2(0, 40)
-	research_btn.pressed.connect(_on_detail_research_pressed)
-	vbox.add_child(research_btn)
-
-
 func _show_detail_panel(tech_id: String) -> void:
-	_detail_tech_id = tech_id
 	if _detail_panel == null:
 		return
 	var data: Dictionary = _tech_cache.get(tech_id, {})
-	var vbox: VBoxContainer = _detail_panel.get_node("DetailScroll/DetailVBox")
-
-	# Name
-	var name_lbl: Label = vbox.get_node("DetailName")
-	name_lbl.text = data.get("name", tech_id)
-
-	# Status
-	var status_lbl: Label = vbox.get_node("DetailStatus")
 	var state: String = _get_tech_state(tech_id) if _tech_manager != null else "locked"
-	var status_color: Color
-	var status_text: String
-	match state:
-		"researched":
-			status_text = "RESEARCHED"
-			status_color = COLOR_RESEARCHED
-		"researching":
-			status_text = "RESEARCHING"
-			status_color = COLOR_RESEARCHING
-		"available":
-			status_text = "AVAILABLE"
-			status_color = COLOR_AVAILABLE
-		"unaffordable":
-			status_text = "NEED RESOURCES"
-			status_color = COLOR_UNAFFORDABLE
-		_:
-			status_text = "LOCKED"
-			status_color = COLOR_LOCKED
-	status_lbl.text = status_text
-	status_lbl.add_theme_color_override("font_color", status_color)
 
-	# Description
-	var desc_lbl: Label = vbox.get_node("DetailDescription")
-	desc_lbl.text = data.get("description", "")
-	desc_lbl.visible = desc_lbl.text != ""
-
-	# Flavor
-	var flavor_lbl: Label = vbox.get_node("DetailFlavor")
-	var flavor: String = data.get("flavor_text", "")
-	flavor_lbl.text = '"%s"' % flavor if flavor != "" else ""
-	flavor_lbl.visible = flavor != ""
-
-	# Cost
-	var cost_lbl: Label = vbox.get_node("DetailCost")
-	var cost: Dictionary = data.get("cost", {})
-	if not cost.is_empty():
-		var cost_parts: Array[String] = []
-		for resource: String in cost:
-			cost_parts.append("%s: %d" % [resource.capitalize(), int(cost[resource])])
-		cost_lbl.text = "Cost: %s" % ", ".join(cost_parts)
-		cost_lbl.visible = true
-	else:
-		cost_lbl.visible = false
-
-	# Time
-	var time_lbl: Label = vbox.get_node("DetailTime")
-	var research_time: int = int(data.get("research_time", 0))
-	time_lbl.text = "Research Time: %ds" % research_time if research_time > 0 else ""
-	time_lbl.visible = research_time > 0
-
-	# Effects
-	var effects: Dictionary = data.get("effects", {})
-	var effects_lbl: Label = vbox.get_node("DetailEffects")
-	var effects_header: Label = vbox.get_node("DetailEffectsHeader")
-	if not effects.is_empty():
-		effects_lbl.text = _format_effects(effects)
-		effects_header.visible = true
-		effects_lbl.visible = true
-	else:
-		effects_header.visible = false
-		effects_lbl.visible = false
-
-	# Prerequisites
+	# Build prerequisite info strings
+	var prereq_info: Array[String] = []
 	var prereqs: Array = data.get("prerequisites", [])
-	var prereq_header: Label = vbox.get_node("DetailPrereqHeader")
-	var prereq_lbl: Label = vbox.get_node("DetailPrereqs")
-	if not prereqs.is_empty():
-		var prereq_parts: Array[String] = []
-		for prereq_id: String in prereqs:
-			var prereq_data: Dictionary = _tech_cache.get(prereq_id, {})
-			var prereq_name: String = prereq_data.get("name", prereq_id)
-			var done: bool = _tech_manager != null and _tech_manager.is_tech_researched(prereq_id, _player_id)
-			prereq_parts.append("%s %s" % [prereq_name, "(done)" if done else "(needed)"])
-		prereq_lbl.text = "\n".join(prereq_parts)
-		prereq_header.visible = true
-		prereq_lbl.visible = true
-	else:
-		prereq_header.visible = false
-		prereq_lbl.visible = false
+	for prereq_id: String in prereqs:
+		var prereq_data: Dictionary = _tech_cache.get(prereq_id, {})
+		var prereq_name: String = prereq_data.get("name", prereq_id)
+		var done: bool = _tech_manager != null and _tech_manager.is_tech_researched(prereq_id, _player_id)
+		prereq_info.append("%s %s" % [prereq_name, "(done)" if done else "(needed)"])
 
-	# Leads to
+	# Build leads-to info strings
+	var leads_to_info: Array[String] = []
 	var leads_to: Array = _leads_to_map.get(tech_id, [])
-	var leads_header: Label = vbox.get_node("DetailLeadsToHeader")
-	var leads_lbl: Label = vbox.get_node("DetailLeadsTo")
-	if not leads_to.is_empty():
-		var leads_parts: Array[String] = []
-		for next_id: String in leads_to:
-			var next_data: Dictionary = _tech_cache.get(next_id, {})
-			leads_parts.append(next_data.get("name", next_id))
-		leads_lbl.text = "\n".join(leads_parts)
-		leads_header.visible = true
-		leads_lbl.visible = true
-	else:
-		leads_header.visible = false
-		leads_lbl.visible = false
+	for next_id: String in leads_to:
+		var next_data: Dictionary = _tech_cache.get(next_id, {})
+		leads_to_info.append(next_data.get("name", next_id))
 
-	# Research button
-	var research_btn: Button = vbox.get_node("DetailResearchBtn")
-	research_btn.visible = state == "available"
-
-	_detail_panel.visible = true
+	_detail_panel.show_tech(tech_id, data, state, prereq_info, leads_to_info)
 
 
 func _hide_detail_panel() -> void:
-	_detail_tech_id = ""
 	if _detail_panel != null:
-		_detail_panel.visible = false
+		_detail_panel.hide_panel()
 
 
-func _format_effects(effects: Dictionary) -> String:
-	var parts: Array[String] = []
-	for key: String in effects:
-		var value: Variant = effects[key]
-		var label: String = key.replace("_", " ").capitalize()
-		if value is Dictionary:
-			var sub_parts: Array[String] = []
-			for sub_key: String in value:
-				var sub_label: String = sub_key.replace("_", " ").capitalize()
-				sub_parts.append("%s: %s" % [sub_label, str(value[sub_key])])
-			parts.append("%s: %s" % [label, ", ".join(sub_parts)])
-		elif value is Array:
-			var names: Array[String] = []
-			for item: Variant in value:
-				names.append(str(item).replace("_", " ").capitalize())
-			parts.append("%s: %s" % [label, ", ".join(names)])
-		else:
-			parts.append("%s: %s" % [label, str(value)])
-	return "\n".join(parts)
-
-
-func _on_detail_research_pressed() -> void:
-	if _tech_manager == null or _detail_tech_id == "":
+func _on_detail_research_pressed(tech_id: String) -> void:
+	if _tech_manager == null or tech_id == "":
 		return
-	if _tech_manager.can_research(_player_id, _detail_tech_id):
-		_tech_manager.start_research(_player_id, _detail_tech_id)
+	if _tech_manager.can_research(_player_id, tech_id):
+		_tech_manager.start_research(_player_id, tech_id)
 		refresh()
-		_show_detail_panel(_detail_tech_id)
+		_show_detail_panel(tech_id)
 
 
 func _load_visibility_config() -> void:
@@ -645,7 +388,14 @@ func _populate_grid() -> void:
 			var btn := Button.new()
 			btn.name = "Tech_%s" % tech_id
 			btn.text = data.get("name", tech_id)
-			btn.custom_minimum_size = Vector2(170, 36)
+			var tex: Texture2D = _detail_panel.get_tech_texture(tech_id)
+			if tex != null:
+				btn.icon = tex
+				btn.expand_icon = true
+				btn.custom_minimum_size = Vector2(180, 48)
+				btn.add_theme_constant_override("icon_max_width", int(THUMB_ICON_SIZE.x))
+			else:
+				btn.custom_minimum_size = Vector2(170, 36)
 			btn.pressed.connect(_on_tech_button_pressed.bind(tech_id))
 			column.add_child(btn)
 			_tech_buttons[tech_id] = btn
@@ -946,6 +696,24 @@ func _on_tech_button_pressed(tech_id: String) -> void:
 func _on_tech_researched(_player_id_arg: int, _tech_id: String, _effects: Dictionary) -> void:
 	_check_opponent_unlock()
 	refresh()
+	if _player_id_arg == _player_id:
+		_play_research_animation(_tech_id)
+
+
+func _play_research_animation(tech_id: String) -> void:
+	# Animate the grid button: golden flash pulse
+	var btn: Button = _tech_buttons.get(tech_id, null)
+	if btn != null:
+		var btn_tween := create_tween()
+		btn_tween.tween_property(btn, "modulate", Color(2.0, 1.8, 0.6, 1.0), 0.15)
+		btn_tween.tween_property(btn, "modulate", Color.WHITE, 0.4).set_ease(Tween.EASE_OUT)
+		btn_tween.tween_property(btn, "modulate", Color(1.5, 1.4, 0.8, 1.0), 0.15)
+		btn_tween.tween_property(btn, "modulate", Color.WHITE, 0.3).set_ease(Tween.EASE_OUT)
+
+	# Animate the detail panel image if showing this tech
+	if _detail_panel != null and _detail_panel.visible:
+		if _detail_panel.get_current_tech_id() == tech_id:
+			_detail_panel.play_image_reveal()
 
 
 func _on_close_pressed() -> void:

@@ -382,7 +382,7 @@ func test_research_button_starts_research() -> void:
 	var viewer := _create_viewer(tm)
 	viewer._show_detail_panel("stone_tools")
 	# Trigger the research button handler directly
-	viewer._on_detail_research_pressed()
+	viewer._on_detail_research_pressed("stone_tools")
 	var current: String = tm.get_current_research(0)
 	assert_str(current).is_equal("stone_tools")
 
@@ -392,7 +392,7 @@ func test_research_button_refreshes_panel_state_after_starting() -> void:
 	_give_resources(0, 1000)
 	var viewer := _create_viewer(tm)
 	viewer._show_detail_panel("stone_tools")
-	viewer._on_detail_research_pressed()
+	viewer._on_detail_research_pressed("stone_tools")
 	# After starting research the state changes to "researching"/in-progress;
 	# the research button should no longer be visible (state is no longer "available")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
@@ -407,15 +407,15 @@ func test_research_button_does_nothing_without_tech_manager() -> void:
 	viewer._show_detail_panel("stone_tools")
 	viewer._tech_manager = null
 	# Should not crash
-	viewer._on_detail_research_pressed()
+	viewer._on_detail_research_pressed("stone_tools")
 
 
 func test_research_button_does_nothing_when_no_tech_selected() -> void:
 	var tm := _create_tech_manager()
 	_give_resources(0, 1000)
 	var viewer := _create_viewer(tm)
-	# Do not call _show_detail_panel — _detail_tech_id stays ""
-	viewer._on_detail_research_pressed()
+	# Do not call _show_detail_panel — pass empty string
+	viewer._on_detail_research_pressed("")
 	var current: String = tm.get_current_research(0)
 	assert_str(current).is_equal("")
 
