@@ -7,7 +7,8 @@
     "research_time": 25,
     "prerequisites": [],
     "effects": {
-      "economic_bonus": { "gather_rate": 0.10 }
+      "economic_bonus": { "gather_rate": 0.10 },
+      "unlock_buildings": ["mining_camp"]
     },
     "description": "Craft sharpened flint into axes, scrapers, and blades. Improves villager gathering efficiency across all resources.",
     "flavor_text": "Sharpened flint changes everything."
