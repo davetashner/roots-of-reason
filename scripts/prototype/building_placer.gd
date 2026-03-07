@@ -26,6 +26,7 @@ var _current_grid_pos := Vector2i(-1, -1)
 var _is_valid: bool = false
 var _player_id: int = 0
 var _placed_buildings: Array[Dictionary] = []
+var _building_layer: Node = null
 
 ## Multiplier applied to all building costs (e.g. 0.80 = 20% reduction).
 var _building_cost_multiplier: float = 1.0
@@ -53,6 +54,14 @@ func setup(
 	_map_node = map_node
 	_target_detector = target_detector
 	_tech_manager = tech_manager
+
+
+func _get_building_layer() -> Node:
+	if _building_layer == null:
+		_building_layer = get_parent().get_node_or_null("BuildingLayer")
+	if _building_layer == null:
+		_building_layer = get_parent()
+	return _building_layer
 
 
 func is_active() -> bool:
@@ -208,7 +217,7 @@ func _create_building(bname: String, grid_pos: Vector2i, footprint: Vector2i) ->
 	building.build_progress = 0.0
 	building.hp = 0
 	building._build_time = float(_building_stats.get("build_time", 25))
-	get_parent().add_child(building)
+	_get_building_layer().add_child(building)
 	return building
 
 

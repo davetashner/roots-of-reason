@@ -461,7 +461,9 @@ func _screen_to_grid(p: Vector2) -> Vector2i:
 func resolve_target(scene_root: Node) -> void:
 	if pending_combat_target_name == "":
 		return
-	var target := scene_root.get_node_or_null(pending_combat_target_name)
+	var target: Node = scene_root.get_node_or_null(pending_combat_target_name)
+	if target == null:
+		target = scene_root.find_child(pending_combat_target_name, true, false)
 	if target is Node2D:
 		combat_target = target
 	pending_combat_target_name = ""

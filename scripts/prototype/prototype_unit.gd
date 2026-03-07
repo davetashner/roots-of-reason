@@ -625,7 +625,9 @@ func is_idle() -> bool:
 func resolve_build_target(scene_root: Node) -> void:
 	if _pending_build_target_name == "":
 		return
-	var target := scene_root.get_node_or_null(_pending_build_target_name)
+	var target: Node = scene_root.get_node_or_null(_pending_build_target_name)
+	if target == null:
+		target = scene_root.find_child(_pending_build_target_name, true, false)
 	if target is Node2D:
 		_build_target = target
 	_pending_build_target_name = ""
