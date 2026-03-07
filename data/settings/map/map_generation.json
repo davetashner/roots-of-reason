@@ -167,6 +167,19 @@
         "forbidden_terrain": ["water", "river", "mountain", "shallows", "deep_water", "shore", "canyon"],
         "noise_weight": 0.4,
         "noise_seed_offset": 6000
+      },
+      "sheep": {
+        "base_pack_count": 10,
+        "pack_count_min": 8,
+        "pack_count_max": 14,
+        "pack_size_min": 3,
+        "pack_size_max": 5,
+        "min_distance_from_start": 4,
+        "min_distance_between_packs": 6,
+        "terrain_affinity": { "grass": 1.0, "dirt": 0.4 },
+        "forbidden_terrain": ["water", "river", "mountain", "shallows", "deep_water", "shore", "canyon", "forest"],
+        "noise_weight": 0.3,
+        "noise_seed_offset": 6100
       }
     }
   }

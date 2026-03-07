@@ -150,7 +150,7 @@ func setup_fauna() -> void:
 					unit._war_survival = _root._war_survival
 				if _root._target_detector != null:
 					_root._target_detector.register_entity(unit)
-				if fauna_name == "wolf":
+				if fauna_name == "wolf" or fauna_name == "sheep":
 					unit.entity_category = "wild_fauna"
 				if fauna_name == "wolf":
 					var wolf_ai := Node.new()
