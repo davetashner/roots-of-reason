@@ -59,6 +59,9 @@ var _queue_eta_label: Label = null
 var _tracked_queue: Node = null
 var _main_vbox: VBoxContainer = null
 
+# Unit command buttons (Stop/Hold)
+var _cmd_row: HBoxContainer = null
+
 # Build section (villager mode)
 var _build_separator: VSeparator = null
 var _build_section: VBoxContainer = null
@@ -173,6 +176,15 @@ func _build_ui() -> void:
 	_stats_label.add_theme_font_size_override("font_size", 13)
 	vbox.add_child(_stats_label)
 
+	# Unit command buttons (Stop/Hold)
+	_cmd_row = HBoxContainer.new()
+	_cmd_row.name = "CmdRow"
+	_cmd_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cmd_row.add_theme_constant_override("separation", 4)
+	_cmd_row.visible = false
+	vbox.add_child(_cmd_row)
+	_build_cmd_buttons()
+
 	_main_vbox = vbox
 	_build_queue_section(vbox)
 	_build_build_section()
@@ -256,13 +268,14 @@ func show_unit(unit: Node2D) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
+	_show_cmd_row()
 	visible = true
 	# Villager build panel
 	var is_villager: bool = "unit_type" in unit and unit.unit_type == "villager"
 	if is_villager and _building_placer != null:
-		_show_build_section()
+		_toggle_build_section(true)
 	else:
-		_hide_build_section()
+		_toggle_build_section(false)
 	# Portrait color
 	if "unit_color" in unit:
 		_portrait.color = unit.unit_color
@@ -296,7 +309,8 @@ func show_building(building: Node2D) -> void:
 	_tracked_entities.clear()
 	_is_multi = false
 	_clear_hover()
-	_hide_build_section()
+	_toggle_build_section(false)
+	_hide_cmd_row()
 	visible = true
 	# Check ruins state
 	var is_ruins: bool = "_is_ruins" in building and building._is_ruins
@@ -373,7 +387,8 @@ func show_barge(barge: Node2D) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
-	_hide_build_section()
+	_toggle_build_section(false)
+	_show_cmd_row()
 	visible = true
 	# Portrait color
 	if barge.owner_id == 0:
@@ -405,11 +420,12 @@ func show_multi_select(units: Array) -> void:
 	_clear_hover()
 	_clear_thumbnail()
 	_hide_queue_section()
+	_show_cmd_row()
 	# Show build menu when all selected units are villagers
 	if _all_villagers(units) and _building_placer != null:
-		_show_build_section()
+		_toggle_build_section(true)
 	else:
-		_hide_build_section()
+		_toggle_build_section(false)
 	visible = true
 	# Portrait: use first unit's color
 	if not units.is_empty() and "unit_color" in units[0]:
@@ -428,6 +444,7 @@ func show_resource_node(node: Node2D) -> void:
 	_hovered_entity = node
 	_is_hovering_resource = true
 	_clear_thumbnail()
+	_hide_cmd_row()
 	visible = true
 	# Portrait color from node
 	if "_node_color" in node:
@@ -452,7 +469,8 @@ func clear() -> void:
 	_is_multi = false
 	_clear_hover()
 	_hide_queue_section()
-	_hide_build_section()
+	_toggle_build_section(false)
+	_hide_cmd_row()
 	visible = false
 
 
@@ -769,14 +787,8 @@ func _set_build_progress_bar(progress: float) -> void:
 
 func _get_unit_stats(unit: Node2D) -> Dictionary:
 	var unit_type: String = unit.unit_type if "unit_type" in unit else "villager"
-	var stats: Dictionary = {}
-	if Engine.has_singleton("DataLoader"):
-		stats = DataLoader.get_unit_stats(unit_type)
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_unit_stats"):
-			stats = dl.get_unit_stats(unit_type)
-	return stats
+	var result: Variant = _dl_call("get_unit_stats", [unit_type])
+	return result if result is Dictionary else {}
 
 
 func _get_unit_display_name(unit: Node2D) -> String:
@@ -789,14 +801,7 @@ func _get_unit_display_name(unit: Node2D) -> String:
 
 func _get_building_display_name(building: Node2D) -> String:
 	var bname: String = building.building_name if "building_name" in building else ""
-	var stats: Dictionary = {}
-	if bname != "":
-		if Engine.has_singleton("DataLoader"):
-			stats = DataLoader.get_building_stats(bname)
-		elif is_instance_valid(Engine.get_main_loop()):
-			var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-			if dl and dl.has_method("get_building_stats"):
-				stats = dl.get_building_stats(bname)
+	var stats: Dictionary = _load_building_data(bname) if bname != "" else {}
 	if stats.has("name"):
 		return str(stats["name"])
 	if bname != "":
@@ -806,15 +811,7 @@ func _get_building_display_name(building: Node2D) -> String:
 
 func _get_building_stats(building: Node2D) -> Dictionary:
 	var bname: String = building.building_name if "building_name" in building else ""
-	if bname == "":
-		return {}
-	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_building_stats(bname)
-	if is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("get_building_stats"):
-			return dl.get_building_stats(bname)
-	return {}
+	return _load_building_data(bname) if bname != "" else {}
 
 
 func _get_carry_text(unit: Node2D) -> String:
@@ -959,6 +956,48 @@ func _resource_type_name(res_type: int) -> String:
 	return "Res%d" % res_type
 
 
+# -- Unit command buttons (Stop/Hold) --
+
+
+func _build_cmd_buttons() -> void:
+	for cmd_data: Array in [["[Q] Stop", "_on_stop_pressed"], ["[W] Hold", "_on_hold_pressed"]]:
+		var btn := Button.new()
+		btn.text = cmd_data[0]
+		btn.custom_minimum_size = Vector2(60, 24)
+		btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		btn.add_theme_font_size_override("font_size", 11)
+		_apply_btn_style(btn, "normal", Color(0.2, 0.2, 0.3, 0.9))
+		_apply_btn_style(btn, "hover", Color(0.3, 0.3, 0.5, 0.9))
+		btn.pressed.connect(Callable(self, cmd_data[1]))
+		_cmd_row.add_child(btn)
+
+
+func _show_cmd_row() -> void:
+	if _cmd_row != null:
+		_cmd_row.visible = true
+
+
+func _hide_cmd_row() -> void:
+	if _cmd_row != null:
+		_cmd_row.visible = false
+
+
+func _issue_unit_command(method: String) -> void:
+	if _input_handler == null:
+		return
+	for unit in _input_handler._get_selected_units():
+		if is_instance_valid(unit) and unit.has_method(method):
+			unit.call(method)
+
+
+func _on_stop_pressed() -> void:
+	_issue_unit_command("stop")
+
+
+func _on_hold_pressed() -> void:
+	_issue_unit_command("hold_position")
+
+
 # -- Build section (villager mode) --
 
 
@@ -1004,18 +1043,17 @@ func _rebuild_build_tabs() -> void:
 		_build_tab_bar.add_child(tab_btn)
 
 
+func _apply_btn_style(btn: Button, state: String, color: Color, radius: int = 3) -> void:
+	var s := StyleBoxFlat.new()
+	s.bg_color = color
+	s.set_corner_radius_all(radius)
+	btn.add_theme_stylebox_override(state, s)
+
+
 func _style_build_tab(btn: Button, active: bool) -> void:
-	var style := StyleBoxFlat.new()
-	if active:
-		style.bg_color = Color(0.3, 0.3, 0.5, 0.9)
-	else:
-		style.bg_color = Color(0.15, 0.15, 0.2, 0.7)
-	style.set_corner_radius_all(2)
-	btn.add_theme_stylebox_override("normal", style)
-	var hover_style := StyleBoxFlat.new()
-	hover_style.bg_color = Color(0.35, 0.35, 0.55, 0.9)
-	hover_style.set_corner_radius_all(2)
-	btn.add_theme_stylebox_override("hover", hover_style)
+	var c := Color(0.3, 0.3, 0.5, 0.9) if active else Color(0.15, 0.15, 0.2, 0.7)
+	_apply_btn_style(btn, "normal", c, 2)
+	_apply_btn_style(btn, "hover", Color(0.35, 0.35, 0.55, 0.9), 2)
 
 
 func _on_build_tab_pressed(category: String) -> void:
@@ -1030,25 +1068,15 @@ func _on_build_tab_pressed(category: String) -> void:
 		_render_build_grid()
 
 
-func _show_build_section() -> void:
-	_is_villager_mode = true
+func _toggle_build_section(show: bool) -> void:
+	_is_villager_mode = show
 	if _build_separator != null:
-		_build_separator.visible = true
+		_build_separator.visible = show
 	if _build_section != null:
-		_build_section.visible = true
-	_set_panel_width(VILLAGER_PANEL_WIDTH)
-	_render_build_grid()
-
-
-func _hide_build_section() -> void:
-	if not _is_villager_mode:
-		return
-	_is_villager_mode = false
-	if _build_separator != null:
-		_build_separator.visible = false
-	if _build_section != null:
-		_build_section.visible = false
-	_set_panel_width(PANEL_WIDTH)
+		_build_section.visible = show
+	_set_panel_width(VILLAGER_PANEL_WIDTH if show else PANEL_WIDTH)
+	if show:
+		_render_build_grid()
 
 
 func _set_panel_width(w: float) -> void:
@@ -1104,65 +1132,45 @@ func _get_build_commands() -> Array:
 	return unlocked.slice(start, end)
 
 
-func _get_all_building_ids() -> Array:
+func _dl_call(method: String, args: Array = []) -> Variant:
 	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_all_building_ids()
+		return DataLoader.callv(method, args)
 	var dl: Node = null
 	if is_instance_valid(Engine.get_main_loop()):
 		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-	if dl != null and dl.has_method("get_all_building_ids"):
-		return dl.get_all_building_ids()
-	return []
+	if dl != null and dl.has_method(method):
+		return dl.callv(method, args)
+	return null
+
+
+func _get_all_building_ids() -> Array:
+	var result: Variant = _dl_call("get_all_building_ids")
+	return result if result is Array else []
 
 
 func _is_civ_unique_for_other(building_id: String) -> bool:
 	var stats: Dictionary = _load_building_data(building_id)
 	if stats.is_empty():
 		return false
-	var all_civs: Array = _get_all_civ_ids()
+	var all_civs: Variant = _dl_call("get_all_civ_ids")
+	if not all_civs is Array:
+		return false
 	for civ_id: String in all_civs:
-		var civ_data: Dictionary = _load_civ_data(civ_id)
+		var civ_data: Variant = _dl_call("get_civ_data", [civ_id])
+		if not civ_data is Dictionary:
+			continue
 		var unique: Dictionary = civ_data.get("unique_building", {})
 		if unique.is_empty():
 			continue
 		var unique_name: String = str(unique.get("name", "")).to_lower().replace(" ", "_")
 		if unique_name == building_id:
-			var player_civ: String = CivBonusManager.get_active_civ(_player_id)
-			return player_civ != civ_id
+			return CivBonusManager.get_active_civ(_player_id) != civ_id
 	return false
 
 
-func _get_all_civ_ids() -> Array:
-	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_all_civ_ids()
-	var dl: Node = null
-	if is_instance_valid(Engine.get_main_loop()):
-		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-	if dl != null and dl.has_method("get_all_civ_ids"):
-		return dl.get_all_civ_ids()
-	return []
-
-
-func _load_civ_data(civ_id: String) -> Dictionary:
-	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_civ_data(civ_id)
-	var dl: Node = null
-	if is_instance_valid(Engine.get_main_loop()):
-		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-	if dl != null and dl.has_method("get_civ_data"):
-		return dl.get_civ_data(civ_id)
-	return {}
-
-
 func _load_building_data(building_name: String) -> Dictionary:
-	if Engine.has_singleton("DataLoader"):
-		return DataLoader.get_building_stats(building_name)
-	var dl: Node = null
-	if is_instance_valid(Engine.get_main_loop()):
-		dl = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-	if dl != null and dl.has_method("get_building_stats"):
-		return dl.get_building_stats(building_name)
-	return {}
+	var result: Variant = _dl_call("get_building_stats", [building_name])
+	return result if result is Dictionary else {}
 
 
 func _is_build_unlocked(building_id: String) -> bool:
@@ -1195,22 +1203,10 @@ func _create_build_button(command: Dictionary, hotkey: String) -> Button:
 		tip += " (%s)" % hotkey
 	btn.tooltip_text = tip
 	btn.clip_text = true
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.2, 0.2, 0.3, 0.9)
-	style.set_corner_radius_all(3)
-	btn.add_theme_stylebox_override("normal", style)
-	var hover_style := StyleBoxFlat.new()
-	hover_style.bg_color = Color(0.3, 0.3, 0.5, 0.9)
-	hover_style.set_corner_radius_all(3)
-	btn.add_theme_stylebox_override("hover", hover_style)
-	var pressed_style := StyleBoxFlat.new()
-	pressed_style.bg_color = Color(0.15, 0.15, 0.25, 0.9)
-	pressed_style.set_corner_radius_all(3)
-	btn.add_theme_stylebox_override("pressed", pressed_style)
-	var disabled_style := StyleBoxFlat.new()
-	disabled_style.bg_color = Color(0.15, 0.15, 0.15, 0.5)
-	disabled_style.set_corner_radius_all(3)
-	btn.add_theme_stylebox_override("disabled", disabled_style)
+	_apply_btn_style(btn, "normal", Color(0.2, 0.2, 0.3, 0.9))
+	_apply_btn_style(btn, "hover", Color(0.3, 0.3, 0.5, 0.9))
+	_apply_btn_style(btn, "pressed", Color(0.15, 0.15, 0.25, 0.9))
+	_apply_btn_style(btn, "disabled", Color(0.15, 0.15, 0.15, 0.5))
 	btn.add_theme_font_size_override("font_size", 10)
 	if not _check_build_affordability(command):
 		btn.disabled = true
@@ -1261,11 +1257,22 @@ func _clear_build_grid() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _is_villager_mode or _build_grid == null or _build_grid.get_child_count() == 0:
+	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		var key := event as InputEventKey
-		var key_char := char(key.keycode).to_upper()
+	var key := event as InputEventKey
+	var key_char := char(key.keycode).to_upper()
+	# Stop/Hold hotkeys for non-villager units
+	if _cmd_row != null and _cmd_row.visible and not _is_villager_mode:
+		if key_char == "Q":
+			_on_stop_pressed()
+			get_viewport().set_input_as_handled()
+			return
+		if key_char == "W":
+			_on_hold_pressed()
+			get_viewport().set_input_as_handled()
+			return
+	# Build grid hotkeys for villager mode
+	if _is_villager_mode and _build_grid != null and _build_grid.get_child_count() > 0:
 		var hotkeys: Array = [["Q", "W", "E"], ["A", "S", "D"], ["Z", "X", "C"], ["R", "F", "V"]]
 		for row_idx in hotkeys.size():
 			var row: Array = hotkeys[row_idx]
