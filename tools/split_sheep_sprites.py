@@ -19,11 +19,11 @@ from PIL import Image, ImageOps
 SHEEP_DIR = "assets/sprites/units/sheep"
 SOURCE_DIR = os.path.join(SHEEP_DIR, "source")
 CANVAS_SIZE = (128, 128)
-# Background is uniform gray/white around (253-254, 253-254, 253-254).
-# Sheep wool is light but has color variation (different R/G/B values).
-# Use high threshold + uniformity check to avoid erasing white wool.
-BG_MIN = 248  # minimum channel value to consider as potential background
-BG_MAX_SPREAD = 4  # max difference between channels for uniform background
+# Background is uniform gray/white in the 235-254 range with near-equal channels.
+# Sheep wool is light but has color variation (different R/G/B values, spread > 10).
+# Use uniformity check (low spread) to distinguish background from wool.
+BG_MIN = 235  # minimum channel value to consider as potential background
+BG_MAX_SPREAD = 6  # max difference between channels for uniform background
 
 
 def remove_background(img: Image.Image) -> Image.Image:
@@ -53,6 +53,30 @@ def content_bbox(img: Image.Image):
     return alpha.getbbox()
 
 
+def clean_resize_halo(img: Image.Image) -> Image.Image:
+    """Remove semi-transparent uniform gray pixels created by LANCZOS blending.
+
+    When LANCZOS resamples transparent/opaque boundaries, it creates semi-
+    transparent pixels blending background gray with transparent black.
+    Real sheep wool edges have color channel variation (spread > 6).
+    """
+    pixels = img.load()
+    w, h = img.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = pixels[x, y]
+            if a == 0:
+                continue
+            spread = max(r, g, b) - min(r, g, b)
+            # Semi-transparent uniform gray = LANCZOS halo artifact
+            if 0 < a < 255 and spread <= BG_MAX_SPREAD:
+                pixels[x, y] = (0, 0, 0, 0)
+            # Fully opaque uniform near-white that survived removal
+            elif a == 255 and r >= BG_MIN and g >= BG_MIN and b >= BG_MIN and spread <= BG_MAX_SPREAD:
+                pixels[x, y] = (0, 0, 0, 0)
+    return img
+
+
 def crop_and_place(img: Image.Image, canvas_size: tuple = CANVAS_SIZE) -> Image.Image:
     """Crop to content bounding box, scale to fit, then center on canvas."""
     bbox = content_bbox(img)
@@ -71,7 +95,8 @@ def crop_and_place(img: Image.Image, canvas_size: tuple = CANVAS_SIZE) -> Image.
         new_w = max(1, int(cw * scale))
         new_h = max(1, int(ch * scale))
         cropped = cropped.resize((new_w, new_h), Image.LANCZOS)
-        cw, ch = new_w, new_h
+        cropped = clean_resize_halo(cropped)
+        cw, ch = cropped.size
 
     canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
 
