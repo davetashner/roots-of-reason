@@ -1,0 +1,26 @@
+{
+  "name": "Mining Camp",
+  "category": "civilian",
+  "hp": 600,
+  "footprint": [
+    2,
+    2
+  ],
+  "build_time": 35,
+  "build_cost": {
+    "wood": 100
+  },
+  "population_bonus": 0,
+  "garrison_capacity": 0,
+  "is_drop_off": true,
+  "drop_off_types": [
+    "stone",
+    "gold"
+  ],
+  "units_produced": [],
+  "age_required": 0,
+  "required_techs": ["stone_tools"],
+  "placement_constraint": "",
+  "defense": 0,
+  "los": 4
+}

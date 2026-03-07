@@ -9,6 +9,7 @@ const COLOR_RESEARCHED := Color("#FFD700")
 const COLOR_AVAILABLE := Color("#4CAF50")
 const COLOR_UNAFFORDABLE := Color("#2196F3")
 const COLOR_LOCKED := Color("#666666")
+const COLOR_RESEARCHING := Color("#FFA726")
 const COLOR_SHADOWED := Color("#9C27B0")
 
 const AGE_NAMES: Array[String] = [
@@ -440,6 +441,9 @@ func _show_detail_panel(tech_id: String) -> void:
 		"researched":
 			status_text = "RESEARCHED"
 			status_color = COLOR_RESEARCHED
+		"researching":
+			status_text = "RESEARCHING"
+			status_color = COLOR_RESEARCHING
 		"available":
 			status_text = "AVAILABLE"
 			status_color = COLOR_AVAILABLE
@@ -693,9 +697,13 @@ func _classify_by_prereqs(prereqs: Array) -> String:
 
 
 func _get_tech_state(tech_id: String) -> String:
-	## Returns "researched", "available", "unaffordable", or "locked".
+	## Returns "researched", "researching", "available", "unaffordable", or "locked".
 	if _tech_manager.is_tech_researched(tech_id, _player_id):
 		return "researched"
+	# Check if currently in the research queue
+	var queue: Array = _tech_manager.get_research_queue(_player_id)
+	if tech_id in queue:
+		return "researching"
 	# Check prerequisites
 	var data: Dictionary = _tech_cache.get(tech_id, {})
 	var prereqs: Array = data.get("prerequisites", [])
@@ -717,6 +725,8 @@ func _apply_button_style(btn: Button, state: String) -> void:
 	match state:
 		"researched":
 			color = COLOR_RESEARCHED
+		"researching":
+			color = COLOR_RESEARCHING
 		"available":
 			color = COLOR_AVAILABLE
 		"unaffordable":
@@ -763,6 +773,8 @@ func _build_tooltip(tech_id: String, state: String) -> String:
 	match state:
 		"researched":
 			status_text = "RESEARCHED"
+		"researching":
+			status_text = "RESEARCHING"
 		"available":
 			status_text = "AVAILABLE"
 		"unaffordable":

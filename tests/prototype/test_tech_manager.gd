@@ -205,7 +205,7 @@ func test_tech_researched_signal_emitted() -> void:
 	tm.start_research(0, "stone_tools")
 	for i in 26:
 		tm._process(1.0)
-	var expected_effects: Dictionary = {"economic_bonus": {"gather_rate": 0.10}}
+	var expected_effects: Dictionary = {"economic_bonus": {"gather_rate": 0.10}, "unlock_buildings": ["mining_camp"]}
 	await assert_signal(monitor).is_emitted("tech_researched", [0, "stone_tools", expected_effects])
 
 
