@@ -62,7 +62,7 @@
     "prerequisites": [],
     "effects": {
       "economic_bonus": { "farm_food_rate": 0.25 },
-      "unlock_buildings": ["farm"]
+      "unlock_buildings": ["farm", "granary"]
     },
     "description": "Cultivate crops instead of relying on foraging. Unlocks the Farm building and boosts farm food production rate by 25%, enabling population growth.",
     "flavor_text": "Planted seeds promise a future beyond foraging."
