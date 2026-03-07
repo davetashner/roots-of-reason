@@ -50,8 +50,10 @@ var _showing_opponent: bool = false
 var _opponent_toggle_btn: Button = null
 ## Overlay panel showing opponent's current research
 var _opponent_panel: PanelContainer = null
-## Tech detail side panel
+## Tech detail overlay panel
 var _detail_panel: PanelContainer = null
+## Semi-transparent backdrop behind the detail panel
+var _detail_backdrop: ColorRect = null
 ## {tech_id: Array[String]} reverse dependency map (what each tech leads to)
 var _leads_to_map: Dictionary = {}
 
@@ -243,12 +245,6 @@ func _build_ui() -> void:
 	_grid_container.add_theme_constant_override("separation", 24)
 	_scroll.add_child(_grid_container)
 
-	# Detail side panel (hidden by default)
-	_detail_panel = TechDetailPanel.new()
-	_detail_panel.close_requested.connect(_hide_detail_panel)
-	_detail_panel.research_requested.connect(_on_detail_research_pressed)
-	content_hbox.add_child(_detail_panel)
-
 	# Opponent intel panel (hidden by default)
 	_build_opponent_panel()
 	outer_vbox.add_child(_opponent_panel)
@@ -264,6 +260,22 @@ func _build_ui() -> void:
 	_add_legend_entry(legend, COLOR_UNAFFORDABLE, "Can't Afford")
 	_add_legend_entry(legend, COLOR_LOCKED, "Locked")
 	_add_legend_entry(legend, COLOR_SHADOWED, "Undiscovered")
+
+	# Detail panel backdrop (dims the grid when detail panel is open)
+	_detail_backdrop = ColorRect.new()
+	_detail_backdrop.name = "DetailBackdrop"
+	_detail_backdrop.color = Color(0.0, 0.0, 0.0, 0.5)
+	_detail_backdrop.visible = false
+	_detail_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_detail_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	_detail_backdrop.gui_input.connect(_on_backdrop_input)
+	add_child(_detail_backdrop)
+
+	# Detail overlay panel (centered, slides in from left)
+	_detail_panel = TechDetailPanel.new()
+	_detail_panel.close_requested.connect(_hide_detail_panel)
+	_detail_panel.research_requested.connect(_on_detail_research_pressed)
+	add_child(_detail_panel)
 
 
 func _add_legend_entry(parent: HBoxContainer, color: Color, label_text: String) -> void:
@@ -300,10 +312,19 @@ func _show_detail_panel(tech_id: String) -> void:
 		var next_data: Dictionary = _tech_cache.get(next_id, {})
 		leads_to_info.append(next_data.get("name", next_id))
 
+	# Position the panel vertically centered before showing
+	var viewport_size := get_viewport_rect().size
+	_detail_panel.position.y = (viewport_size.y - _detail_panel.PANEL_HEIGHT) / 2.0
+	_detail_panel.size = Vector2(_detail_panel.PANEL_WIDTH, _detail_panel.PANEL_HEIGHT)
+
+	if _detail_backdrop != null:
+		_detail_backdrop.visible = true
 	_detail_panel.show_tech(tech_id, data, state, prereq_info, leads_to_info)
 
 
 func _hide_detail_panel() -> void:
+	if _detail_backdrop != null:
+		_detail_backdrop.visible = false
 	if _detail_panel != null:
 		_detail_panel.hide_panel()
 
@@ -714,6 +735,14 @@ func _play_research_animation(tech_id: String) -> void:
 	if _detail_panel != null and _detail_panel.visible:
 		if _detail_panel.get_current_tech_id() == tech_id:
 			_detail_panel.play_image_reveal()
+
+
+func _on_backdrop_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			_hide_detail_panel()
+			get_viewport().set_input_as_handled()
 
 
 func _on_close_pressed() -> void:

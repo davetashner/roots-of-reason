@@ -1,6 +1,7 @@
 extends PanelContainer
-## Tech detail side panel showing illustration, name, status, description,
+## Tech detail overlay panel showing illustration, name, status, description,
 ## cost, effects, prerequisites, leads-to, and a research button.
+## Slides in from the left with a dimming backdrop behind it.
 ## Extracted from tech_tree_viewer.gd to keep files under 1000 lines.
 
 signal research_requested(tech_id: String)
@@ -14,16 +15,19 @@ const COLOR_RESEARCHING := Color("#FFA726")
 
 const DETAIL_IMAGE_SIZE := Vector2(256, 256)
 const TECH_SPRITE_PATH := "res://assets/sprites/tech/%s.png"
+const PANEL_WIDTH: float = 460.0
+const PANEL_HEIGHT: float = 600.0
+const SLIDE_DURATION: float = 0.3
 
 var _tech_textures: Dictionary = {}
 var _current_tech_id: String = ""
+var _slide_tween: Tween = null
 
 
 func _init() -> void:
 	name = "DetailPanel"
 	visible = false
-	custom_minimum_size = Vector2(320, 0)
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	custom_minimum_size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.08, 0.15, 0.95)
 	style.border_color = Color(0.4, 0.4, 0.6)
@@ -164,12 +168,44 @@ func show_tech(tech_id: String, data: Dictionary, state: String, prereq_info: Ar
 	var research_btn: Button = vbox.get_node("DetailResearchBtn")
 	research_btn.visible = state == "available"
 
-	visible = true
+	slide_in()
 
 
 func hide_panel() -> void:
 	_current_tech_id = ""
 	visible = false
+	_kill_slide_tween()
+
+
+func slide_in() -> void:
+	## Animate the panel sliding in from the left to center.
+	_kill_slide_tween()
+	visible = true
+	var viewport_size := get_viewport_rect().size
+	var target_x: float = (viewport_size.x - size.x) / 2.0
+	position.x = -size.x
+	_slide_tween = create_tween()
+	_slide_tween.set_ease(Tween.EASE_OUT)
+	_slide_tween.set_trans(Tween.TRANS_CUBIC)
+	_slide_tween.tween_property(self, "position:x", target_x, SLIDE_DURATION)
+
+
+func slide_out() -> void:
+	## Animate the panel sliding out to the left, then hide.
+	_kill_slide_tween()
+	if not visible:
+		return
+	_slide_tween = create_tween()
+	_slide_tween.set_ease(Tween.EASE_IN)
+	_slide_tween.set_trans(Tween.TRANS_CUBIC)
+	_slide_tween.tween_property(self, "position:x", -size.x, SLIDE_DURATION)
+	_slide_tween.tween_callback(func() -> void: visible = false)
+
+
+func _kill_slide_tween() -> void:
+	if _slide_tween != null and _slide_tween.is_valid():
+		_slide_tween.kill()
+	_slide_tween = null
 
 
 func play_image_reveal() -> void:
