@@ -281,8 +281,6 @@ func test_archer_selection_y_uses_config_value() -> void:
 
 func test_selection_y_falls_back_to_sprite_bottom() -> void:
 	# Villager config has no selection_y — should fall back to rect.end.y
-	_handler = UnitSpriteHandlerScript.new(
-		_unit, "villager", Color.RED, "res://data/units/sprites/villager.json"
-	)
+	_handler = UnitSpriteHandlerScript.new(_unit, "villager", Color.RED, "res://data/units/sprites/villager.json")
 	var expected_y: float = _handler.get_sprite_rect().end.y
 	assert_float(_handler.get_selection_y()).is_equal(expected_y)
