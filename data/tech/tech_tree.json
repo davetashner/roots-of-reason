@@ -9,6 +9,7 @@
     "effects": {
       "economic_bonus": { "gather_rate": 0.10 }
     },
+    "description": "Craft sharpened flint into axes, scrapers, and blades. Improves villager gathering efficiency across all resources.",
     "flavor_text": "Sharpened flint changes everything."
   },
   {
@@ -22,6 +23,7 @@
       "economic_bonus": { "hunting_yield": 0.20 },
       "stat_modifiers": { "night_los": 2 }
     },
+    "description": "Learn to create and control fire for cooking, warmth, and light. Increases hunting yield and extends night vision range.",
     "flavor_text": "Warmth, light, and cooked meat."
   },
   {
@@ -34,6 +36,7 @@
     "effects": {
       "unlock_buildings": ["sheep_pen"]
     },
+    "description": "Domesticate animals for a reliable food source. Unlocks the Sheep Pen building for sustainable meat and wool production.",
     "flavor_text": "The first step from hunter to herder."
   },
   {
@@ -46,6 +49,7 @@
     "effects": {
       "economic_bonus": { "carry_capacity": 0.25 }
     },
+    "description": "Weave plant fibers into containers for transporting resources. Increases villager carry capacity by 25%.",
     "flavor_text": "Woven reeds multiply what hands can carry."
   },
   {
@@ -58,6 +62,7 @@
     "effects": {
       "economic_bonus": { "farm_food_rate": 0.25 }
     },
+    "description": "Cultivate crops instead of relying on foraging. Boosts farm food production rate by 25%, enabling population growth.",
     "flavor_text": "Planted seeds promise a future beyond foraging."
   },
   {
@@ -72,6 +77,7 @@
       "unlock_buildings": ["barracks"],
       "unlock_units": ["infantry"]
     },
+    "description": "Alloy copper and tin into bronze for weapons and tools. Unlocks the Barracks and Infantry units, and increases melee attack power.",
     "flavor_text": "Copper and tin forge an empire.",
     "pioneer_bonus": {
       "type": "temporary_buff",
@@ -94,6 +100,7 @@
     "effects": {
       "unlock_buildings": ["library"]
     },
+    "description": "Develop a system of written symbols to record knowledge. Unlocks the Library, the foundation for all advanced research.",
     "flavor_text": "Marks on clay become the memory of a people.",
     "pioneer_bonus": {
       "type": "permanent_stat",
@@ -117,6 +124,7 @@
       "economic_bonus": { "food_decay_reduction": 0.50 },
       "unlock_buildings": ["market"]
     },
+    "description": "Shape and fire clay into durable vessels for storage and trade. Halves food decay and unlocks the Market building.",
     "flavor_text": "Fired clay stores grain through winter."
   },
   {
@@ -129,6 +137,7 @@
     "effects": {
       "economic_bonus": { "farm_output": 0.25 }
     },
+    "description": "Build canal systems to deliver water to farmland. Increases farm output by 25%, critical for sustaining larger populations.",
     "flavor_text": "Canals turn desert into garden."
   },
   {
@@ -142,6 +151,7 @@
       "stat_modifiers": { "building_hp": 0.20 },
       "unlock_buildings": ["stone_wall"]
     },
+    "description": "Cut and fit stone blocks for durable construction. Increases building HP by 20% and unlocks Stone Walls for defense.",
     "flavor_text": "Fitted stone stands where mud brick crumbles."
   },
   {
@@ -155,6 +165,7 @@
       "unlock_buildings": ["dock"],
       "unlock_units": ["fishing_boat", "merchant_ship", "transport_ship"]
     },
+    "description": "Harness the wind to cross open water. Unlocks the Dock and naval units including Fishing Boats, Merchant Ships, and Transports.",
     "flavor_text": "The horizon beckons."
   },
   {
@@ -167,6 +178,7 @@
     "effects": {
       "stat_modifiers": { "fishing_carry": 5 }
     },
+    "description": "Weave fine nets that trap fish by their gills. Increases Fishing Boat carry capacity, boosting food income from the sea.",
     "flavor_text": "Woven nets haul a richer catch."
   },
   {
@@ -179,6 +191,7 @@
     "effects": {
       "stat_modifiers": { "unit_speed": 0.15 }
     },
+    "description": "Mount axles on circular discs for carts and chariots. Increases all unit movement speed by 15%.",
     "flavor_text": "Round and round, the world moves faster."
   },
   {
@@ -192,6 +205,7 @@
       "stat_modifiers": { "melee_attack": 2 },
       "unlock_units": ["swordsman"]
     },
+    "description": "Smelt iron ore into stronger weapons and armor. Unlocks Swordsmen and significantly boosts melee attack across your army.",
     "flavor_text": "Iron edges shatter bronze shields."
   },
   {
@@ -204,6 +218,7 @@
     "effects": {
       "research_bonus": 0.25
     },
+    "description": "Pursue systematic inquiry into the nature of knowledge and reality. Grants a 25% research speed bonus to all future technologies.",
     "flavor_text": "The unexamined life is not worth living."
   },
   {
@@ -217,6 +232,7 @@
       "economic_bonus": { "construction_speed": 0.15 },
       "stat_modifiers": { "siege_accuracy": 0.10 }
     },
+    "description": "Develop formal number systems, geometry, and calculation. Speeds up construction by 15% and improves siege weapon accuracy.",
     "flavor_text": "Numbers reveal the hidden order of things.",
     "pioneer_bonus": {
       "type": "permanent_stat",
@@ -239,6 +255,7 @@
     "effects": {
       "economic_bonus": { "gold_income": 0.15 }
     },
+    "description": "Mint standardized coins to replace barter trade. Increases gold income by 15%, fueling economic growth.",
     "flavor_text": "Standardized coins replace haggled barter."
   },
   {
@@ -252,6 +269,7 @@
       "unlock_buildings": ["siege_workshop", "aqueduct"],
       "economic_bonus": { "house_capacity": 5 }
     },
+    "description": "Apply mathematical principles to practical construction. Unlocks the Siege Workshop and Aqueduct, and increases housing capacity.",
     "flavor_text": "Theory meets stone and timber."
   },
   {
@@ -265,6 +283,7 @@
       "corruption_reduction": 0.30,
       "economic_bonus": { "villager_efficiency": 0.10 }
     },
+    "description": "Codify rules governing society to reduce corruption and improve order. Cuts corruption by 30% and boosts villager efficiency.",
     "flavor_text": "Written law binds king and commoner alike."
   },
   {
@@ -277,6 +296,7 @@
     "effects": {
       "unlock_units": ["war_galley"]
     },
+    "description": "Design warships with triple-banked oars for naval dominance. Unlocks the powerful War Galley combat vessel.",
     "flavor_text": "Three banks of oars drive a floating fortress."
   },
   {
@@ -289,6 +309,7 @@
     "effects": {
       "war_survival": { "chance": 0.10, "hp_flat": 1 }
     },
+    "description": "Harvest medicinal plants to treat battlefield injuries. Gives wounded soldiers a 10% chance to survive lethal damage.",
     "flavor_text": "Poultices and tinctures pull soldiers back from the brink."
   },
   {
@@ -302,6 +323,7 @@
       "pandemic_mitigation": { "severity_reduction": 0.25, "probability_reduction": 0.15 },
       "stat_modifiers": { "hp_regen_ooc": 0.5 }
     },
+    "description": "Study plant-based remedies to combat disease and aid recovery. Reduces pandemic severity and grants out-of-combat HP regeneration.",
     "flavor_text": "Willow bark eases fever; garlic wards infection."
   },
   {
@@ -314,6 +336,7 @@
     "effects": {
       "stat_modifiers": { "territory_movement_speed": 0.20 }
     },
+    "description": "Construct paved roads connecting your settlements. Increases movement speed within your territory by 20%.",
     "flavor_text": "Paved roads bind villages into kingdoms."
   },
   {
@@ -326,6 +349,7 @@
     "effects": {
       "stat_modifiers": { "unit_los": 0.20 }
     },
+    "description": "Chart celestial bodies to improve navigation and awareness. Increases line of sight for all units by 20%.",
     "flavor_text": "Charted stars guide travelers and scholars alike."
   },
   {
@@ -338,6 +362,7 @@
     "effects": {
       "stat_modifiers": { "defense": 2, "building_armor": 0.10 }
     },
+    "description": "Forge carbon-hardened steel for superior armor and fortifications. Increases defense and building armor values.",
     "flavor_text": "Folded steel turns aside the heaviest blow."
   },
   {
@@ -350,6 +375,7 @@
     "effects": {
       "economic_bonus": { "villager_train_time": -0.20, "food_income": 0.10 }
     },
+    "description": "Organize society into lord-vassal hierarchies for efficient land management. Speeds villager training and boosts food income.",
     "flavor_text": "Land for loyalty, service for protection."
   },
   {
@@ -363,6 +389,7 @@
       "stat_modifiers": { "naval_los": 3 },
       "unlock_buildings": ["deep_ocean_navigation"]
     },
+    "description": "Use magnetized needles for reliable direction-finding at sea. Greatly extends naval vision and enables deep ocean exploration.",
     "flavor_text": "A magnetized needle opens the world.",
     "pioneer_bonus": {
       "type": "instant_effect",
@@ -386,6 +413,7 @@
       "research_bonus": 0.50,
       "economic_bonus": { "research_time": -0.10 }
     },
+    "description": "Mechanize text reproduction with movable type. Dramatically accelerates research speed and reduces research time for all techs.",
     "flavor_text": "A thousand copies where one scribe labored.",
     "public_alert": true,
     "pioneer_bonus": {
@@ -409,6 +437,7 @@
     "effects": {
       "economic_bonus": { "trade_rates": 0.25, "gold_income": 0.15 }
     },
+    "description": "Organize skilled craftsmen into trade guilds that control quality and prices. Improves trade rates and gold income.",
     "flavor_text": "Masters of craft set the price of excellence."
   },
   {
@@ -422,6 +451,7 @@
       "unlock_buildings": ["castle"],
       "stat_modifiers": { "fortification_hp": 0.30 }
     },
+    "description": "Design concentric fortifications with towers, moats, and murder holes. Unlocks the Castle and strengthens all fortifications.",
     "flavor_text": "Concentric walls multiply the defender's advantage."
   },
   {
@@ -434,6 +464,7 @@
     "effects": {
       "war_survival": { "chance": 0.20, "hp_percent": 0.05 }
     },
+    "description": "Train physicians in wound treatment and surgical procedures. Doubles the chance of soldiers surviving lethal damage in battle.",
     "flavor_text": "Trained hands stitch what battle has torn."
   },
   {
@@ -447,8 +478,9 @@
       "unlock_units": ["hand_cannoneer"],
       "stat_modifiers": { "siege_damage": 0.25 }
     },
-    "war_spillover": { "mining_efficiency": 0.10 },
+    "description": "Discover the explosive mixture of saltpeter, sulfur, and charcoal. Unlocks Hand Cannoneers and boosts siege damage by 25%.",
     "flavor_text": "Thunder and fire from a bamboo tube.",
+    "war_spillover": { "mining_efficiency": 0.10 },
     "pioneer_bonus": {
       "type": "temporary_buff",
       "effect": {
@@ -471,6 +503,7 @@
       "economic_bonus": { "gold_income": 0.20 },
       "corruption_reduction": 0.25
     },
+    "description": "Establish financial institutions with lending, deposits, and double-entry bookkeeping. Increases gold income and reduces corruption.",
     "flavor_text": "Double-entry bookkeeping reveals every stolen coin."
   },
   {
@@ -484,6 +517,7 @@
       "stat_modifiers": { "naval_hp": 0.25 },
       "economic_bonus": { "transport_capacity": 0.50 }
     },
+    "description": "Advance hull construction with carvel planking for larger, more durable ships. Increases naval HP and transport capacity.",
     "flavor_text": "Carvel hulls carry cargo the world over."
   },
   {
@@ -496,6 +530,7 @@
     "effects": {
       "unlock_units": ["cannon_ship"]
     },
+    "description": "Build multi-decked warships armed with broadside cannons. Unlocks the devastating Cannon Ship for naval supremacy.",
     "flavor_text": "Broadsides of iron reshape naval warfare."
   },
   {
@@ -508,6 +543,7 @@
     "effects": {
       "economic_bonus": { "farm_output": 0.30 }
     },
+    "description": "Alternate crop types across seasons to restore soil fertility. Boosts farm output by 30% without requiring new farmland.",
     "flavor_text": "Turnips restore what wheat has taken."
   },
   {
@@ -520,6 +556,7 @@
     "effects": {
       "economic_bonus": { "gather_rate": 0.25 }
     },
+    "description": "Harness wind and water through mills and waterwheels to automate labor. Increases all resource gathering rates by 25%.",
     "flavor_text": "Wind and water turn millstones day and night."
   },
   {
@@ -532,6 +569,7 @@
     "effects": {
       "stat_modifiers": { "archer_range": 0.30 }
     },
+    "description": "Study light refraction through shaped glass lenses. Increases archer range by 30%, giving ranged units a decisive advantage.",
     "flavor_text": "Ground glass bends light to the archer's advantage."
   },
   {
@@ -544,6 +582,7 @@
     "effects": {
       "economic_bonus": { "trade_gold_income": 0.50 }
     },
+    "description": "Establish protected sea lanes and overland paths for commerce. Doubles gold income from trade, fueling your economy.",
     "flavor_text": "Silk and spice flow along paths of profit."
   },
   {
@@ -554,6 +593,7 @@
     "research_time": 60,
     "prerequisites": ["writing", "iron_working"],
     "effects": { "reveals_opponent_research": true },
+    "description": "Train spies and establish intelligence networks. Reveals what technologies your opponents are currently researching.",
     "flavor_text": "Knowledge of your enemy is the first step to victory."
   },
   {
@@ -567,6 +607,7 @@
       "economic_bonus": { "villager_work_rate": 0.30 },
       "unlock_buildings": ["factory"]
     },
+    "description": "Convert heat into mechanical motion using pressurized steam. Unlocks the Factory and boosts villager work rate by 30%.",
     "flavor_text": "Boiling water moves mountains.",
     "pioneer_bonus": {
       "type": "instant_effect",
@@ -589,8 +630,9 @@
     "effects": {
       "stat_modifiers": { "ranged_attack": 0.30 }
     },
-    "war_spillover": { "mining_efficiency": 0.15 },
-    "flavor_text": "Spiral grooves turn muskets into precision instruments."
+    "description": "Cut spiral grooves inside gun barrels for spin-stabilized projectiles. Increases ranged attack damage by 30%.",
+    "flavor_text": "Spiral grooves turn muskets into precision instruments.",
+    "war_spillover": { "mining_efficiency": 0.15 }
   },
   {
     "id": "railroad",
@@ -602,6 +644,7 @@
     "effects": {
       "economic_bonus": { "resource_transport_speed": 1.0 }
     },
+    "description": "Lay iron rails for steam-powered freight and troop transport. Doubles resource transport speed across your empire.",
     "flavor_text": "Iron rails bind a continent."
   },
   {
@@ -615,6 +658,7 @@
       "research_bonus": 1.0,
       "unlock_buildings": ["telegraph"]
     },
+    "description": "Harness electrical current for power and communication. Doubles research speed and unlocks the Telegraph building.",
     "flavor_text": "Tamed lightning illuminates the age of reason.",
     "pioneer_bonus": {
       "type": "temporary_buff",
@@ -637,6 +681,7 @@
     "effects": {
       "stat_modifiers": { "building_hp": 0.30, "naval_hp": 0.30 }
     },
+    "description": "Mass-produce steel using Bessemer converters. Significantly increases the durability of buildings and naval vessels.",
     "flavor_text": "Bessemer converters pour molten futures."
   },
   {
@@ -647,6 +692,7 @@
     "research_time": 75,
     "prerequisites": ["mathematics"],
     "effects": {},
+    "description": "Understand the composition and reactions of matter at the elemental level. A foundational science enabling many advanced technologies.",
     "flavor_text": "Elements arranged reveal nature's alphabet."
   },
   {
@@ -660,6 +706,7 @@
       "pandemic_mitigation": { "severity_reduction": 0.50, "probability_reduction": 0.30 },
       "economic_bonus": { "population_growth": 0.25 }
     },
+    "description": "Build sewer systems and clean water infrastructure. Dramatically reduces pandemic risk and accelerates population growth.",
     "flavor_text": "Clean water saves more lives than any army."
   },
   {
@@ -672,6 +719,7 @@
     "effects": {
       "war_survival": { "chance": 0.30, "hp_percent": 0.10 }
     },
+    "description": "Develop anaesthesia, antiseptics, and evidence-based treatment. Gives wounded soldiers a 30% chance to survive mortal injuries.",
     "flavor_text": "Anaesthesia and antiseptics transform the field hospital."
   },
   {
@@ -685,6 +733,7 @@
       "economic_bonus": { "food_decay_eliminated": true },
       "stat_modifiers": { "camp_disease_immunity": true, "idle_hp_regen": 1.0 }
     },
+    "description": "Heat liquids to destroy harmful microorganisms. Eliminates food decay, grants disease immunity at camps, and boosts idle HP regeneration.",
     "flavor_text": "Invisible killers made visible and vanquished."
   },
   {
@@ -698,6 +747,7 @@
       "pandemic_mitigation": { "immune": true },
       "stat_modifiers": { "military_max_hp": 0.15 }
     },
+    "description": "Develop inoculations that grant population-wide disease immunity. Makes your civilization immune to pandemics and increases military HP.",
     "flavor_text": "A scratch on the arm shields millions."
   },
   {
@@ -710,6 +760,7 @@
     "effects": {
       "economic_bonus": { "unit_train_time": -0.40 }
     },
+    "description": "Organize production into sequential specialized stations. Reduces unit training time by 40%, enabling rapid army mobilization.",
     "flavor_text": "Interchangeable parts, unstoppable production."
   },
   {
@@ -722,8 +773,9 @@
     "effects": {
       "stat_modifiers": { "siege_damage": 0.50 }
     },
-    "war_spillover": { "stone_mining": 0.25 },
-    "flavor_text": "Nobel's invention reshapes both battlefield and quarry."
+    "description": "Stabilize nitroglycerin into a controllable explosive. Increases siege damage by 50% and improves stone mining efficiency.",
+    "flavor_text": "Nobel's invention reshapes both battlefield and quarry.",
+    "war_spillover": { "stone_mining": 0.25 }
   },
   {
     "id": "civil_service",
@@ -736,6 +788,7 @@
       "corruption_reduction": 1.0,
       "economic_bonus": { "bureaucracy_efficiency": 0.15 }
     },
+    "description": "Replace patronage with merit-based government appointments. Eliminates corruption entirely and improves administrative efficiency.",
     "flavor_text": "Merit replaces patronage; the state serves the people."
   },
   {
@@ -749,8 +802,9 @@
       "stat_modifiers": { "ranged_accuracy": 0.20 },
       "unlock_units": ["artillery"]
     },
-    "war_spillover": { "navigation": 0.10 },
-    "flavor_text": "Calculated arcs turn artillery into science."
+    "description": "Apply physics to calculate precise projectile trajectories. Improves ranged accuracy by 20% and unlocks Artillery units.",
+    "flavor_text": "Calculated arcs turn artillery into science.",
+    "war_spillover": { "navigation": 0.10 }
   },
   {
     "id": "mechanized_warfare",
@@ -762,6 +816,7 @@
     "effects": {
       "unlock_units": ["tank"]
     },
+    "description": "Combine armored vehicles with mobile firepower. Unlocks the Tank, a heavily armored unit that dominates the battlefield.",
     "flavor_text": "Steel treads crush the age of cavalry."
   },
   {
@@ -774,6 +829,7 @@
     "effects": {
       "research_bonus": 0.15
     },
+    "description": "Transmit coded messages instantly over long distances via electrical wires. Provides a 15% research speed bonus.",
     "flavor_text": "Dots and dashes outrun the fastest horse."
   },
   {
@@ -786,6 +842,7 @@
     "effects": {
       "unlock_units": ["scout_plane"]
     },
+    "description": "Achieve powered heavier-than-air flight. Unlocks Scout Planes for unmatched reconnaissance across the battlefield.",
     "flavor_text": "Heavier than air, yet humanity soars."
   },
   {
@@ -798,6 +855,7 @@
     "effects": {
       "corruption_reduction": 0.20
     },
+    "description": "Establish representative government chosen by the people. Reduces corruption by 20% through political accountability.",
     "flavor_text": "Government of the people, by the people, for the people."
   },
   {
@@ -810,6 +868,7 @@
     "effects": {
       "research_bonus": 0.50
     },
+    "description": "Understand the structure of atoms and subatomic particles. Provides a 50% research bonus and opens the path to nuclear technology.",
     "flavor_text": "Splitting the atom splits the future."
   },
   {
@@ -822,8 +881,9 @@
     "effects": {
       "research_bonus": 1.0
     },
-    "singularity_chain": true,
+    "description": "Formalize computation with Turing machines and algorithms. Doubles research speed and begins the singularity technology chain.",
     "flavor_text": "Turing's machine thinks in ones and zeros.",
+    "singularity_chain": true,
     "pioneer_bonus": {
       "type": "permanent_stat",
       "effect": {
@@ -845,6 +905,7 @@
     "effects": {
       "research_bonus": 0.25
     },
+    "description": "Replace vacuum tubes with solid-state semiconductor switches. Enables miniaturized electronics and boosts research output.",
     "flavor_text": "Silicon replaces vacuum tubes."
   },
   {
@@ -857,6 +918,7 @@
     "effects": {
       "unlock_buildings": ["nuclear_plant"]
     },
+    "description": "Split heavy atoms in controlled chain reactions. Unlocks the Nuclear Plant for massive energy production.",
     "flavor_text": "Controlled chain reactions power cities."
   },
   {
@@ -869,8 +931,9 @@
     "effects": {
       "unlock_units": ["missile"]
     },
-    "war_spillover": { "navigation": 0.15 },
-    "flavor_text": "Warheads become launch vehicles."
+    "description": "Develop liquid and solid fuel propulsion for long-range delivery systems. Unlocks Missile units for devastating strikes.",
+    "flavor_text": "Warheads become launch vehicles.",
+    "war_spillover": { "navigation": 0.15 }
   },
   {
     "id": "satellite",
@@ -882,6 +945,7 @@
     "effects": {
       "stat_modifiers": { "map_visibility_territory": true, "unit_speed": 0.10 }
     },
+    "description": "Launch orbital platforms for communications and surveillance. Reveals your entire territory on the map and boosts unit speed.",
     "flavor_text": "Eyes in the sky see everything."
   },
   {
@@ -894,8 +958,9 @@
     "effects": {
       "research_bonus": 0.15
     },
-    "singularity_chain": true,
-    "flavor_text": "Nanometer precision etches intelligence into sand."
+    "description": "Build nanometer-precision fabrication facilities for advanced microchips. A key stepping stone on the singularity chain.",
+    "flavor_text": "Nanometer precision etches intelligence into sand.",
+    "singularity_chain": true
   },
   {
     "id": "internet",
@@ -908,8 +973,9 @@
       "research_bonus": 2.0,
       "economic_bonus": { "library_research_sharing": true }
     },
-    "singularity_chain": true,
+    "description": "Connect all knowledge repositories in a global network. Triples research output and enables library research sharing.",
     "flavor_text": "All human knowledge, connected.",
+    "singularity_chain": true,
     "pioneer_bonus": {
       "type": "instant_effect",
       "effect": {
@@ -931,8 +997,9 @@
     "effects": {
       "research_bonus": 0.75
     },
-    "singularity_chain": true,
-    "flavor_text": "Machines that learn from their mistakes."
+    "description": "Train algorithms to improve from data without explicit programming. A critical step toward artificial general intelligence.",
+    "flavor_text": "Machines that learn from their mistakes.",
+    "singularity_chain": true
   },
   {
     "id": "statistics",
@@ -944,6 +1011,7 @@
     "effects": {
       "economic_bonus": { "gold_income": 0.10 }
     },
+    "description": "Develop mathematical frameworks for analyzing data and quantifying uncertainty. Boosts gold income through better economic forecasting.",
     "flavor_text": "Probability tames uncertainty."
   },
   {
@@ -956,8 +1024,9 @@
     "effects": {
       "stat_modifiers": { "enemy_detection_range": 0.50 }
     },
-    "war_spillover": { "farm_output": 0.10 },
-    "flavor_text": "Radio waves reveal what eyes cannot see."
+    "description": "Detect distant objects by bouncing radio waves off them. Increases enemy detection range by 50% for early warning.",
+    "flavor_text": "Radio waves reveal what eyes cannot see.",
+    "war_spillover": { "farm_output": 0.10 }
   },
   {
     "id": "guided_missiles",
@@ -969,6 +1038,7 @@
     "effects": {
       "stat_modifiers": { "ranged_attack": 0.50 }
     },
+    "description": "Equip missiles with onboard guidance systems for precision targeting. Increases ranged attack damage by 50%.",
     "flavor_text": "Precision strikes from beyond the horizon."
   },
   {
@@ -982,6 +1052,7 @@
       "stat_modifiers": { "war_survival": { "stabilize_chance": 0.25, "stabilize_hp": 1, "cooldown": 60 } },
       "pandemic_mitigation": { "villager_death_immunity": true }
     },
+    "description": "Discover bacteria-killing compounds for treating infections. Grants battlefield stabilization and makes villagers immune to pandemic death.",
     "flavor_text": "Penicillin turns mortal wounds into recoverable injuries."
   },
   {
@@ -994,6 +1065,7 @@
     "effects": {
       "economic_bonus": { "food_output": 0.40, "population_health": 0.20 }
     },
+    "description": "Decode DNA and selectively breed superior crop strains. Boosts food output by 40% and improves population health.",
     "flavor_text": "Reading the code of life itself."
   },
   {
@@ -1006,6 +1078,7 @@
     "effects": {
       "stat_modifiers": { "espionage_protection": true, "tech_regression_defense": 0.10 }
     },
+    "description": "Build defenses against digital infiltration and sabotage. Blocks enemy espionage and reduces tech regression vulnerability.",
     "flavor_text": "Digital walls guard digital knowledge."
   },
   {
@@ -1018,6 +1091,7 @@
     "effects": {
       "economic_bonus": { "knowledge_rate": 0.50 }
     },
+    "description": "Launch crewed missions beyond Earth's atmosphere. Dramatically increases knowledge generation as orbital research unlocks new frontiers.",
     "flavor_text": "One small step for a villager, one giant leap for civilization."
   },
   {
@@ -1030,6 +1104,7 @@
     "effects": {
       "economic_bonus": { "building_cost_reduction": 0.30 }
     },
+    "description": "Harvest solar, wind, and geothermal energy for sustainable power. Reduces building costs by 30% through cheap, clean energy.",
     "flavor_text": "Sun and wind replace coal and oil."
   },
   {
@@ -1042,8 +1117,9 @@
     "effects": {
       "research_bonus": 1.50
     },
-    "singularity_chain": true,
-    "flavor_text": "Artificial neurons mirror the brain's architecture."
+    "description": "Model interconnected artificial neurons that process information in layers. A massive research accelerator on the path to AGI.",
+    "flavor_text": "Artificial neurons mirror the brain's architecture.",
+    "singularity_chain": true
   },
   {
     "id": "big_data",
@@ -1055,8 +1131,9 @@
     "effects": {
       "economic_bonus": { "economic_optimization": 0.20 }
     },
-    "singularity_chain": true,
-    "flavor_text": "Patterns emerge from the noise of billions."
+    "description": "Process vast datasets to extract actionable patterns. Optimizes economic efficiency by 20% through data-driven decision making.",
+    "flavor_text": "Patterns emerge from the noise of billions.",
+    "singularity_chain": true
   },
   {
     "id": "parallel_computing",
@@ -1069,8 +1146,9 @@
       "research_bonus": 0.50,
       "unlock_buildings": ["gpu_foundry"]
     },
-    "singularity_chain": true,
-    "flavor_text": "A thousand processors think as one."
+    "description": "Execute thousands of computations simultaneously across processor arrays. Unlocks the GPU Foundry and boosts research.",
+    "flavor_text": "A thousand processors think as one.",
+    "singularity_chain": true
   },
   {
     "id": "deep_learning",
@@ -1082,8 +1160,9 @@
     "effects": {
       "research_bonus": 3.0
     },
-    "singularity_chain": true,
-    "flavor_text": "Layers upon layers learn what programmers cannot teach."
+    "description": "Stack many neural network layers for hierarchical feature learning. Provides the largest single research bonus in the game.",
+    "flavor_text": "Layers upon layers learn what programmers cannot teach.",
+    "singularity_chain": true
   },
   {
     "id": "quantum_computing",
@@ -1095,6 +1174,7 @@
     "effects": {
       "research_bonus": 1.0
     },
+    "description": "Exploit quantum superposition and entanglement to solve problems classical computers cannot. Doubles research speed.",
     "flavor_text": "Superposition solves in seconds what silicon takes millennia."
   },
   {
@@ -1107,6 +1187,7 @@
     "effects": {
       "economic_bonus": { "villager_work_rate": 0.50, "military_production": 0.30 }
     },
+    "description": "Build autonomous machines for labor and manufacturing. Boosts villager work rate by 50% and military production by 30%.",
     "flavor_text": "Steel hands never tire."
   },
   {
@@ -1119,9 +1200,10 @@
     "effects": {
       "unlock_buildings": ["transformer_lab"]
     },
+    "description": "Develop attention-based models that process sequences with unprecedented capability. Unlocks the Transformer Lab, the penultimate step to AGI.",
+    "flavor_text": "Attention is all you need.",
     "singularity_chain": true,
     "public_alert": true,
-    "flavor_text": "Attention is all you need.",
     "pioneer_bonus": {
       "type": "permanent_stat",
       "effect": {
@@ -1143,6 +1225,7 @@
     "effects": {
       "research_bonus": 1.0
     },
+    "description": "Connect human neural activity directly to digital systems. Doubles research speed by merging human intuition with machine computation.",
     "flavor_text": "Thought becomes code; code becomes thought."
   },
   {
@@ -1155,9 +1238,10 @@
     "effects": {
       "unlock_buildings": ["agi_core"]
     },
+    "description": "Solve the problem of ensuring artificial intelligence pursues human-compatible goals. Unlocks the AGI Core, the final building needed for victory.",
+    "flavor_text": "The hardest problem: ensuring it wants what we want.",
     "singularity_chain": true,
-    "public_alert": true,
-    "flavor_text": "The hardest problem: ensuring it wants what we want."
+    "public_alert": true
   },
   {
     "id": "gpu_foundry",
@@ -1169,8 +1253,9 @@
     "effects": {
       "economic_bonus": { "knowledge_rate": 0.50 }
     },
-    "singularity_chain": true,
-    "flavor_text": "Thousands of cores blaze in parallel, turning silicon into thought."
+    "description": "Manufacture specialized graphics processors optimized for parallel AI workloads. Increases knowledge generation by 50%.",
+    "flavor_text": "Thousands of cores blaze in parallel, turning silicon into thought.",
+    "singularity_chain": true
   },
   {
     "id": "transformer_lab",
@@ -1182,9 +1267,10 @@
     "effects": {
       "research_bonus": 2.0
     },
+    "description": "Establish a dedicated facility for training and running large-scale transformer models. Provides a massive research bonus on the path to AGI.",
+    "flavor_text": "Attention mechanisms weave meaning from raw data at superhuman scale.",
     "singularity_chain": true,
-    "public_alert": true,
-    "flavor_text": "Attention mechanisms weave meaning from raw data at superhuman scale."
+    "public_alert": true
   },
   {
     "id": "agi_core",
@@ -1196,9 +1282,10 @@
     "effects": {
       "unlock_buildings": ["agi_core"]
     },
+    "description": "Build a self-improving artificial general intelligence. The final technology — completing this wins the game through technological singularity.",
+    "flavor_text": "The last invention humanity needs to make.",
     "singularity_chain": true,
-    "public_alert": true,
-    "flavor_text": "The last invention humanity needs to make."
+    "public_alert": true
   },
   {
     "id": "cuneiform_writing",
@@ -1210,6 +1297,7 @@
     "effects": {
       "research_bonus": 0.10
     },
+    "description": "Adapt wedge-shaped script for administrative records and scholarly texts. Grants a 10% research bonus exclusive to Mesopotamia.",
     "flavor_text": "The wedge-shaped script of Mesopotamia becomes the foundation of recorded knowledge.",
     "civ_exclusive": "mesopotamia"
   },
@@ -1226,6 +1314,7 @@
         "building_cost_reduction": 0.10
       }
     },
+    "description": "Draw on the engineering marvel of the Hanging Gardens to advance agriculture and construction. Boosts farm output and reduces building costs.",
     "flavor_text": "The legendary gardens inspire a new era of agricultural and architectural innovation.",
     "civ_exclusive": "mesopotamia"
   },
@@ -1239,6 +1328,7 @@
     "effects": {
       "unit_speed_bonus": 0.15
     },
+    "description": "Build a network of straight, paved roads connecting all settlements. Increases unit movement speed by 15%, exclusive to Rome.",
     "flavor_text": "An empire-spanning road network enables rapid troop deployment across vast distances.",
     "civ_exclusive": "rome"
   },
@@ -1252,6 +1342,7 @@
     "effects": {
       "ranged_defense_bonus": 0.20
     },
+    "description": "Train infantry in the tortoise shield wall formation. Increases ranged defense by 20%, making Roman soldiers nearly impervious to arrows.",
     "flavor_text": "The tortoise formation turns a wall of shields into an impenetrable defense against projectiles.",
     "civ_exclusive": "rome"
   },
@@ -1265,6 +1356,7 @@
     "effects": {
       "naval_los_bonus": 0.30
     },
+    "description": "Master celestial navigation and ocean current reading for open-water voyaging. Increases naval line of sight by 30% for Polynesia.",
     "flavor_text": "Ancient star navigation techniques grant Polynesian sailors unmatched awareness of distant shores.",
     "civ_exclusive": "polynesia"
   },
@@ -1279,6 +1371,7 @@
       "battle_cry_attack_bonus": 0.15,
       "battle_cry_duration": 30.0
     },
+    "description": "Perform the ceremonial war dance before battle to boost morale and terrify enemies. Grants a temporary 15% attack bonus.",
     "flavor_text": "The fearsome war dance strikes terror into enemies and emboldens warriors with ferocious spirit.",
     "civ_exclusive": "polynesia"
   },
@@ -1292,6 +1385,7 @@
     "effects": {
       "research_cost_reduction": 0.10
     },
+    "description": "Produce lightweight paper from plant fibers for cheaper knowledge recording. Reduces all research costs by 10% for China.",
     "flavor_text": "Lightweight paper replaces cumbersome bamboo slips, spreading knowledge faster and cheaper.",
     "civ_exclusive": "china"
   },
@@ -1305,6 +1399,7 @@
     "effects": {
       "gunpowder_unit_age_unlock": -1
     },
+    "description": "Centuries of alchemical refinement grant early access to gunpowder weapons. Unlocks gunpowder units one age earlier for China.",
     "flavor_text": "Centuries of alchemical refinement grant access to devastating gunpowder weapons before any rival.",
     "civ_exclusive": "china"
   },
@@ -1318,6 +1413,7 @@
     "effects": {
       "research_bonus": 0.10
     },
+    "description": "Carve sacred pictographic script into temple walls for eternal record-keeping. Grants a 10% research bonus exclusive to Egypt.",
     "flavor_text": "Sacred carvings preserve knowledge for eternity, accelerating the pace of discovery.",
     "civ_exclusive": "egypt"
   },
@@ -1333,6 +1429,7 @@
         "farm_food_rate": 0.25
       }
     },
+    "description": "Predict and harness the annual Nile flood cycle for rich farmland renewal. Boosts farm food rate by 25% for Egypt.",
     "flavor_text": "Mastery of the annual flood cycle transforms the Nile valley into the breadbasket of the ancient world.",
     "civ_exclusive": "egypt"
   },
@@ -1346,6 +1443,7 @@
     "effects": {
       "age_advancement_cost_reduction": 0.15
     },
+    "description": "Track vast spans of time with a sophisticated calendrical system. Reduces age advancement costs by 15% for the Maya.",
     "flavor_text": "A precise calendar spanning millennia allows the Maya to plan their civilization's advancement with cosmic precision.",
     "civ_exclusive": "maya"
   },
@@ -1360,6 +1458,7 @@
       "map_reveal_bonus": 0.20,
       "los_bonus": 2
     },
+    "description": "Map the night sky in precise detail for navigation and strategic foresight. Reveals 20% more map and increases line of sight for the Maya.",
     "flavor_text": "Detailed maps of the night sky grant unparalleled navigational awareness and strategic foresight.",
     "civ_exclusive": "maya"
   },
@@ -1373,6 +1472,7 @@
     "effects": {
       "naval_speed_bonus": 0.40
     },
+    "description": "Perfect shallow-draft longship design for unmatched speed and maneuverability. Increases naval speed by 40% for the Vikings.",
     "flavor_text": "Superior hull design and fearless seamanship allow Viking longships to outrun any vessel on the open sea.",
     "civ_exclusive": "vikings"
   },
@@ -1386,6 +1486,7 @@
     "effects": {
       "rage_ability_unlocked": true
     },
+    "description": "Channel a trance-like battle fury that makes warriors impervious to pain. Unlocks the Rage ability for Viking infantry.",
     "flavor_text": "Warriors channel a battle fury so intense that pain becomes meaningless and every strike lands with terrible force.",
     "civ_exclusive": "vikings"
   }

@@ -15,6 +15,10 @@
       "items": { "type": "string" }
     },
     "effects": { "type": "object" },
+    "description": {
+      "type": "string",
+      "description": "1-2 sentence explanation of what the tech represents and its strategic significance. Distinct from flavor_text."
+    },
     "flavor_text": { "type": "string" },
     "singularity_chain": { "type": "boolean" },
     "public_alert": { "type": "boolean" },
