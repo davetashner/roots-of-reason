@@ -406,6 +406,9 @@ func _issue_context_command(world_pos: Vector2) -> void:
 	selected = _filter_barges(selected)
 	if selected.is_empty():
 		return
+	# Rally point: if only buildings with production queues are selected, set rally target
+	if _try_set_rally_point(selected, world_pos):
+		return
 	var target: Node = null
 	if _target_detector != null and _target_detector.has_method("detect"):
 		target = _target_detector.detect(world_pos)
@@ -496,6 +499,28 @@ func _do_box_select() -> void:
 		if c.has_method("select"):
 			c.select()
 			count += 1
+
+
+func _try_set_rally_point(selected: Array[Node], world_pos: Vector2) -> bool:
+	## If all selected entities are own buildings with production queues,
+	## set the rally target on each and return true.
+	var queues: Array[Node] = []
+	for entity in selected:
+		if not _is_building(entity):
+			return false
+		var pq: Node = entity.get_node_or_null("ProductionQueue")
+		if pq == null:
+			return false
+		queues.append(pq)
+	var target_node: Node2D = null
+	if _target_detector != null and _target_detector.has_method("detect"):
+		var detected: Node = _target_detector.detect(world_pos)
+		if detected is Node2D and _is_resource_node(detected):
+			target_node = detected
+	for pq: Node in queues:
+		pq.set_rally_target(world_pos, target_node)
+	_show_click_marker(world_pos, "move")
+	return true
 
 
 func _is_building(node: Node) -> bool:
