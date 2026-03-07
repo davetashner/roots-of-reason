@@ -5,6 +5,8 @@ extends Control
 const GameLobbyScreenScript := preload("res://scripts/ui/game_lobby_screen.gd")
 const SettingsPanelScript := preload("res://scripts/ui/settings_panel.gd")
 const COVER_IMAGE := preload("res://assets/branding/cover.png")
+const MAIN_THEME := "res://assets/audio/music/crowning-of-the-turning-age-main-theme.ogg"
+const MENU_SELECT_SFX := "res://assets/audio/sfx/ui/menu_select.ogg"
 
 var _lobby: PanelContainer = null
 var _settings_panel: PanelContainer = null
@@ -15,6 +17,7 @@ var _button_vbox: VBoxContainer = null
 func _ready() -> void:
 	_reset_state()
 	_build_ui()
+	AudioManager.play_music(MAIN_THEME)
 
 
 func _reset_state() -> void:
@@ -104,7 +107,11 @@ func _build_ui() -> void:
 	var settings_vbox := VBoxContainer.new()
 	settings_vbox.set_script(SettingsPanelScript)
 	settings_center.add_child(settings_vbox)
-	settings_vbox.build(func() -> void: _settings_panel.visible = false)
+	settings_vbox.build(
+		func() -> void:
+			AudioManager.play_ui_sound(MENU_SELECT_SFX)
+			_settings_panel.visible = false
+	)
 	add_child(_settings_panel)
 
 	# Credits placeholder
@@ -117,7 +124,11 @@ func _add_menu_button(btn_name: String, text: String, callback: Callable) -> But
 	btn.name = btn_name
 	btn.text = text
 	btn.custom_minimum_size = Vector2(260, 50)
-	btn.pressed.connect(callback)
+	btn.pressed.connect(
+		func() -> void:
+			AudioManager.play_ui_sound(MENU_SELECT_SFX)
+			callback.call()
+	)
 	_button_vbox.add_child(btn)
 	return btn
 
@@ -149,7 +160,11 @@ func _build_placeholder_panel(panel_name: String, text: String) -> PanelContaine
 	back_btn.name = "BackButton"
 	back_btn.text = "Back"
 	back_btn.custom_minimum_size = Vector2(120, 40)
-	back_btn.pressed.connect(func() -> void: panel.visible = false)
+	back_btn.pressed.connect(
+		func() -> void:
+			AudioManager.play_ui_sound(MENU_SELECT_SFX)
+			panel.visible = false
+	)
 	vbox.add_child(back_btn)
 
 	return panel
