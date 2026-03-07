@@ -230,6 +230,7 @@ func test_shows_cancel_button_when_advancing() -> void:
 	var building := _create_mock_building()
 	section.update_display(building)
 	assert_str(section._button.text).is_equal("Cancel")
+	assert_str(section._button.tooltip_text).is_equal("Cancel age advancement")
 	assert_bool(section._progress_bar.visible).is_true()
 
 
@@ -264,7 +265,7 @@ func test_progress_bar_value_reflects_progress() -> void:
 	assert_float(section._progress_bar.value).is_equal_approx(75.0, 0.1)
 
 
-func test_cost_label_shows_costs() -> void:
+func test_tooltip_shows_costs() -> void:
 	var section := _create_section()
 	var adv := _create_mock_advancement()
 	section.setup(adv)
@@ -281,10 +282,10 @@ func test_cost_label_shows_costs() -> void:
 	)
 	var building := _create_mock_building()
 	section.update_display(building)
-	assert_str(section._cost_label.text).contains("Cost:")
+	assert_str(section._button.tooltip_text).contains("Cost:")
 
 
-func test_button_disabled_when_missing_techs() -> void:
+func test_hidden_when_missing_techs() -> void:
 	var section := _create_section()
 	var adv := _create_mock_advancement()
 	var missing: Array[String] = ["stone_tools"]
@@ -292,8 +293,7 @@ func test_button_disabled_when_missing_techs() -> void:
 	section.setup(adv)
 	var building := _create_mock_building()
 	section.update_display(building)
-	assert_bool(section._button.disabled).is_true()
-	assert_str(section._missing_label.text).contains("Need:")
+	assert_bool(section.visible).is_false()
 
 
 func test_button_disabled_when_insufficient_resources() -> void:
@@ -314,7 +314,6 @@ func test_button_disabled_when_insufficient_resources() -> void:
 	var building := _create_mock_building()
 	section.update_display(building)
 	assert_bool(section._button.disabled).is_true()
-	assert_str(section._missing_label.text).contains("Not enough resources")
 
 
 func test_button_enabled_when_can_advance() -> void:
@@ -335,7 +334,6 @@ func test_button_enabled_when_can_advance() -> void:
 	var building := _create_mock_building()
 	section.update_display(building)
 	assert_bool(section._button.disabled).is_false()
-	assert_str(section._missing_label.text).is_equal("")
 
 
 # -- button press tests --
