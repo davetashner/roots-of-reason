@@ -11,6 +11,12 @@ const GarrisonCmdHandler := preload("res://scripts/prototype/garrison_command_ha
 const EmbarkCmdHandler := preload("res://scripts/prototype/embark_command_handler.gd")
 const DisembarkCmdHandler := preload("res://scripts/prototype/disembark_command_handler.gd")
 const AttackCmdHandler := preload("res://scripts/prototype/attack_command_handler.gd")
+const VILLAGER_SELECT_SFX: Array[String] = [
+	"res://assets/audio/sfx/units/villager_select.ogg",
+	"res://assets/audio/sfx/units/villager_select_2.ogg",
+	"res://assets/audio/sfx/units/villager_select_3.ogg",
+	"res://assets/audio/sfx/units/villager_select_4.ogg",
+]
 
 var _units: Array[Node] = []
 var _box_selecting: bool = false
@@ -304,9 +310,11 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 					else:
 						if get_selected_count() < _max_selection_size:
 							clicked_unit.select()
+							_play_unit_select_sfx(clicked_unit)
 				else:
 					_deselect_all()
 					clicked_unit.select()
+					_play_unit_select_sfx(clicked_unit)
 			else:
 				# Start box select
 				_box_selecting = true
@@ -318,6 +326,7 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 				_box_selecting = false
 				_do_box_select()
 				_clear_selection_rect()
+				_play_selection_sfx()
 
 	elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
 		var world_pos := _screen_to_world(mb.position, camera)
@@ -351,6 +360,18 @@ func _get_selected_units() -> Array[Node]:
 
 func get_active_group() -> int:
 	return _last_recalled_group
+
+
+func _play_unit_select_sfx(unit: Node) -> void:
+	if "unit_type" in unit and unit.unit_type == "villager":
+		AudioManager.play_ui_sound(VILLAGER_SELECT_SFX.pick_random())
+
+
+func _play_selection_sfx() -> void:
+	for unit in _get_selected_units():
+		if "unit_type" in unit and unit.unit_type == "villager":
+			AudioManager.play_ui_sound(VILLAGER_SELECT_SFX.pick_random())
+			return
 
 
 func _move_selected(world_pos: Vector2) -> void:
@@ -420,6 +441,7 @@ func _issue_context_command(world_pos: Vector2) -> void:
 		cmd = "feed"
 	command_issued.emit(selected, cmd, target, world_pos)
 	_show_click_marker(world_pos, cmd)
+	_play_selection_sfx()
 	# Dispatch to pluggable command handlers
 	var handled := false
 	for handler in _command_handlers:
