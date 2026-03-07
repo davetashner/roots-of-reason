@@ -110,6 +110,8 @@ func setup_demo_entities() -> void:
 			res_node.setup(res_name)
 			res_node.depleted.connect(_root._on_resource_depleted)
 			_root._target_detector.register_entity(res_node)
+			if _root._input_handler != null and _root._input_handler.has_method("register_unit"):
+				_root._input_handler.register_unit(res_node)
 			res_index += 1
 	var start_cfg: Dictionary = _load_start_config(GameManager.player_difficulty)
 	var bld_pos := get_start_position(0)

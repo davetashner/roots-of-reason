@@ -19,6 +19,7 @@ var current_yield: int = 0
 var regenerates: bool = false
 var regen_rate: float = 0.0
 var regen_delay: float = 0.0
+var selected: bool = false
 var variant_index: int = 0
 var _regen_accum: float = 0.0
 var _regen_delay_timer: float = 0.0
@@ -92,7 +93,7 @@ func _update_sprite() -> void:
 	if _sprite == null:
 		return
 	var state: String = "full"
-	if _is_regrowing or current_yield <= 0:
+	if current_yield <= 0:
 		state = "stump"
 	elif total_yield > 0:
 		var ratio: float = float(current_yield) / float(total_yield)
@@ -182,6 +183,16 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
+func select() -> void:
+	selected = true
+	queue_redraw()
+
+
+func deselect() -> void:
+	selected = false
+	queue_redraw()
+
+
 func get_entity_category() -> String:
 	return entity_category
 
@@ -191,6 +202,8 @@ func is_point_inside(point: Vector2) -> bool:
 
 
 func _draw() -> void:
+	if selected:
+		draw_arc(Vector2.ZERO, SIZE * 1.5, 0, TAU, 24, Color(0.2, 1.0, 0.2, 0.7), 1.5)
 	if _sprite != null:
 		return
 	var color := _node_color

@@ -477,9 +477,11 @@ func _do_box_select() -> void:
 		return
 	if not Input.is_key_pressed(KEY_SHIFT):
 		_deselect_all()
-	# Collect candidates inside the rectangle
+	# Collect candidates inside the rectangle (skip resource nodes)
 	var candidates: Array[Node] = []
 	for unit in _units:
+		if _is_resource_node(unit):
+			continue
 		if "owner_id" in unit and unit.owner_id != 0:
 			continue
 		if rect.has_point(unit.global_position):
@@ -503,6 +505,10 @@ func _do_box_select() -> void:
 
 func _is_building(node: Node) -> bool:
 	return "entity_category" in node and node.entity_category == "own_building"
+
+
+func _is_resource_node(node: Node) -> bool:
+	return "entity_category" in node and node.entity_category == "resource_node"
 
 
 func _get_world_mouse(motion: InputEventMouseMotion) -> Vector2:
@@ -537,13 +543,13 @@ func get_selected_count() -> int:
 
 
 func _filter_barges(units: Array[Node]) -> Array[Node]:
-	## Remove barges and auto-trading units from a unit list — they cannot
-	## receive manual move/context commands.
+	## Remove barges, resource nodes, and auto-trading units from a unit list
+	## — they cannot receive manual move/context commands.
 	var result: Array[Node] = []
 	for unit in units:
 		if "entity_category" in unit:
 			var cat: String = unit.entity_category
-			if cat == "own_barge" or cat == "enemy_barge":
+			if cat == "own_barge" or cat == "enemy_barge" or cat == "resource_node":
 				continue
 		# Filter out trade carts and merchant ships (driven by TradeCartAI)
 		if "unit_type" in unit:
