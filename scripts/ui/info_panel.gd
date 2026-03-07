@@ -14,6 +14,11 @@ const BUILD_GRID_COLUMNS: int = 3
 const BUILD_BUTTON_SIZE: int = 48
 const BUILD_BUTTON_MARGIN: int = 4
 const MAX_BUILD_SLOTS: int = 12
+const CMD_BUTTONS: Array = [
+	["[Q] Stop", "stop"],
+	["[W] Hold", "hold_position"],
+	["[E] Explore", "start_explore"],
+]
 
 const RESOURCE_NAME_TO_TYPE: Dictionary = {
 	"food": ResourceManager.ResourceType.FOOD,
@@ -956,11 +961,11 @@ func _resource_type_name(res_type: int) -> String:
 	return "Res%d" % res_type
 
 
-# -- Unit command buttons (Stop/Hold) --
+# -- Unit command buttons (Stop/Hold/Explore) --
 
 
 func _build_cmd_buttons() -> void:
-	for cmd_data: Array in [["[Q] Stop", "_on_stop_pressed"], ["[W] Hold", "_on_hold_pressed"]]:
+	for cmd_data: Array in CMD_BUTTONS:
 		var btn := Button.new()
 		btn.text = cmd_data[0]
 		btn.custom_minimum_size = Vector2(60, 24)
@@ -968,7 +973,7 @@ func _build_cmd_buttons() -> void:
 		btn.add_theme_font_size_override("font_size", 11)
 		_apply_btn_style(btn, "normal", Color(0.2, 0.2, 0.3, 0.9))
 		_apply_btn_style(btn, "hover", Color(0.3, 0.3, 0.5, 0.9))
-		btn.pressed.connect(Callable(self, cmd_data[1]))
+		btn.pressed.connect(_issue_unit_command.bind(cmd_data[1]))
 		_cmd_row.add_child(btn)
 
 
@@ -988,14 +993,6 @@ func _issue_unit_command(method: String) -> void:
 	for unit in _input_handler._get_selected_units():
 		if is_instance_valid(unit) and unit.has_method(method):
 			unit.call(method)
-
-
-func _on_stop_pressed() -> void:
-	_issue_unit_command("stop")
-
-
-func _on_hold_pressed() -> void:
-	_issue_unit_command("hold_position")
 
 
 # -- Build section (villager mode) --
@@ -1261,16 +1258,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var key := event as InputEventKey
 	var key_char := char(key.keycode).to_upper()
-	# Stop/Hold hotkeys for non-villager units
+	# Stop/Hold/Explore hotkeys for non-villager units
 	if _cmd_row != null and _cmd_row.visible and not _is_villager_mode:
-		if key_char == "Q":
-			_on_stop_pressed()
-			get_viewport().set_input_as_handled()
-			return
-		if key_char == "W":
-			_on_hold_pressed()
-			get_viewport().set_input_as_handled()
-			return
+		var cmd_keys := ["Q", "W", "E"]
+		for i in CMD_BUTTONS.size():
+			if i < cmd_keys.size() and key_char == cmd_keys[i]:
+				_issue_unit_command(CMD_BUTTONS[i][1])
+				get_viewport().set_input_as_handled()
+				return
 	# Build grid hotkeys for villager mode
 	if _is_villager_mode and _build_grid != null and _build_grid.get_child_count() > 0:
 		var hotkeys: Array = [["Q", "W", "E"], ["A", "S", "D"], ["Z", "X", "C"], ["R", "F", "V"]]

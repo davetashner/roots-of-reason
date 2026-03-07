@@ -399,15 +399,6 @@ func setup_hud() -> void:
 			_root._building_placer,
 		)
 	)
-	var cmd_panel_layer := CanvasLayer.new()
-	cmd_panel_layer.name = "CommandPanel"
-	cmd_panel_layer.layer = 10
-	_root.add_child(cmd_panel_layer)
-	var cmd_panel := PanelContainer.new()
-	cmd_panel.name = "CommandPanelWidget"
-	cmd_panel.set_script(load("res://scripts/ui/command_panel.gd"))
-	cmd_panel_layer.add_child(cmd_panel)
-	cmd_panel.setup(_root._input_handler, _root._building_placer, _root._trade_manager)
 	_root._cursor_overlay = CanvasLayer.new()
 	_root._cursor_overlay.name = "CursorOverlay"
 	_root._cursor_overlay.set_script(load("res://scripts/prototype/cursor_overlay.gd"))

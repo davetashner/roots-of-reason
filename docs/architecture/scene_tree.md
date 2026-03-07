@@ -36,8 +36,7 @@ PrototypeMain (Node2D)
 ├── SingularityRegression             ── knowledge burning logic
 │
 ├── ResourceBar (UI)                  ── resource display
-├── InfoPanel (UI)                    ── selected entity info
-├── CommandPanel (UI)                 ── unit/building action buttons
+├── InfoPanel (UI)                    ── selected entity info + commands
 ├── NotificationPanel (UI)            ── event alerts
 ├── MinimapUI                         ── minimap
 ├── TechTreeViewer (UI)               ── scrollable tech tree
