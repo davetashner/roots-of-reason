@@ -4,6 +4,8 @@ extends PanelContainer
 signal start_game(settings: Dictionary)
 signal back_pressed
 
+const MENU_SELECT_SFX := "res://assets/audio/sfx/ui/menu_select.ogg"
+
 const LOBBY_CARD_OPTIONS: Dictionary = {
 	"card_size": Vector2(200, 300),
 	"content_margin": 10,
@@ -256,6 +258,7 @@ func _on_card_input(event: InputEvent, civ_id: String) -> void:
 
 
 func _select_civ(civ_id: String) -> void:
+	AudioManager.play_ui_sound(MENU_SELECT_SFX)
 	_selected_civ = civ_id
 	for id: String in _cards:
 		var styles: Dictionary = _card_styles[id]
@@ -270,6 +273,7 @@ func _select_civ(civ_id: String) -> void:
 func _on_start_pressed() -> void:
 	if _selected_civ == "":
 		return
+	AudioManager.play_ui_sound(MENU_SELECT_SFX)
 	var settings := {
 		"player_civ": _selected_civ,
 		"ai_civ": _resolve_ai_civ(),
@@ -281,6 +285,7 @@ func _on_start_pressed() -> void:
 
 
 func _on_back_pressed() -> void:
+	AudioManager.play_ui_sound(MENU_SELECT_SFX)
 	back_pressed.emit()
 	hide_screen()
 

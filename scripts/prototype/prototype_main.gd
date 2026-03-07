@@ -9,6 +9,12 @@ const EntityRegistryScript := preload("res://scripts/prototype/entity_registry.g
 const CivSelectionScreenScript := preload("res://scripts/ui/civ_selection_screen.gd")
 const BuildingValidator := preload("res://scripts/prototype/building_validator.gd")
 const FOG_UPDATE_INTERVAL: float = 0.2  # Update fog every 200ms
+const GAME_MUSIC := "res://assets/audio/music/pastoral-strategy-loop.ogg"
+const BATTLE_MUSIC := "res://assets/audio/music/crimson-rampart-battle-music.ogg"
+const BATTLE_MUSIC_COOLDOWN := 10.0
+const BIRDS_SFX := "res://assets/audio/sfx/ambient/birds_chirping.ogg"
+const AMBIENT_INTERVAL_MIN := 20.0
+const AMBIENT_INTERVAL_MAX := 35.0
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -62,6 +68,9 @@ var _bootstrapper: RefCounted = null
 var _flow: RefCounted = null
 
 var _fog_timer: float = 0.0
+var _battle_music_timer: float = 0.0
+var _ambient_timer: float = 0.0
+var _ambient_player: AudioStreamPlayer = null
 
 
 func _ready() -> void:
@@ -105,6 +114,39 @@ func _process(delta: float) -> void:
 	if _fog_timer >= FOG_UPDATE_INTERVAL:
 		_fog_timer -= FOG_UPDATE_INTERVAL
 		_update_fog_of_war()
+	if _battle_music_timer > 0.0:
+		_battle_music_timer -= delta
+		if _battle_music_timer <= 0.0:
+			_battle_music_timer = 0.0
+			AudioManager.play_music(GAME_MUSIC)
+	if _ambient_player != null:
+		_ambient_timer -= delta
+		if _ambient_timer <= 0.0:
+			_ambient_player.play()
+			_ambient_timer = randf_range(AMBIENT_INTERVAL_MIN, AMBIENT_INTERVAL_MAX)
+
+
+func _setup_ambient_audio() -> void:
+	var stream: AudioStream = load(BIRDS_SFX) if ResourceLoader.exists(BIRDS_SFX) else null
+	if stream == null:
+		return
+	_ambient_player = AudioStreamPlayer.new()
+	_ambient_player.stream = stream
+	_ambient_player.bus = "Ambient"
+	_ambient_player.name = "AmbientBirds"
+	add_child(_ambient_player)
+	_ambient_timer = randf_range(AMBIENT_INTERVAL_MIN, AMBIENT_INTERVAL_MAX)
+
+
+func _on_combat_event(attacker: Node2D, defender: Node2D, _damage: int) -> void:
+	var player_involved := false
+	if attacker != null and is_instance_valid(attacker) and "owner_id" in attacker and attacker.owner_id == 0:
+		player_involved = true
+	if defender != null and is_instance_valid(defender) and "owner_id" in defender and defender.owner_id == 0:
+		player_involved = true
+	if player_involved:
+		_battle_music_timer = BATTLE_MUSIC_COOLDOWN
+		AudioManager.play_music(BATTLE_MUSIC)
 
 
 func _show_civ_selection() -> void:
@@ -151,6 +193,9 @@ func _start_game() -> void:
 	_save_handler.setup(self)
 	SaveManager.register_scene_provider(self)
 	tree_exiting.connect(func() -> void: SaveManager.register_scene_provider(null))
+	AudioManager.play_music(GAME_MUSIC)
+	EventBus.combat_event.connect(_on_combat_event)
+	_setup_ambient_audio()
 	_print_orphan_count("after _start_game")
 
 

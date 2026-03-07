@@ -251,6 +251,7 @@ func _deal_damage_to_target() -> void:
 		"war_survived": war_survived,
 	}
 	CombatLogger.log_damage(_unit, combat_target, damage, attacker_stats, _reusable_target_stats, log_extras)
+	EventBus.emit_combat_event(_unit, combat_target, damage)
 
 
 func _play_attack_visuals(damage: int) -> void:
