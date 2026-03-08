@@ -427,7 +427,7 @@ func show_multi_select(units: Array) -> void:
 		_portrait.color = Color(0.2, 0.4, 0.9)
 	var type_name := _get_unit_display_name(units[0]) if not units.is_empty() else "Units"
 	_name_label.text = "%d %ss selected" % [units.size(), type_name]
-	_stats_label.text = ""
+	_stats_label.text = _get_multi_carry_text(units)
 	_update_multi_hp(units)
 
 
@@ -635,6 +635,7 @@ func _update() -> void:
 	_update_build_button_states()
 	if _is_multi:
 		_update_multi_hp(_tracked_entities)
+		_stats_label.text = _get_multi_carry_text(_tracked_entities)
 		return
 	if _tracked_entity == null or not is_instance_valid(_tracked_entity):
 		clear()
@@ -833,6 +834,24 @@ func _get_carry_text(unit: Node2D) -> String:
 	if type_label != "":
 		return "Gathering: %s  (0/%d)" % [type_label, capacity]
 	return ""
+
+
+func _get_multi_carry_text(units: Array) -> String:
+	var totals: Dictionary = {}
+	for unit in units:
+		if not is_instance_valid(unit) or "_carried_amount" not in unit:
+			continue
+		var amount: int = int(unit._carried_amount)
+		if amount <= 0 or "_gather_type" not in unit or str(unit._gather_type) == "":
+			continue
+		var rt: String = str(unit._gather_type)
+		totals[rt] = totals.get(rt, 0) + amount
+	if totals.is_empty():
+		return ""
+	var parts: Array[String] = []
+	for rt: String in totals:
+		parts.append("%d %s" % [totals[rt], rt.capitalize()])
+	return "Carrying: " + ", ".join(parts)
 
 
 func _update_queue_display(building: Node2D) -> void:
