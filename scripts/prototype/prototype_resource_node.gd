@@ -149,6 +149,7 @@ func apply_gather_work(amount: float) -> int:
 			_regen_accum = 0.0
 			regen_started.emit(self)
 		else:
+			visible = false
 			depleted.emit(self)
 	return gathered
 
@@ -290,4 +291,6 @@ func load_state(data: Dictionary) -> void:
 		regen_rate = float(cfg.get("regen_rate", 0.0))
 		regen_delay = float(cfg.get("regen_delay", 0.0))
 		_setup_sprite(cfg)
+	if current_yield <= 0 and not regenerates:
+		visible = false
 	queue_redraw()
