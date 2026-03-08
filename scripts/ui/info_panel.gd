@@ -120,13 +120,12 @@ func _build_ui() -> void:
 	add_child(_root_hbox)
 	var hbox := _root_hbox
 
-	# Portrait
 	_portrait = ColorRect.new()
 	_portrait.custom_minimum_size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
 	_portrait.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
+	_portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(_portrait)
-	# Building thumbnail overlay (rendered on top of portrait color)
 	_portrait_texture = TextureRect.new()
 	_portrait_texture.custom_minimum_size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
 	_portrait_texture.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
@@ -136,27 +135,23 @@ func _build_ui() -> void:
 	_portrait_texture.visible = false
 	_portrait.add_child(_portrait_texture)
 
-	# Right side
 	var vbox := VBoxContainer.new()
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 4)
 	hbox.add_child(vbox)
 
-	# Name
 	_name_label = Label.new()
 	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_name_label.add_theme_font_size_override("font_size", 16)
 	vbox.add_child(_name_label)
 
-	# HP bar row
 	_hp_bar_container = HBoxContainer.new()
 	_hp_bar_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hp_bar_container.custom_minimum_size = Vector2(0, 16)
 	_hp_bar_container.add_theme_constant_override("separation", 8)
 	vbox.add_child(_hp_bar_container)
 
-	# HP bar background
 	_hp_bar_bg = Panel.new()
 	_hp_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hp_bar_bg.custom_minimum_size = Vector2(180, 14)
@@ -166,7 +161,6 @@ func _build_ui() -> void:
 	_hp_bar_bg.add_theme_stylebox_override("panel", bg_style)
 	_hp_bar_container.add_child(_hp_bar_bg)
 
-	# HP bar fill (drawn on top of background)
 	_hp_bar_fill = Panel.new()
 	_hp_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hp_bar_fill.position = Vector2.ZERO
@@ -292,7 +286,7 @@ func show_unit(unit: Node2D) -> void:
 	_tracked_entities.clear()
 	_is_multi = false
 	_clear_hover()
-	_clear_thumbnail()
+	_load_unit_thumbnail(unit)
 	_hide_queue_section()
 	_hide_train_section()
 	_show_cmd_row()
@@ -513,15 +507,20 @@ func _clear_hover() -> void:
 	_is_hovering_wolf = false
 
 
+func _load_unit_thumbnail(unit: Node2D) -> void:
+	var utype: String = unit.unit_type if "unit_type" in unit else ""
+	_load_thumbnail("res://assets/sprites/units/placeholder/" + utype + ".png" if utype != "" else "")
+
+
 func _load_building_thumbnail(building: Node2D) -> void:
+	var bname: String = building.building_name if "building_name" in building else ""
+	_load_thumbnail("res://assets/sprites/buildings/placeholder/" + bname + ".png" if bname != "" else "")
+
+
+func _load_thumbnail(path: String) -> void:
 	if _portrait_texture == null:
 		return
-	var bname: String = building.building_name if "building_name" in building else ""
-	if bname == "":
-		_clear_thumbnail()
-		return
-	var path := "res://assets/sprites/buildings/placeholder/" + bname + ".png"
-	if ResourceLoader.exists(path):
+	if path != "" and ResourceLoader.exists(path):
 		var tex: Texture2D = load(path)
 		if tex != null:
 			_portrait_texture.texture = tex
