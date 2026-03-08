@@ -267,6 +267,7 @@ func _build_ui() -> void:
 	# Detail panel backdrop (dims the grid when detail panel is open)
 	_detail_backdrop = ColorRect.new()
 	_detail_backdrop.name = "DetailBackdrop"
+	_detail_backdrop.top_level = true
 	_detail_backdrop.color = Color(0.0, 0.0, 0.0, 0.5)
 	_detail_backdrop.visible = false
 	_detail_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -274,8 +275,9 @@ func _build_ui() -> void:
 	_detail_backdrop.gui_input.connect(_on_backdrop_input)
 	add_child(_detail_backdrop)
 
-	# Detail overlay panel (centered, slides in from left)
+	# Detail overlay panel (slides in from left)
 	_detail_panel = TechDetailPanel.new()
+	_detail_panel.top_level = true
 	_detail_panel.close_requested.connect(_hide_detail_panel)
 	_detail_panel.research_requested.connect(_on_detail_research_pressed)
 	add_child(_detail_panel)
@@ -315,13 +317,12 @@ func _show_detail_panel(tech_id: String) -> void:
 		var next_data: Dictionary = _tech_cache.get(next_id, {})
 		leads_to_info.append(next_data.get("name", next_id))
 
-	# Position the panel vertically centered, horizontally snapped to grid edge
+	# Position the panel vertically centered, sliding in from the left
 	var viewport_size := get_viewport_rect().size
 	_detail_panel.position.y = (viewport_size.y - _detail_panel.PANEL_HEIGHT) / 2.0
 	_detail_panel.size = Vector2(_detail_panel.PANEL_WIDTH, _detail_panel.PANEL_HEIGHT)
-	var grid_right: float = _scroll.global_position.x + _grid_container.size.x + 32.0
-	var snap_x: float = minf(grid_right, viewport_size.x - _detail_panel.PANEL_WIDTH - 16.0)
-	_detail_panel.slide_target_x = snap_x
+	var target_x: float = (viewport_size.x - _detail_panel.PANEL_WIDTH) / 3.0
+	_detail_panel.slide_target_x = target_x
 
 	# Get research progress if currently researching
 	var progress: float = 0.0
@@ -329,6 +330,8 @@ func _show_detail_panel(tech_id: String) -> void:
 		progress = _tech_manager.get_research_progress(_player_id)
 
 	if _detail_backdrop != null:
+		_detail_backdrop.position = Vector2.ZERO
+		_detail_backdrop.size = viewport_size
 		_detail_backdrop.visible = true
 	_detail_panel.show_tech(tech_id, data, state, prereq_info, leads_to_info, progress)
 
