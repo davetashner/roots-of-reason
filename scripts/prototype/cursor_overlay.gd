@@ -8,6 +8,7 @@ var _label: Label
 func _ready() -> void:
 	layer = 11
 	_label = Label.new()
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 14)
 	_label.add_theme_color_override("font_shadow_color", Color.BLACK)
 	_label.add_theme_constant_override("shadow_offset_x", 1)
