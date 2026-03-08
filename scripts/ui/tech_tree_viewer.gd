@@ -484,27 +484,29 @@ func _classify_by_prereqs(prereqs: Array) -> String:
 
 
 func _get_tech_state(tech_id: String) -> String:
-	## Returns "researched", "researching", "available", "unaffordable", or "locked".
+	## Returns "researched", "researching", "available", "busy",
+	## "unaffordable", or "locked".
 	if _tech_manager.is_tech_researched(tech_id, _player_id):
 		return "researched"
-	# Check if currently in the research queue
 	var queue: Array = _tech_manager.get_research_queue(_player_id)
 	if tech_id in queue:
 		return "researching"
-	# Check prerequisites
-	var data: Dictionary = _tech_cache.get(tech_id, {})
-	var prereqs: Array = data.get("prerequisites", [])
-	for prereq: String in prereqs:
-		if not _tech_manager.is_tech_researched(prereq, _player_id):
-			return "locked"
-	# Check age requirement
-	var required_age: int = int(data.get("age", 0))
-	if required_age > GameManager.current_age:
+	if not _prereqs_met(tech_id):
 		return "locked"
-	# Prerequisites met — check affordability
 	if _tech_manager.can_research(_player_id, tech_id):
 		return "available"
+	if not queue.is_empty():
+		return "busy"
 	return "unaffordable"
+
+
+func _prereqs_met(tech_id: String) -> bool:
+	var data: Dictionary = _tech_cache.get(tech_id, {})
+	for prereq: String in data.get("prerequisites", []):
+		if not _tech_manager.is_tech_researched(prereq, _player_id):
+			return false
+	var required_age: int = int(data.get("age", 0))
+	return required_age <= GameManager.current_age
 
 
 func _apply_button_style(btn: Button, state: String) -> void:
@@ -516,7 +518,7 @@ func _apply_button_style(btn: Button, state: String) -> void:
 			color = COLOR_RESEARCHING
 		"available":
 			color = COLOR_AVAILABLE
-		"unaffordable":
+		"unaffordable", "busy":
 			color = COLOR_UNAFFORDABLE
 		"shadowed":
 			color = COLOR_SHADOWED

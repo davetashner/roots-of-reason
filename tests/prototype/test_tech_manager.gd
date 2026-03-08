@@ -143,40 +143,36 @@ func test_start_research_adds_to_queue() -> void:
 	assert_str(queue[0]).is_equal("stone_tools")
 
 
-func test_queue_limit_enforced() -> void:
+func test_only_one_research_at_a_time() -> void:
 	var tm := _create_tech_manager()
-	# Give plenty of resources
 	_give_resources(0, 5000, 5000, 5000, 5000, 5000)
 	GameManager.current_age = 0
-	# Queue 4 techs (the max): stone_tools, fire_mastery, basket_weaving, animal_husbandry
-	# But basket_weaving and animal_husbandry need stone_tools as prereq.
-	# We need 4 techs without blocking prereqs at age 0.
-	# stone_tools and fire_mastery have no prereqs.
-	# basket_weaving needs stone_tools — so it would fail can_research.
-	# Let's just use stone_tools and fire_mastery, then manually complete stone_tools
-	# to unlock basket_weaving and animal_husbandry.
+	# Start researching stone_tools
+	var result: bool = tm.start_research(0, "stone_tools")
+	assert_bool(result).is_true()
+	assert_int(tm.get_research_queue(0).size()).is_equal(1)
+	# Attempting a second research should fail (max_queue_size = 1)
+	var result2: bool = tm.start_research(0, "fire_mastery")
+	assert_bool(result2).is_false()
+	assert_int(tm.get_research_queue(0).size()).is_equal(1)
+	# can_research should also return false while queue is occupied
+	assert_bool(tm.can_research(0, "fire_mastery")).is_false()
+
+
+func test_can_research_after_completion() -> void:
+	var tm := _create_tech_manager()
+	_give_resources(0, 5000, 5000, 5000, 5000, 5000)
+	GameManager.current_age = 0
 	tm.start_research(0, "stone_tools")
-	tm.start_research(0, "fire_mastery")
-	# Complete stone_tools to unlock the next two
+	# Complete stone_tools
 	for i in 26:
 		tm._process(1.0)
 	assert_bool(tm.is_tech_researched("stone_tools", 0)).is_true()
-	# Queue should now have fire_mastery as active
-	tm.start_research(0, "basket_weaving")
-	tm.start_research(0, "animal_husbandry")
-	# Queue should be: fire_mastery, basket_weaving, animal_husbandry (3 items, under limit of 4)
-	assert_int(tm.get_research_queue(0).size()).is_equal(3)
-	# Try to add a 4th — need another tech without prereqs at age 0.
-	# There are no more age-0 techs without prereqs except the ones already used.
-	# Let's advance age and try bronze_working (age 1, no prereqs)
-	GameManager.current_age = 1
-	var result: bool = tm.start_research(0, "bronze_working")
+	assert_int(tm.get_research_queue(0).size()).is_equal(0)
+	# Now fire_mastery should be researchable
+	assert_bool(tm.can_research(0, "fire_mastery")).is_true()
+	var result: bool = tm.start_research(0, "fire_mastery")
 	assert_bool(result).is_true()
-	assert_int(tm.get_research_queue(0).size()).is_equal(4)
-	# Now queue is full, 5th should fail
-	var result2: bool = tm.start_research(0, "writing")
-	assert_bool(result2).is_false()
-	assert_int(tm.get_research_queue(0).size()).is_equal(4)
 
 
 # -- research completion --
@@ -247,17 +243,15 @@ func test_cancel_refunds_in_progress() -> void:
 	assert_str(tm.get_current_research(0)).is_equal("")
 
 
-func test_cancel_removes_from_queue() -> void:
+func test_cancel_clears_active_research() -> void:
 	var tm := _create_tech_manager()
 	_give_resources(0, 500)
 	GameManager.current_age = 0
 	tm.start_research(0, "stone_tools")
-	tm.start_research(0, "fire_mastery")
-	assert_int(tm.get_research_queue(0).size()).is_equal(2)
-	# Cancel the queued (non-active) one
-	tm.cancel_research(0, "fire_mastery")
 	assert_int(tm.get_research_queue(0).size()).is_equal(1)
-	assert_str(tm.get_current_research(0)).is_equal("stone_tools")
+	tm.cancel_research(0, "stone_tools")
+	assert_int(tm.get_research_queue(0).size()).is_equal(0)
+	assert_str(tm.get_current_research(0)).is_equal("")
 
 
 # -- is_tech_researched --

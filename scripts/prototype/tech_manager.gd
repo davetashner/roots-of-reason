@@ -110,6 +110,10 @@ func can_research(player_id: int, tech_id: String) -> bool:
 	# Already researched or in queue
 	if is_tech_researched(tech_id, player_id) or _is_in_queue(player_id, tech_id):
 		return false
+	# Queue full
+	var queue: Array = _research_queue.get(player_id, [])
+	if queue.size() >= _max_queue_size:
+		return false
 	# Civ exclusivity check
 	var civ_exclusive: String = tech_data.get("civ_exclusive", "")
 	if civ_exclusive != "":

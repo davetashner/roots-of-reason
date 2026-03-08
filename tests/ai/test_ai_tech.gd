@@ -221,7 +221,7 @@ func test_researches_prereqs_for_bronze_age() -> void:
 func test_age_prereqs_before_personality_techs() -> void:
 	# Ensure prereqs come before personality-specific techs
 	var tm := _create_tech_manager()
-	# Normal: max_queue 2, so we can see both entries
+	# Normal AI difficulty: AI attempts max_queue 2, but TechManager caps at 1
 	var ai := _create_ai_tech(tm, "normal", "balanced")
 	_give_resources(1, 5000, 5000, 5000, 5000, 5000)
 	ai._tick()
