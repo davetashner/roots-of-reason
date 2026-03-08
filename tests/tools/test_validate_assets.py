@@ -317,3 +317,93 @@ class TestMainExitCodes:
             "--verbose",
         ])
         assert exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# OGG audio encoding validation
+# ---------------------------------------------------------------------------
+
+def _make_ogg_vorbis(path: Path) -> Path:
+    """Create a minimal file with Ogg Vorbis identification header."""
+    # Ogg page header (simplified) + Vorbis identification header
+    ogg_header = b"OggS"  # capture pattern
+    ogg_header += b"\x00"  # version
+    ogg_header += b"\x02"  # header type (beginning of stream)
+    ogg_header += b"\x00" * 8  # granule position
+    ogg_header += b"\x00" * 4  # serial number
+    ogg_header += b"\x00" * 4  # page sequence number
+    ogg_header += b"\x00" * 4  # checksum
+    ogg_header += b"\x01"  # number of segments
+    ogg_header += b"\x1e"  # segment table (30 bytes)
+    # Vorbis identification header
+    ogg_header += b"\x01vorbis"
+    ogg_header += b"\x00" * 23  # rest of vorbis id header
+    path.write_bytes(ogg_header)
+    return path
+
+
+def _make_ogg_opus(path: Path) -> Path:
+    """Create a minimal file with Ogg Opus identification header."""
+    ogg_header = b"OggS"
+    ogg_header += b"\x00"
+    ogg_header += b"\x02"
+    ogg_header += b"\x00" * 8
+    ogg_header += b"\x00" * 4
+    ogg_header += b"\x00" * 4
+    ogg_header += b"\x00" * 4
+    ogg_header += b"\x01"
+    ogg_header += b"\x13"  # segment table (19 bytes)
+    # Opus identification header
+    ogg_header += b"OpusHead"
+    ogg_header += b"\x00" * 11
+    path.write_bytes(ogg_header)
+    return path
+
+
+class TestCheckOggEncoding:
+    def test_vorbis_passes(self, tmp_path: Path) -> None:
+        filepath = _make_ogg_vorbis(tmp_path / "music.ogg")
+        err = validate_assets.check_ogg_encoding(filepath, "audio/music/music.ogg")
+        assert err is None
+
+    def test_opus_fails(self, tmp_path: Path) -> None:
+        filepath = _make_ogg_opus(tmp_path / "music.ogg")
+        err = validate_assets.check_ogg_encoding(filepath, "audio/music/music.ogg")
+        assert err is not None
+        assert "Opus" in err
+        assert "Vorbis" in err
+
+    def test_not_ogg_fails(self, tmp_path: Path) -> None:
+        filepath = tmp_path / "bad.ogg"
+        filepath.write_bytes(b"not an ogg file")
+        err = validate_assets.check_ogg_encoding(filepath, "audio/bad.ogg")
+        assert err is not None
+        assert "Not a valid OGG" in err
+
+    def test_missing_file(self, tmp_path: Path) -> None:
+        filepath = tmp_path / "missing.ogg"
+        err = validate_assets.check_ogg_encoding(filepath, "audio/missing.ogg")
+        assert err is not None
+        assert "Could not read" in err
+
+
+class TestValidateAssetsOgg:
+    """Integration tests for OGG validation within the full pipeline."""
+
+    def test_opus_file_caught_in_full_validation(self, tmp_path: Path) -> None:
+        assets = tmp_path / "assets"
+        music_dir = assets / "audio" / "music"
+        music_dir.mkdir(parents=True)
+        _make_ogg_opus(music_dir / "theme.ogg")
+        config = validate_assets.load_config(validate_assets.DEFAULT_CONFIG)
+        errors = validate_assets.validate_assets(assets, config)
+        assert any("Opus" in e for e in errors)
+
+    def test_vorbis_file_passes_in_full_validation(self, tmp_path: Path) -> None:
+        assets = tmp_path / "assets"
+        music_dir = assets / "audio" / "music"
+        music_dir.mkdir(parents=True)
+        _make_ogg_vorbis(music_dir / "theme.ogg")
+        config = validate_assets.load_config(validate_assets.DEFAULT_CONFIG)
+        errors = validate_assets.validate_assets(assets, config)
+        assert len(errors) == 0
