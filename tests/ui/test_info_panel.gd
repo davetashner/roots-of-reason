@@ -261,15 +261,30 @@ func test_show_building_clears_thumbnail_for_missing_sprite() -> void:
 	assert_bool(panel._portrait_texture.visible).is_false()
 
 
-func test_show_unit_clears_thumbnail() -> void:
+func test_show_unit_loads_thumbnail_when_sprite_exists() -> void:
+	var panel := _create_panel()
+	var unit := Node2D.new()
+	unit.set_script(UnitScript)
+	unit.unit_type = "villager"
+	unit.owner_id = 0
+	unit.hp = 25
+	unit.max_hp = 25
+	add_child(unit)
+	auto_free(unit)
+	panel.show_unit(unit)
+	# villager has a placeholder sprite — thumbnail should be visible
+	assert_bool(panel._portrait_texture.visible).is_true()
+
+
+func test_show_unit_clears_thumbnail_when_no_sprite() -> void:
 	var panel := _create_panel()
 	# First show building (may set thumbnail)
 	var b := _create_building(550, 550)
 	panel.show_building(b)
-	# Then show unit — thumbnail should be cleared
+	# Then show unit with no placeholder sprite
 	var unit := Node2D.new()
 	unit.set_script(UnitScript)
-	unit.unit_type = "villager"
+	unit.unit_type = "no_such_unit_type"
 	unit.owner_id = 0
 	unit.hp = 25
 	unit.max_hp = 25

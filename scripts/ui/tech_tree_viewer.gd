@@ -1,4 +1,4 @@
-extends PanelContainer
+extends Panel
 ## In-game tech tree viewer showing all ages, techs, and dependencies.
 ## Displays a scrollable grid of tech buttons organized by age columns.
 ## Color-coded: gold (researched), green (available), blue (prereqs met but
@@ -191,7 +191,7 @@ func _build_ui() -> void:
 
 	var outer_vbox := VBoxContainer.new()
 	outer_vbox.name = "OuterVBox"
-	outer_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	outer_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	outer_vbox.add_theme_constant_override("separation", 8)
 	add_child(outer_vbox)
 
@@ -269,7 +269,7 @@ func _build_ui() -> void:
 	_detail_backdrop.name = "DetailBackdrop"
 	_detail_backdrop.color = Color(0.0, 0.0, 0.0, 0.5)
 	_detail_backdrop.visible = false
-	_detail_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_detail_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_detail_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	_detail_backdrop.gui_input.connect(_on_backdrop_input)
 	add_child(_detail_backdrop)

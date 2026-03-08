@@ -55,8 +55,8 @@ func _create_tech_manager() -> Node:
 	return node
 
 
-func _create_viewer(tm: Node) -> PanelContainer:
-	var viewer := PanelContainer.new()
+func _create_viewer(tm: Node) -> Panel:
+	var viewer := Panel.new()
 	viewer.name = "TechTreeViewer"
 	viewer.set_script(TechTreeViewerScript)
 	add_child(viewer)
