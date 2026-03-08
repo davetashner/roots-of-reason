@@ -618,6 +618,15 @@ func assign_gather_target(node: Node2D, gather_offset: Vector2 = Vector2.ZERO) -
 	_gatherer.assign_target(node, gather_offset)
 
 
+func send_to_drop_off(building: Node2D) -> void:
+	_build_target = null
+	_pending_build_target_name = ""
+	_cancel_combat()
+	_cancel_feed()
+	_cancel_explore()
+	_gatherer.send_to_drop_off(building)
+
+
 func _repath_to_build_target() -> void:
 	## Re-path to build target using a random adjacent cell to avoid convergence.
 	if _build_target == null or not is_instance_valid(_build_target):

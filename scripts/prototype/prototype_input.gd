@@ -7,6 +7,7 @@ const FormationManagerScript := preload("res://scripts/prototype/formation_manag
 const FeedCmdHandler := preload("res://scripts/prototype/feed_command_handler.gd")
 const BuildCmdHandler := preload("res://scripts/prototype/build_command_handler.gd")
 const GatherCmdHandler := preload("res://scripts/prototype/gather_command_handler.gd")
+const DropOffCmdHandler := preload("res://scripts/prototype/drop_off_command_handler.gd")
 const GarrisonCmdHandler := preload("res://scripts/prototype/garrison_command_handler.gd")
 const EmbarkCmdHandler := preload("res://scripts/prototype/embark_command_handler.gd")
 const DisembarkCmdHandler := preload("res://scripts/prototype/disembark_command_handler.gd")
@@ -93,6 +94,7 @@ func _init_command_handlers() -> void:
 		FeedCmdHandler.new(),
 		BuildCmdHandler.new(),
 		gather_handler,
+		DropOffCmdHandler.new(),
 		GarrisonCmdHandler.new(),
 		EmbarkCmdHandler.new(),
 		DisembarkCmdHandler.new(),

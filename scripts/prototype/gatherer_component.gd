@@ -260,6 +260,15 @@ static func _is_target_harvestable(target: Node2D) -> bool:
 	return false
 
 
+func send_to_drop_off(building: Node2D) -> void:
+	## Manually direct the villager to deposit carried resources at a specific building.
+	if carried_amount <= 0:
+		return
+	drop_off_target = building
+	gather_state = GatherState.MOVING_TO_DROP_OFF
+	_unit.move_to(building.global_position)
+
+
 func cancel() -> void:
 	gather_target = null
 	gather_state = GatherState.NONE
