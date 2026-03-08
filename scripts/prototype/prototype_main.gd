@@ -124,6 +124,8 @@ func _process(delta: float) -> void:
 		if _ambient_timer <= 0.0:
 			_ambient_player.play()
 			_ambient_timer = randf_range(AMBIENT_INTERVAL_MIN, AMBIENT_INTERVAL_MAX)
+	if _flow != null:
+		_flow.tick_sheep_conversion(delta)
 
 
 func _setup_ambient_audio() -> void:

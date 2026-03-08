@@ -340,7 +340,10 @@ func _unit_at(world_pos: Vector2) -> Node:
 		if not is_instance_valid(unit):
 			continue
 		if "owner_id" in unit and unit.owner_id != 0:
-			continue
+			# Allow selecting sheep (wild or converted) for info display
+			var is_sheep: bool = "unit_type" in unit and unit.unit_type == "sheep"
+			if not is_sheep:
+				continue
 		if unit.has_method("is_point_inside") and unit.is_point_inside(world_pos):
 			return unit
 	return null

@@ -47,6 +47,8 @@ var _pending_garrison_names: Array[String] = []
 var _dog_los_bonus: int = 0
 var _farm_food_node: Node2D = null
 var _farm_max_food: int = 0
+var _sheep_food_per_unit: float = 0.0
+var _sheep_food_accumulator: float = 0.0
 
 var _combat_config: Dictionary = {}
 var _construction_alpha: float = 0.4
@@ -91,6 +93,11 @@ func _load_building_stats() -> void:
 	drop_off_types.clear()
 	for t in types:
 		drop_off_types.append(str(t))
+	# Load sheep pen food generation config
+	if building_name == "sheep_pen":
+		var fauna_cfg: Dictionary = GameUtils.dl_settings("map/fauna")
+		var sheep_cfg: Dictionary = fauna_cfg.get("sheep", {})
+		_sheep_food_per_unit = float(sheep_cfg.get("food_per_garrisoned_sheep", 3))
 
 
 func _load_construction_config() -> void:
@@ -303,6 +310,7 @@ func _process(delta: float) -> void:
 		_tick_garrison_loading()
 	if not _garrisoned_units.is_empty():
 		_tick_garrison_arrows(game_delta)
+		_tick_sheep_food(game_delta)
 
 
 func get_entity_category() -> String:
@@ -665,6 +673,23 @@ func _tick_garrison_arrows(game_delta: float) -> void:
 			)
 
 
+func _tick_sheep_food(game_delta: float) -> void:
+	if _sheep_food_per_unit <= 0.0:
+		return
+	# Count garrisoned sheep
+	var sheep_count: int = 0
+	for unit in _garrisoned_units:
+		if is_instance_valid(unit) and "unit_type" in unit and unit.unit_type == "sheep":
+			sheep_count += 1
+	if sheep_count <= 0:
+		return
+	_sheep_food_accumulator += _sheep_food_per_unit * float(sheep_count) * game_delta
+	var food_to_add: int = int(_sheep_food_accumulator)
+	if food_to_add > 0:
+		_sheep_food_accumulator -= float(food_to_add)
+		ResourceManager.add_resource(owner_id, ResourceManager.ResourceType.FOOD, food_to_add)
+
+
 func _find_nearest_hostile(max_range: float) -> Node2D:
 	var root := get_parent()
 	if root == null:
@@ -727,6 +752,8 @@ func save_state() -> Dictionary:
 	if _farm_food_node != null and is_instance_valid(_farm_food_node):
 		state["farm_food_current_yield"] = _farm_food_node.current_yield
 		state["farm_food_total_yield"] = _farm_food_node.total_yield
+	if _sheep_food_accumulator > 0.0:
+		state["sheep_food_accumulator"] = _sheep_food_accumulator
 	return state
 
 
@@ -755,6 +782,7 @@ func load_state(data: Dictionary) -> void:
 	var g_names: Array = data.get("garrisoned_units", [])
 	for n in g_names:
 		_pending_garrison_names.append(str(n))
+	_sheep_food_accumulator = float(data.get("sheep_food_accumulator", 0.0))
 	_farm_max_food = int(data.get("farm_food_total_yield", 0))
 	if _is_ruins:
 		entity_category = "ruins"

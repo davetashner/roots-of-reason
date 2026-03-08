@@ -24,5 +24,10 @@
     "feed_cost": 25,
     "decay_interval": 10.0,
     "decay_rate": 0.1
+  },
+  "sheep": {
+    "conversion_radius_tiles": 2,
+    "conversion_scan_interval": 1.0,
+    "food_per_garrisoned_sheep": 3
   }
 }

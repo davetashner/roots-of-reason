@@ -6,15 +6,23 @@ const UnitScript := preload("res://scripts/prototype/prototype_unit.gd")
 const TradeCartAIScript := preload("res://scripts/prototype/trade_cart_ai.gd")
 const DogAIScript := preload("res://scripts/fauna/dog_ai.gd")
 
+const TILE_SIZE: float = 64.0
+
 ## Reference to the root scene node (prototype_main).
 var _root: Node2D = null
 ## Reference to the bootstrapper for delegated helpers.
 var _bootstrapper: RefCounted = null
 
+# Sheep conversion scan timer
+var _sheep_scan_timer: float = 0.0
+var _sheep_scan_interval: float = 1.0
+var _sheep_conversion_radius_px: float = 128.0  # 2 tiles default
+
 
 func setup(root: Node2D, bootstrapper: RefCounted) -> void:
 	_root = root
 	_bootstrapper = bootstrapper
+	_load_sheep_config()
 
 
 # -- Victory / defeat flow --------------------------------------------------
@@ -329,6 +337,93 @@ func on_wolf_domesticated(wolf_unit: Node2D, feeder_owner_id: int) -> void:
 
 func on_dog_danger_alert(_alert_position: Vector2, _player_id: int) -> void:
 	pass
+
+
+# -- Sheep conversion --------------------------------------------------------
+
+
+func _load_sheep_config() -> void:
+	var fauna_cfg: Dictionary = GameUtils.dl_settings("map/fauna")
+	var sheep_cfg: Dictionary = fauna_cfg.get("sheep", {})
+	var radius_tiles: float = float(sheep_cfg.get("conversion_radius_tiles", 2))
+	_sheep_conversion_radius_px = radius_tiles * TILE_SIZE
+	_sheep_scan_interval = float(sheep_cfg.get("conversion_scan_interval", 1.0))
+
+
+func tick_sheep_conversion(delta: float) -> void:
+	## Called each frame from prototype_main._process to check for sheep near villagers.
+	var game_delta := GameManager.get_game_delta(delta)
+	if game_delta == 0.0:
+		return
+	_sheep_scan_timer += game_delta
+	if _sheep_scan_timer < _sheep_scan_interval:
+		return
+	_sheep_scan_timer -= _sheep_scan_interval
+	_scan_sheep_conversion()
+
+
+func _scan_sheep_conversion() -> void:
+	## Find wild sheep near any player's villagers and convert them.
+	if _root._entity_registry == null:
+		return
+	var wild_fauna: Array[Node2D] = _root._entity_registry.get_by_owner(-1)
+	if wild_fauna.is_empty():
+		return
+	# Collect sheep from wild fauna
+	var wild_sheep: Array[Node2D] = []
+	for fauna in wild_fauna:
+		if not is_instance_valid(fauna):
+			continue
+		if "unit_type" in fauna and fauna.unit_type == "sheep":
+			wild_sheep.append(fauna)
+	if wild_sheep.is_empty():
+		return
+	# Check each wild sheep against all player villagers
+	# Support all player IDs (0 = human, 1+ = AI)
+	for sheep in wild_sheep:
+		var converter_id := _find_nearest_villager_owner(sheep)
+		if converter_id >= 0:
+			_convert_sheep(sheep, converter_id)
+
+
+func _find_nearest_villager_owner(sheep: Node2D) -> int:
+	## Returns the owner_id of the nearest villager within conversion radius, or -1.
+	var best_dist := INF
+	var best_owner: int = -1
+	# Check all registered entities for villagers
+	for owner_id in [0, 1]:
+		for unit in _root._entity_registry.get_by_owner(owner_id):
+			if not is_instance_valid(unit):
+				continue
+			if not ("unit_type" in unit and unit.unit_type == "villager"):
+				continue
+			var dist: float = sheep.global_position.distance_to(unit.global_position)
+			if dist <= _sheep_conversion_radius_px and dist < best_dist:
+				best_dist = dist
+				best_owner = owner_id
+	return best_owner
+
+
+func _convert_sheep(sheep: Node2D, new_owner_id: int) -> void:
+	## Convert a wild sheep to be owned by a player.
+	_root._entity_registry.unregister(sheep)
+	sheep.owner_id = new_owner_id
+	sheep.entity_category = ""  # No longer wild_fauna — becomes a normal owned unit
+	# Give player color
+	if new_owner_id == 0:
+		sheep.unit_color = Color(0.2, 0.4, 0.9)
+	else:
+		sheep.unit_color = Color(0.9, 0.2, 0.2)
+	sheep.queue_redraw()
+	_root._entity_registry.register(sheep)
+	# Register for selection (player-owned sheep become selectable)
+	if _root._input_handler != null and _root._input_handler.has_method("register_unit"):
+		_root._input_handler.register_unit(sheep)
+	# Reconnect death signal as owned unit
+	if sheep.unit_died.is_connected(on_fauna_died):
+		sheep.unit_died.disconnect(on_fauna_died)
+	if not sheep.unit_died.is_connected(on_unit_died):
+		sheep.unit_died.connect(on_unit_died)
 
 
 # -- VFX / notification helpers ----------------------------------------------
