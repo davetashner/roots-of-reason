@@ -103,6 +103,9 @@ func show_tech(
 		"unaffordable":
 			status_text = "NEED RESOURCES"
 			status_color = COLOR_UNAFFORDABLE
+		"busy":
+			status_text = "RESEARCH IN PROGRESS"
+			status_color = COLOR_UNAFFORDABLE
 		_:
 			status_text = "LOCKED"
 			status_color = COLOR_LOCKED
