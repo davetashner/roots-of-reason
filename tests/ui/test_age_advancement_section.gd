@@ -310,6 +310,20 @@ func test_missing_techs_tooltip_lists_techs() -> void:
 	assert_str(section._button.tooltip_text).contains("Fire Mastery")
 
 
+func test_missing_techs_status_label_visible() -> void:
+	var section := _create_section()
+	var adv := _create_mock_advancement()
+	var missing: Array[String] = ["stone_tools", "fire_mastery"]
+	adv.set_meta("missing_techs", missing)
+	section.setup(adv)
+	var building := _create_mock_building()
+	section.update_display(building)
+	assert_bool(section._status_label.visible).is_true()
+	assert_str(section._status_label.text).contains("Need:")
+	assert_str(section._status_label.text).contains("Stone Tools")
+	assert_str(section._status_label.text).contains("Fire Mastery")
+
+
 func test_button_disabled_when_insufficient_resources() -> void:
 	var section := _create_section()
 	var adv := _create_mock_advancement()
@@ -350,6 +364,61 @@ func test_insufficient_resources_tooltip_shows_shortfall() -> void:
 	assert_str(section._button.tooltip_text).contains("Insufficient resources:")
 	assert_str(section._button.tooltip_text).contains("Food: 100 / 200")
 	assert_str(section._button.tooltip_text).contains("Stone: 50 / 200")
+
+
+func test_insufficient_resources_status_label_shows_shortfall() -> void:
+	var section := _create_section()
+	var adv := _create_mock_advancement()
+	section.setup(adv)
+	(
+		ResourceManager
+		. init_player(
+			0,
+			{
+				ResourceManager.ResourceType.FOOD: 100,
+				ResourceManager.ResourceType.WOOD: 200,
+				ResourceManager.ResourceType.STONE: 50,
+			}
+		)
+	)
+	var building := _create_mock_building()
+	section.update_display(building)
+	assert_bool(section._status_label.visible).is_true()
+	assert_str(section._status_label.text).contains("Need:")
+	assert_str(section._status_label.text).contains("Food: 100/200")
+	assert_str(section._status_label.text).contains("Stone: 50/200")
+
+
+func test_ready_status_label_shows_cost() -> void:
+	var section := _create_section()
+	var adv := _create_mock_advancement()
+	section.setup(adv)
+	(
+		ResourceManager
+		. init_player(
+			0,
+			{
+				ResourceManager.ResourceType.FOOD: 200,
+				ResourceManager.ResourceType.WOOD: 200,
+				ResourceManager.ResourceType.STONE: 200,
+			}
+		)
+	)
+	var building := _create_mock_building()
+	section.update_display(building)
+	assert_bool(section._status_label.visible).is_true()
+	assert_str(section._status_label.text).contains("Cost:")
+
+
+func test_status_label_hidden_when_advancing() -> void:
+	var section := _create_section()
+	var adv := _create_mock_advancement()
+	adv.set_meta("advancing", true)
+	adv.set_meta("progress", 0.5)
+	section.setup(adv)
+	var building := _create_mock_building()
+	section.update_display(building)
+	assert_bool(section._status_label.visible).is_false()
 
 
 func test_button_enabled_when_can_advance() -> void:

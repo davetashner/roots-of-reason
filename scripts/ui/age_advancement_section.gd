@@ -15,6 +15,7 @@ var _player_id: int = 0
 
 var _button: Button = null
 var _progress_bar: ProgressBar = null
+var _status_label: Label = null
 
 
 func _ready() -> void:
@@ -48,6 +49,13 @@ func _ready() -> void:
 	_progress_bar.visible = false
 	btn_row.add_child(_progress_bar)
 
+	_status_label = Label.new()
+	_status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_status_label.add_theme_font_size_override("font_size", 10)
+	_status_label.add_theme_color_override("font_color", Color(0.85, 0.75, 0.5))
+	_status_label.visible = false
+	add_child(_status_label)
+
 
 func setup(age_advancement: Node, player_id: int = 0) -> void:
 	_age_advancement = age_advancement
@@ -79,6 +87,7 @@ func update_display(building: Node2D) -> void:
 		_button.disabled = false
 		_progress_bar.visible = true
 		_progress_bar.value = _age_advancement.get_advance_progress() * 100.0
+		_status_label.visible = false
 	else:
 		visible = true
 		_button.text = "Advance to %s" % age_name
@@ -88,13 +97,44 @@ func update_display(building: Node2D) -> void:
 		var can_afford: bool = ResourceManager.can_afford(_player_id, _age_advancement.get_advance_cost(next_age))
 		if not missing.is_empty():
 			_button.disabled = true
+			var status: String = _build_missing_status(missing)
 			_button.tooltip_text = _build_locked_tooltip(age_name, missing, raw_costs)
+			_status_label.text = status
+			_status_label.visible = true
 		elif not can_afford:
 			_button.disabled = true
+			var status: String = _build_cost_status(raw_costs)
 			_button.tooltip_text = _build_unaffordable_tooltip(age_name, raw_costs)
+			_status_label.text = status
+			_status_label.visible = true
 		else:
 			_button.disabled = false
 			_button.tooltip_text = _build_ready_tooltip(age_name, raw_costs)
+			_status_label.text = "Cost: %s" % _format_costs(raw_costs)
+			_status_label.visible = true
+
+
+func _build_missing_status(missing: Array[String]) -> String:
+	var names: Array[String] = []
+	for tech_id: String in missing:
+		names.append(tech_id.replace("_", " ").capitalize())
+	return "Need: %s" % ", ".join(names)
+
+
+func _build_cost_status(raw_costs: Dictionary) -> String:
+	var parts: Array[String] = []
+	for res_name: String in raw_costs:
+		var lower_key := res_name.to_lower()
+		if not RESOURCE_NAME_TO_TYPE.has(lower_key):
+			continue
+		var res_type: ResourceManager.ResourceType = RESOURCE_NAME_TO_TYPE[lower_key]
+		var needed: int = int(raw_costs[res_name])
+		var have: int = int(ResourceManager.get_amount(_player_id, res_type))
+		if have < needed:
+			parts.append("%s: %d/%d" % [res_name.capitalize(), have, needed])
+	if parts.is_empty():
+		return "Cost: %s" % _format_costs(raw_costs)
+	return "Need: %s" % ", ".join(parts)
 
 
 func _build_locked_tooltip(age_name: String, missing: Array[String], raw_costs: Dictionary) -> String:
