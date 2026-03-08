@@ -40,11 +40,8 @@ var _is_hovering_resource: bool = false
 var _is_hovering_wolf: bool = false
 var _trade_manager: Node = null
 
-# Config loaded from data/settings/ui/info_panel.json
 var _hp_green_threshold: float = 0.6
 var _hp_yellow_threshold: float = 0.3
-
-# Child nodes
 var _root_hbox: HBoxContainer = null
 var _portrait: ColorRect = null
 var _portrait_texture: TextureRect = null
@@ -54,8 +51,6 @@ var _hp_bar_bg: Panel = null
 var _hp_label: Label = null
 var _stats_label: Label = null
 var _hp_bar_container: HBoxContainer = null
-
-# Production queue display nodes
 var _queue_section: VBoxContainer = null
 var _queue_current_label: Label = null
 var _queue_progress_bar: ProgressBar = null
@@ -63,11 +58,7 @@ var _queue_icons_container: HBoxContainer = null
 var _queue_eta_label: Label = null
 var _tracked_queue: Node = null
 var _main_vbox: VBoxContainer = null
-
-# Unit command buttons (Stop/Hold)
 var _cmd_row: HBoxContainer = null
-
-# Build section (villager mode)
 var _build_separator: VSeparator = null
 var _build_section: VBoxContainer = null
 var _build_tab_bar: HBoxContainer = null
@@ -75,11 +66,8 @@ var _build_grid: GridContainer = null
 var _build_tab: String = "civilian"
 var _is_villager_mode: bool = false
 var _player_id: int = 0
-
-# Train buttons section (buildings with units_produced)
 var _train_section: HBoxContainer = null
-
-# Age advancement section (Town Center)
+var _ungarrison_btn: Button = null
 var _age_section: VBoxContainer = null
 var _age_advancement: Node = null
 
@@ -101,7 +89,6 @@ func _load_config() -> void:
 func _build_ui() -> void:
 	custom_minimum_size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
 	size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
-	# Anchor bottom-center
 	anchor_left = 0.5
 	anchor_right = 0.5
 	anchor_top = 1.0
@@ -170,19 +157,15 @@ func _build_ui() -> void:
 	_hp_bar_fill.add_theme_stylebox_override("panel", fill_style)
 	_hp_bar_bg.add_child(_hp_bar_fill)
 
-	# HP label
 	_hp_label = Label.new()
 	_hp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hp_label.add_theme_font_size_override("font_size", 12)
 	_hp_bar_container.add_child(_hp_label)
-
-	# Stats line
 	_stats_label = Label.new()
 	_stats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stats_label.add_theme_font_size_override("font_size", 13)
 	vbox.add_child(_stats_label)
 
-	# Unit command buttons (Stop/Hold)
 	_cmd_row = HBoxContainer.new()
 	_cmd_row.name = "CmdRow"
 	_cmd_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -195,6 +178,15 @@ func _build_ui() -> void:
 	_train_section = HBoxContainer.new()
 	_train_section.set_script(load("res://scripts/ui/train_buttons_section.gd"))
 	vbox.add_child(_train_section)
+	_ungarrison_btn = Button.new()
+	_ungarrison_btn.name = "UngarrisonBtn"
+	_ungarrison_btn.text = "Ungarrison All"
+	_ungarrison_btn.custom_minimum_size = Vector2(120, 28)
+	_ungarrison_btn.visible = false
+	_apply_btn_style(_ungarrison_btn, "normal", Color(0.3, 0.2, 0.1, 0.9))
+	_apply_btn_style(_ungarrison_btn, "hover", Color(0.5, 0.3, 0.15, 0.9))
+	_ungarrison_btn.pressed.connect(_on_ungarrison_pressed)
+	vbox.add_child(_ungarrison_btn)
 	_build_queue_section(vbox)
 	_build_age_section(vbox)
 	_build_build_section()
@@ -206,13 +198,9 @@ func _build_queue_section(parent: VBoxContainer) -> void:
 	_queue_section.add_theme_constant_override("separation", 2)
 	_queue_section.visible = false
 	parent.add_child(_queue_section)
-
-	# Separator
 	var sep := HSeparator.new()
 	sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_queue_section.add_child(sep)
-
-	# Current training label + progress bar row
 	var current_row := HBoxContainer.new()
 	current_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	current_row.add_theme_constant_override("separation", 6)
@@ -232,14 +220,10 @@ func _build_queue_section(parent: VBoxContainer) -> void:
 	_queue_progress_bar.max_value = 100.0
 	_queue_progress_bar.show_percentage = true
 	current_row.add_child(_queue_progress_bar)
-
-	# Queued icons row
 	_queue_icons_container = HBoxContainer.new()
 	_queue_icons_container.mouse_filter = Control.MOUSE_FILTER_STOP
 	_queue_icons_container.add_theme_constant_override("separation", 4)
 	_queue_section.add_child(_queue_icons_container)
-
-	# ETA label
 	_queue_eta_label = Label.new()
 	_queue_eta_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_queue_eta_label.add_theme_font_size_override("font_size", 11)
@@ -289,23 +273,19 @@ func show_unit(unit: Node2D) -> void:
 	_load_unit_thumbnail(unit)
 	_hide_queue_section()
 	_hide_train_section()
+	_hide_ungarrison_btn()
 	_show_cmd_row()
 	visible = true
-	# Villager build panel
 	var is_villager: bool = "unit_type" in unit and unit.unit_type == "villager"
 	if is_villager and _building_placer != null:
 		_toggle_build_section(true)
 	else:
 		_toggle_build_section(false)
-	# Portrait color
 	if "unit_color" in unit:
 		_portrait.color = unit.unit_color
 	else:
 		_portrait.color = Color(0.2, 0.4, 0.9)
-	# Name
-	var display_name: String = _get_unit_display_name(unit)
-	_name_label.text = display_name
-	# Stats from DataLoader
+	_name_label.text = _get_unit_display_name(unit)
 	var stats := _get_unit_stats(unit)
 	var atk: int = int(stats.get("attack", 0))
 	var def: int = int(stats.get("defense", 0))
@@ -333,24 +313,18 @@ func show_building(building: Node2D) -> void:
 	_toggle_build_section(false)
 	_hide_cmd_row()
 	visible = true
-	# Check ruins state
 	var is_ruins: bool = "_is_ruins" in building and building._is_ruins
-	# Portrait color
 	if is_ruins:
 		_portrait.color = Color(0.4, 0.4, 0.4)
 	elif building.owner_id == 0:
 		_portrait.color = Color(0.2, 0.5, 1.0)
 	else:
 		_portrait.color = Color(0.8, 0.2, 0.2)
-	# Building sprite thumbnail
 	_load_building_thumbnail(building)
-	# Name
 	if is_ruins:
 		_name_label.text = "Ruins"
 	else:
-		var display_name: String = _get_building_display_name(building)
-		_name_label.text = display_name
-	# Stats
+		_name_label.text = _get_building_display_name(building)
 	if is_ruins:
 		_stats_label.text = ""
 	elif building.under_construction:
@@ -358,25 +332,20 @@ func show_building(building: Node2D) -> void:
 		_stats_label.text = "Progress: %d%%" % pct
 	else:
 		var stats_text := ""
-		# Building defense stat
 		var bstats := _get_building_stats(building)
 		var defense: int = int(bstats.get("defense", 0))
 		stats_text = "DEF: %d" % defense
-		# Garrison attack bonus
 		if building.has_method("get_garrison_attack"):
 			var garrison_atk: int = building.get_garrison_attack()
 			if garrison_atk > 0:
 				stats_text += "  ATK: %d" % garrison_atk
-		# Garrison capacity indicator
 		if "garrison_capacity" in building and building.garrison_capacity > 0:
 			var garrisoned: int = building.get_garrisoned_count() if building.has_method("get_garrisoned_count") else 0
 			stats_text += "  Garrisoned: %d/%d" % [garrisoned, building.garrison_capacity]
-		# Damage state
 		var state_text := ""
 		if building.has_method("get_damage_state"):
 			var state: String = building.get_damage_state()
 			state_text = state.capitalize()
-		# Dock transport info
 		if _river_transport != null and building.building_name == "river_dock":
 			var dock_info: Dictionary = _river_transport.get_dock_info(building)
 			if not dock_info.is_empty():
@@ -384,7 +353,6 @@ func show_building(building: Node2D) -> void:
 				var barges: int = dock_info.get("active_barge_count", 0)
 				var countdown: float = dock_info.get("time_until_next_dispatch", 0.0)
 				state_text = "Queued: %d  Barges: %d  Next: %.0fs" % [queued, barges, countdown]
-		# Market trade info
 		if _trade_manager != null and building.building_name == "market":
 			var market_info: Dictionary = _trade_manager.get_market_info(building)
 			if not market_info.is_empty():
@@ -401,6 +369,7 @@ func show_building(building: Node2D) -> void:
 	_update_train_section(building)
 	_update_queue_display(building)
 	_update_age_section(building)
+	_update_ungarrison_btn(building)
 
 
 func show_barge(barge: Node2D) -> void:
@@ -411,16 +380,15 @@ func show_barge(barge: Node2D) -> void:
 	_clear_thumbnail()
 	_hide_queue_section()
 	_hide_train_section()
+	_hide_ungarrison_btn()
 	_toggle_build_section(false)
 	_show_cmd_row()
 	visible = true
-	# Portrait color
 	if barge.owner_id == 0:
 		_portrait.color = Color(0.6, 0.4, 0.2)
 	else:
 		_portrait.color = Color(0.8, 0.3, 0.3)
 	_name_label.text = "Barge"
-	# Cargo display
 	var cargo_parts: Array[String] = []
 	for res_type: int in barge.carried_resources:
 		var amount: int = barge.carried_resources[res_type]
@@ -430,7 +398,6 @@ func show_barge(barge: Node2D) -> void:
 		_stats_label.text = "Empty"
 	else:
 		_stats_label.text = ", ".join(cargo_parts)
-	# HP
 	var current_hp: int = barge.hp
 	var max_hp_val: int = barge.max_hp
 	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
@@ -445,22 +412,19 @@ func show_multi_select(units: Array) -> void:
 	_clear_thumbnail()
 	_hide_queue_section()
 	_hide_train_section()
+	_hide_ungarrison_btn()
 	_show_cmd_row()
-	# Show build menu when all selected units are villagers
 	if _all_villagers(units) and _building_placer != null:
 		_toggle_build_section(true)
 	else:
 		_toggle_build_section(false)
 	visible = true
-	# Portrait: use first unit's color
 	if not units.is_empty() and "unit_color" in units[0]:
 		_portrait.color = units[0].unit_color
 	else:
 		_portrait.color = Color(0.2, 0.4, 0.9)
-	# Name: count + type
 	var type_name := _get_unit_display_name(units[0]) if not units.is_empty() else "Units"
 	_name_label.text = "%d %ss selected" % [units.size(), type_name]
-	# Aggregate HP
 	_stats_label.text = ""
 	_update_multi_hp(units)
 
@@ -470,20 +434,16 @@ func show_resource_node(node: Node2D) -> void:
 	_is_hovering_resource = true
 	_clear_thumbnail()
 	_hide_train_section()
+	_hide_ungarrison_btn()
 	_hide_cmd_row()
 	visible = true
-	# Portrait color from node
 	if "_node_color" in node:
 		_portrait.color = node._node_color
 	else:
 		_portrait.color = Color(0.5, 0.5, 0.5)
-	# Name — capitalize and clean underscores
-	var display_name: String = str(node.resource_name).replace("_", " ").capitalize()
-	_name_label.text = display_name
-	# Regen status text
+	_name_label.text = str(node.resource_name).replace("_", " ").capitalize()
 	var type_label: String = str(node.resource_type).capitalize()
 	_stats_label.text = type_label + _get_regen_text(node)
-	# Yield bar
 	var cur: int = int(node.current_yield)
 	var tot: int = int(node.total_yield)
 	_set_yield_bar(float(cur) / float(tot) if tot > 0 else 0.0, cur, tot)
@@ -496,6 +456,7 @@ func clear() -> void:
 	_clear_hover()
 	_hide_queue_section()
 	_hide_train_section()
+	_hide_ungarrison_btn()
 	_toggle_build_section(false)
 	_hide_cmd_row()
 	visible = false
@@ -554,14 +515,11 @@ func _get_yield_color(ratio: float) -> Color:
 func _process(_delta: float) -> void:
 	if _input_handler == null:
 		return
-	# Poll selection from InputHandler
 	var selected: Array[Node] = _input_handler._get_selected_units()
 	if selected.is_empty():
 		_check_resource_hover()
 		return
-	# Clear hover when selection exists
 	_clear_hover()
-	# Determine what to show
 	if selected.size() == 1:
 		var entity: Node = selected[0]
 		if _is_resource_node(entity):
@@ -577,7 +535,6 @@ func _process(_delta: float) -> void:
 		else:
 			_update()
 	else:
-		# Multi-select — only units (not buildings) in multi
 		if not _is_multi or _tracked_entities.size() != selected.size():
 			show_multi_select(selected)
 		else:
@@ -593,7 +550,6 @@ func _check_resource_hover() -> void:
 	if viewport == null:
 		return
 	var mouse_pos := viewport.get_mouse_position()
-	# Convert screen position to world position using camera transform
 	var canvas_transform := viewport.get_canvas_transform()
 	var world_pos := canvas_transform.affine_inverse() * mouse_pos
 	var found: Node = _target_detector.detect(world_pos)
@@ -618,12 +574,10 @@ func _show_wolf_info(wolf: Node2D) -> void:
 	visible = true
 	_portrait.color = Color(0.5, 0.5, 0.5)
 	_name_label.text = "Wolf"
-	# HP bar
 	var current_hp: int = wolf.hp if "hp" in wolf else 0
 	var max_hp_val: int = wolf.max_hp if "max_hp" in wolf else current_hp
 	var ratio: float = float(current_hp) / float(max_hp_val) if max_hp_val > 0 else 0.0
 	_set_hp_bar(ratio, current_hp, max_hp_val)
-	# Domestication progress
 	var wolf_ai: Node = wolf.get_node_or_null("WolfAI")
 	if wolf_ai != null and wolf_ai.has_method("get_domestication_progress"):
 		var progress: float = wolf_ai.get_domestication_progress()
@@ -657,7 +611,6 @@ func _update_resource_hover() -> void:
 	var cur: int = int(node.current_yield)
 	var tot: int = int(node.total_yield)
 	_set_yield_bar(float(cur) / float(tot) if tot > 0 else 0.0, cur, tot)
-	# Update regen status
 	var type_label: String = str(node.resource_type).capitalize()
 	_stats_label.text = type_label + _get_regen_text(node)
 
@@ -725,6 +678,7 @@ func _update() -> void:
 		_update_train_section(_tracked_entity as Node2D)
 		_update_queue_display(_tracked_entity as Node2D)
 		_update_age_section(_tracked_entity as Node2D)
+		_update_ungarrison_btn(_tracked_entity as Node2D)
 	else:
 		var unit: Node2D = _tracked_entity as Node2D
 		var stats := _get_unit_stats(unit)
@@ -879,24 +833,16 @@ func _update_queue_display(building: Node2D) -> void:
 		return
 	_tracked_queue = pq
 	_show_queue_section()
-	# Current training unit
-	var current_type: String = queue[0]
-	var display_name: String = current_type.replace("_", " ").capitalize()
-	_queue_current_label.text = display_name
-	# Progress bar
+	_queue_current_label.text = queue[0].replace("_", " ").capitalize()
 	var progress: float = pq.get_progress() if pq.has_method("get_progress") else 0.0
 	_queue_progress_bar.value = progress * 100.0
-	# Queued icons (index 1+)
 	_rebuild_queue_icons(queue, pq)
-	# ETA
 	_update_queue_eta(pq, queue)
 
 
 func _rebuild_queue_icons(queue: Array, pq: Node) -> void:
-	# Clear existing icons
 	for child in _queue_icons_container.get_children():
 		child.queue_free()
-	# Add icon for each queued item (including current at index 0)
 	for i in queue.size():
 		var unit_type: String = queue[i]
 		var icon_btn := Button.new()
@@ -908,7 +854,6 @@ func _rebuild_queue_icons(queue: Array, pq: Node) -> void:
 			icon_btn.tooltip_text += " (training)"
 		else:
 			icon_btn.tooltip_text += " (queued — click to cancel)"
-		# Use container to avoid lambda capture issue
 		var idx_arr: Array = [i]
 		var pq_ref: Array = [pq]
 		icon_btn.pressed.connect(func() -> void: _on_queue_icon_pressed(pq_ref[0], idx_arr[0]))
@@ -928,11 +873,9 @@ func _update_queue_eta(pq: Node, queue: Array) -> void:
 		_queue_eta_label.text = ""
 		return
 	var remaining: float = 0.0
-	# Time remaining for current item
 	var train_time: float = pq.get_current_train_time() if pq.has_method("get_current_train_time") else 0.0
 	var elapsed: float = pq.get_elapsed_time() if pq.has_method("get_elapsed_time") else 0.0
 	remaining += maxf(train_time - elapsed, 0.0)
-	# Time for rest of queue
 	for i in range(1, queue.size()):
 		var unit_type: String = queue[i]
 		if pq.has_method("get_train_time_for"):
@@ -981,6 +924,33 @@ func _hide_train_section() -> void:
 		_train_section.visible = false
 
 
+func _update_ungarrison_btn(building: Node2D) -> void:
+	if _ungarrison_btn == null:
+		return
+	if building == null or not is_instance_valid(building):
+		_ungarrison_btn.visible = false
+		return
+	var has_garrison: bool = (
+		building.has_method("get_garrisoned_count")
+		and building.get_garrisoned_count() > 0
+		and building.owner_id == _player_id
+	)
+	_ungarrison_btn.visible = has_garrison
+	if has_garrison:
+		_ungarrison_btn.text = "Ungarrison All (%d)" % building.get_garrisoned_count()
+
+
+func _hide_ungarrison_btn() -> void:
+	if _ungarrison_btn != null:
+		_ungarrison_btn.visible = false
+
+
+func _on_ungarrison_pressed() -> void:
+	if _tracked_entity != null and is_instance_valid(_tracked_entity):
+		if _tracked_entity.has_method("ungarrison_all"):
+			_tracked_entity.ungarrison_all()
+
+
 func _hide_age_section() -> void:
 	if _age_section != null:
 		_age_section.visible = false
@@ -1016,9 +986,6 @@ func _resource_type_name(res_type: int) -> String:
 	return "Res%d" % res_type
 
 
-# -- Unit command buttons (Stop/Hold/Explore) --
-
-
 func _build_cmd_buttons() -> void:
 	for cmd_data: Array in CMD_BUTTONS:
 		var btn := Button.new()
@@ -1048,9 +1015,6 @@ func _issue_unit_command(method: String) -> void:
 	for unit in _input_handler._get_selected_units():
 		if is_instance_valid(unit) and unit.has_method(method):
 			unit.call(method)
-
-
-# -- Build section (villager mode) --
 
 
 func _build_build_section() -> void:
@@ -1313,11 +1277,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var key := event as InputEventKey
 	var key_char := char(key.keycode).to_upper()
-	# Train button hotkeys for buildings with production
 	if _train_section != null and _train_section.visible and _train_section.try_hotkey(key_char):
 		get_viewport().set_input_as_handled()
 		return
-	# Stop/Hold/Explore hotkeys for non-villager units
 	if _cmd_row != null and _cmd_row.visible and not _is_villager_mode:
 		var cmd_keys := ["Q", "W", "E"]
 		for i in CMD_BUTTONS.size():
@@ -1325,7 +1287,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				_issue_unit_command(CMD_BUTTONS[i][1])
 				get_viewport().set_input_as_handled()
 				return
-	# Build grid hotkeys for villager mode
 	if _is_villager_mode and _build_grid != null and _build_grid.get_child_count() > 0:
 		var hotkeys: Array = [["Q", "W", "E"], ["A", "S", "D"], ["Z", "X", "C"], ["R", "F", "V"]]
 		for row_idx in hotkeys.size():
