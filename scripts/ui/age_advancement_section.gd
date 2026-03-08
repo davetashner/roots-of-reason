@@ -80,23 +80,62 @@ func update_display(building: Node2D) -> void:
 		_progress_bar.visible = true
 		_progress_bar.value = _age_advancement.get_advance_progress() * 100.0
 	else:
-		var missing: Array[String] = _age_advancement.get_missing_techs(_player_id)
-		if not missing.is_empty():
-			visible = false
-			return
 		visible = true
 		_button.text = "Advance to %s" % age_name
 		_progress_bar.visible = false
+		var missing: Array[String] = _age_advancement.get_missing_techs(_player_id)
 		var raw_costs: Dictionary = _age_advancement.get_advance_cost_raw(next_age)
-		var cost_parts: Array[String] = []
-		for res_name: String in raw_costs:
-			cost_parts.append("%s: %d" % [res_name.capitalize(), int(raw_costs[res_name])])
-		var cost_str: String = ", ".join(cost_parts) if not cost_parts.is_empty() else ""
-		_button.tooltip_text = "Advance to %s\nCost: %s" % [age_name, cost_str]
-		if not ResourceManager.can_afford(_player_id, _age_advancement.get_advance_cost(next_age)):
+		var can_afford: bool = ResourceManager.can_afford(_player_id, _age_advancement.get_advance_cost(next_age))
+		if not missing.is_empty():
 			_button.disabled = true
+			_button.tooltip_text = _build_locked_tooltip(age_name, missing, raw_costs)
+		elif not can_afford:
+			_button.disabled = true
+			_button.tooltip_text = _build_unaffordable_tooltip(age_name, raw_costs)
 		else:
 			_button.disabled = false
+			_button.tooltip_text = _build_ready_tooltip(age_name, raw_costs)
+
+
+func _build_locked_tooltip(age_name: String, missing: Array[String], raw_costs: Dictionary) -> String:
+	var lines: Array[String] = ["Advance to %s" % age_name, ""]
+	lines.append("Missing technologies:")
+	for tech_id: String in missing:
+		var display_name: String = tech_id.replace("_", " ").capitalize()
+		lines.append("  - %s" % display_name)
+	if not raw_costs.is_empty():
+		lines.append("")
+		lines.append("Cost: %s" % _format_costs(raw_costs))
+	return "\n".join(lines)
+
+
+func _build_unaffordable_tooltip(age_name: String, raw_costs: Dictionary) -> String:
+	var lines: Array[String] = ["Advance to %s" % age_name, ""]
+	lines.append("Insufficient resources:")
+	for res_name: String in raw_costs:
+		var lower_key := res_name.to_lower()
+		if not RESOURCE_NAME_TO_TYPE.has(lower_key):
+			continue
+		var res_type: ResourceManager.ResourceType = RESOURCE_NAME_TO_TYPE[lower_key]
+		var needed: int = int(raw_costs[res_name])
+		var have: int = int(ResourceManager.get_amount(_player_id, res_type))
+		if have < needed:
+			lines.append("  %s: %d / %d" % [res_name.capitalize(), have, needed])
+	return "\n".join(lines)
+
+
+func _build_ready_tooltip(age_name: String, raw_costs: Dictionary) -> String:
+	var cost_str: String = _format_costs(raw_costs)
+	if cost_str.is_empty():
+		return "Advance to %s" % age_name
+	return "Advance to %s\nCost: %s" % [age_name, cost_str]
+
+
+func _format_costs(raw_costs: Dictionary) -> String:
+	var cost_parts: Array[String] = []
+	for res_name: String in raw_costs:
+		cost_parts.append("%s: %d" % [res_name.capitalize(), int(raw_costs[res_name])])
+	return ", ".join(cost_parts)
 
 
 func _on_button_pressed() -> void:
