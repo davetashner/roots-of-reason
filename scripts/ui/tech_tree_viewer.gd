@@ -319,8 +319,10 @@ func _show_detail_panel(tech_id: String) -> void:
 
 	# Position the panel vertically centered, sliding in from the left
 	var viewport_size := get_viewport_rect().size
-	_detail_panel.position.y = (viewport_size.y - _detail_panel.PANEL_HEIGHT) / 2.0
-	_detail_panel.size = Vector2(_detail_panel.PANEL_WIDTH, _detail_panel.PANEL_HEIGHT)
+	_detail_panel.size.x = _detail_panel.PANEL_WIDTH
+	_detail_panel.reset_size()
+	var panel_h: float = _detail_panel.size.y
+	_detail_panel.position.y = (viewport_size.y - panel_h) / 2.0
 	var target_x: float = (viewport_size.x - _detail_panel.PANEL_WIDTH) / 3.0
 	_detail_panel.slide_target_x = target_x
 

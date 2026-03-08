@@ -16,7 +16,6 @@ const COLOR_RESEARCHING := Color("#FFA726")
 const DETAIL_IMAGE_SIZE := Vector2(180, 180)
 const TECH_SPRITE_PATH := "res://assets/sprites/tech/%s.png"
 const PANEL_WIDTH: float = 420.0
-const PANEL_HEIGHT: float = 600.0
 const SLIDE_DURATION: float = 0.3
 
 var slide_target_x: float = -1.0
@@ -29,7 +28,7 @@ var _slide_tween: Tween = null
 func _init() -> void:
 	name = "DetailPanel"
 	visible = false
-	custom_minimum_size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
+	custom_minimum_size = Vector2(PANEL_WIDTH, 0)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.08, 0.08, 0.15, 0.95)
 	style.border_color = Color(0.4, 0.4, 0.6)
@@ -68,7 +67,7 @@ func show_tech(
 	progress: float = 0.0,
 ) -> void:
 	_current_tech_id = tech_id
-	var vbox: VBoxContainer = get_node("DetailScroll/DetailVBox")
+	var vbox: VBoxContainer = get_node("DetailVBox")
 
 	# Name
 	var name_lbl: Label = vbox.get_node("DetailName")
@@ -218,7 +217,7 @@ func show_tech(
 
 
 func update_progress(ratio: float) -> void:
-	var vbox: VBoxContainer = get_node("DetailScroll/DetailVBox")
+	var vbox: VBoxContainer = get_node("DetailVBox")
 	var progress_bar: ProgressBar = vbox.get_node("DetailProgressBar")
 	progress_bar.value = ratio * 100.0
 
@@ -263,7 +262,7 @@ func _kill_slide_tween() -> void:
 
 
 func play_image_reveal() -> void:
-	var vbox: VBoxContainer = get_node("DetailScroll/DetailVBox")
+	var vbox: VBoxContainer = get_node("DetailVBox")
 	var image_rect: TextureRect = vbox.get_node("DetailImageContainer/DetailImageBg/DetailImage")
 	if not image_rect.visible or image_rect.texture == null:
 		return
@@ -274,17 +273,11 @@ func play_image_reveal() -> void:
 
 
 func _build_contents() -> void:
-	var scroll := ScrollContainer.new()
-	scroll.name = "DetailScroll"
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(scroll)
-
 	var vbox := VBoxContainer.new()
 	vbox.name = "DetailVBox"
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 6)
-	scroll.add_child(vbox)
+	add_child(vbox)
 
 	# Close button row
 	var close_row := HBoxContainer.new()
