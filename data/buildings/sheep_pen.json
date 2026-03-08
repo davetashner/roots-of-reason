@@ -5,15 +5,15 @@
   "description": "A fenced enclosure for keeping sheep. Provides a steady supply of food from herded animals. [PLACEHOLDER]",
   "hp": 500,
   "footprint": [
-    3,
-    3
+    2,
+    2
   ],
   "build_time": 30,
   "build_cost": {
     "wood": 100
   },
   "population_bonus": 0,
-  "garrison_capacity": 6,
+  "garrison_capacity": 4,
   "is_drop_off": true,
   "drop_off_types": [
     "food"
@@ -22,7 +22,7 @@
   "age_required": 0,
   "required_techs": ["animal_husbandry"],
   "placement_constraint": "",
-  "food_rate": 5,
+  "food_rate": 1.25,
   "defense": 0,
   "los": 4
 }
