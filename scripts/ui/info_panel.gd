@@ -112,11 +112,12 @@ func _build_ui() -> void:
 	_portrait.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
 	_portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_portrait.clip_contents = true
 	hbox.add_child(_portrait)
 	_portrait_texture = TextureRect.new()
 	_portrait_texture.custom_minimum_size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
 	_portrait_texture.size = Vector2(PORTRAIT_SIZE, PORTRAIT_SIZE)
-	_portrait_texture.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_portrait_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_portrait_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_portrait_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_portrait_texture.visible = false
