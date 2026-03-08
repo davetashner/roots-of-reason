@@ -49,6 +49,8 @@ var _pending_build_target_name: String = ""
 var _auto_build_radius: float = 640.0  # 10 tiles * 64
 var _auto_build_interval: float = 1.0
 var _auto_build_timer: float = 0.0
+var _build_stuck_timer: float = 0.0
+var _build_last_pos: Vector2 = Vector2.ZERO
 
 var _scene_root: Node = null
 var _pathfinder: Node = null
@@ -480,8 +482,10 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
-func _find_build_destination(building: Node2D) -> Vector2:
-	## Find the nearest passable cell adjacent to the building footprint.
+func _find_build_destination(building: Node2D, randomize_pick: bool = false) -> Vector2:
+	## Find a passable cell adjacent to the building footprint.
+	## When randomize_pick is true, pick a random valid cell instead of nearest
+	## to spread multiple villagers across different sides of the building.
 	if not ("grid_pos" in building and "footprint" in building) or _pathfinder == null:
 		return building.global_position
 	var footprint_set: Dictionary = {}
@@ -489,6 +493,7 @@ func _find_build_destination(building: Node2D) -> Vector2:
 	for cell: Vector2i in cells:
 		footprint_set[cell] = true
 	var origin_screen := IsoUtils.grid_to_screen(Vector2(building.grid_pos))
+	var candidates: Array[Vector2] = []
 	var best_pos := building.global_position
 	var best_dist := INF
 	for cell: Vector2i in cells:
@@ -502,10 +507,13 @@ func _find_build_destination(building: Node2D) -> Vector2:
 				if _pathfinder.has_method("is_cell_solid") and _pathfinder.is_cell_solid(neighbor):
 					continue
 				var nb_pos := building.global_position + IsoUtils.grid_to_screen(Vector2(neighbor)) - origin_screen
+				candidates.append(nb_pos)
 				var d := position.distance_to(nb_pos)
 				if d < best_dist:
 					best_dist = d
 					best_pos = nb_pos
+	if randomize_pick and candidates.size() > 1:
+		return candidates[randi() % candidates.size()]
 	return best_pos
 
 
@@ -535,11 +543,25 @@ func _tick_build(game_delta: float) -> void:
 		return
 	var dist: float = position.distance_to(_nearest_footprint_pos(_build_target))
 	if dist > _build_reach:
+		# Detect if stuck: not moving or barely moving toward the target
+		if not _moving:
+			# Stopped but out of range — re-path to building
+			_repath_to_build_target()
+		else:
+			_build_stuck_timer += game_delta
+			if _build_stuck_timer > 1.5:
+				var moved := position.distance_to(_build_last_pos)
+				if moved < 3.0:
+					# Barely moved in 1.5s — re-path to a different cell
+					_repath_to_build_target()
+				_build_stuck_timer = 0.0
+				_build_last_pos = position
 		return
 	# Stop moving — we're in range
 	_moving = false
 	_path.clear()
 	_path_index = 0
+	_build_stuck_timer = 0.0
 	# Apply build work: build_speed / build_time per second, scaled by civ bonus
 	var build_time: float = _build_target._build_time
 	var civ_mult: float = _get_civ_build_multiplier()
@@ -596,12 +618,29 @@ func assign_gather_target(node: Node2D, gather_offset: Vector2 = Vector2.ZERO) -
 	_gatherer.assign_target(node, gather_offset)
 
 
+func _repath_to_build_target() -> void:
+	## Re-path to build target using a random adjacent cell to avoid convergence.
+	if _build_target == null or not is_instance_valid(_build_target):
+		return
+	var dest := _find_build_destination(_build_target, true)
+	_build_stuck_timer = 0.0
+	_build_last_pos = position
+	if _pathfinder and _pathfinder.has_method("find_path_world"):
+		var path: Array[Vector2] = _pathfinder.find_path_world(position, dest)
+		if path.size() > 0:
+			follow_path(path)
+			return
+	move_to(dest)
+
+
 func assign_build_target(building: Node2D) -> void:
 	_cancel_gather()
 	_cancel_combat()
 	_cancel_feed()
 	_cancel_explore()
 	_build_target = building
+	_build_stuck_timer = 0.0
+	_build_last_pos = position
 	var dest := _find_build_destination(building)
 	if _pathfinder and _pathfinder.has_method("find_path_world"):
 		var path: Array[Vector2] = _pathfinder.find_path_world(position, dest)
