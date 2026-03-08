@@ -350,8 +350,8 @@ func _on_detail_research_pressed(tech_id: String) -> void:
 		return
 	if _tech_manager.can_research(_player_id, tech_id):
 		_tech_manager.start_research(_player_id, tech_id)
-		refresh()
-		_show_detail_panel(tech_id)
+		_hide_detail_panel()
+		toggle_visible()
 
 
 func _load_visibility_config() -> void:
