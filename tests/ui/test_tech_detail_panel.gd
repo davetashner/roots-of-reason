@@ -57,8 +57,8 @@ func _create_tech_manager() -> Node:
 	return node
 
 
-func _create_viewer(tm: Node) -> PanelContainer:
-	var viewer := PanelContainer.new()
+func _create_viewer(tm: Node) -> Panel:
+	var viewer := Panel.new()
 	viewer.name = "TechTreeViewer"
 	viewer.set_script(TechTreeViewerScript)
 	add_child(viewer)
@@ -75,7 +75,7 @@ func _research_tech(tm: Node, player_id: int, tech_id: String) -> void:
 	tm._complete_research(player_id)
 
 
-func _get_detail_vbox(viewer: PanelContainer) -> VBoxContainer:
+func _get_detail_vbox(viewer: Panel) -> VBoxContainer:
 	## Convenience: returns the VBoxContainer inside the detail panel.
 	var panel: PanelContainer = viewer.get_detail_panel()
 	return panel.get_node("DetailScroll/DetailVBox") as VBoxContainer
@@ -224,7 +224,7 @@ func test_detail_panel_shows_effects() -> void:
 	# stone_tools has effects: {economic_bonus: {gather_rate: 0.1}}
 	viewer._show_detail_panel("stone_tools")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
-	var effects_lbl: Label = vbox.get_node("DetailEffects") as Label
+	var effects_lbl: Label = vbox.get_node("DetailEffectsMargin/DetailEffects") as Label
 	var effects_header: Label = vbox.get_node("DetailEffectsHeader") as Label
 	assert_bool(effects_header.visible).is_true()
 	assert_bool(effects_lbl.visible).is_true()
@@ -237,7 +237,7 @@ func test_detail_panel_effects_hidden_for_tech_with_no_effects() -> void:
 	# Use nonexistent tech — no effects in cache
 	viewer._show_detail_panel("nonexistent_tech")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
-	var effects_lbl: Label = vbox.get_node("DetailEffects") as Label
+	var effects_lbl: Label = vbox.get_node("DetailEffectsMargin/DetailEffects") as Label
 	var effects_header: Label = vbox.get_node("DetailEffectsHeader") as Label
 	assert_bool(effects_header.visible).is_false()
 	assert_bool(effects_lbl.visible).is_false()
@@ -254,7 +254,7 @@ func test_detail_panel_shows_prerequisites() -> void:
 	viewer._show_detail_panel("animal_husbandry")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
 	var prereq_header: Label = vbox.get_node("DetailPrereqHeader") as Label
-	var prereq_lbl: Label = vbox.get_node("DetailPrereqs") as Label
+	var prereq_lbl: Label = vbox.get_node("DetailPrereqsMargin/DetailPrereqs") as Label
 	assert_bool(prereq_header.visible).is_true()
 	assert_bool(prereq_lbl.visible).is_true()
 	assert_str(prereq_lbl.text).contains("Stone Tools")
@@ -266,7 +266,7 @@ func test_detail_panel_prereq_shows_done_marker_when_researched() -> void:
 	var viewer := _create_viewer(tm)
 	viewer._show_detail_panel("animal_husbandry")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
-	var prereq_lbl: Label = vbox.get_node("DetailPrereqs") as Label
+	var prereq_lbl: Label = vbox.get_node("DetailPrereqsMargin/DetailPrereqs") as Label
 	assert_str(prereq_lbl.text).contains("(done)")
 
 
@@ -276,7 +276,7 @@ func test_detail_panel_prereq_shows_needed_marker_when_not_researched() -> void:
 	var viewer := _create_viewer(tm)
 	viewer._show_detail_panel("animal_husbandry")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
-	var prereq_lbl: Label = vbox.get_node("DetailPrereqs") as Label
+	var prereq_lbl: Label = vbox.get_node("DetailPrereqsMargin/DetailPrereqs") as Label
 	assert_str(prereq_lbl.text).contains("(needed)")
 
 
@@ -288,7 +288,7 @@ func test_detail_panel_prereqs_hidden_for_root_tech() -> void:
 	viewer._show_detail_panel("stone_tools")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
 	var prereq_header: Label = vbox.get_node("DetailPrereqHeader") as Label
-	var prereq_lbl: Label = vbox.get_node("DetailPrereqs") as Label
+	var prereq_lbl: Label = vbox.get_node("DetailPrereqsMargin/DetailPrereqs") as Label
 	assert_bool(prereq_header.visible).is_false()
 	assert_bool(prereq_lbl.visible).is_false()
 
@@ -304,7 +304,7 @@ func test_detail_panel_shows_leads_to() -> void:
 	viewer._show_detail_panel("stone_tools")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
 	var leads_header: Label = vbox.get_node("DetailLeadsToHeader") as Label
-	var leads_lbl: Label = vbox.get_node("DetailLeadsTo") as Label
+	var leads_lbl: Label = vbox.get_node("DetailLeadsToMargin/DetailLeadsTo") as Label
 	assert_bool(leads_header.visible).is_true()
 	assert_bool(leads_lbl.visible).is_true()
 	assert_str(leads_lbl.text).is_not_empty()
@@ -586,7 +586,7 @@ func test_detail_panel_shows_unlocked_buildings() -> void:
 	viewer._show_detail_panel("stone_tools")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
 	var unlocks_header: Label = vbox.get_node("DetailUnlocksHeader") as Label
-	var unlocks_lbl: Label = vbox.get_node("DetailUnlocks") as Label
+	var unlocks_lbl: Label = vbox.get_node("DetailUnlocksMargin/DetailUnlocks") as Label
 	assert_bool(unlocks_header.visible).is_true()
 	assert_bool(unlocks_lbl.visible).is_true()
 	assert_str(unlocks_lbl.text).contains("Mining Camp")
@@ -599,7 +599,7 @@ func test_detail_panel_shows_unlocked_units() -> void:
 	# bronze_working has unlock_buildings: ["barracks"], unlock_units: ["infantry"]
 	viewer._show_detail_panel("bronze_working")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
-	var unlocks_lbl: Label = vbox.get_node("DetailUnlocks") as Label
+	var unlocks_lbl: Label = vbox.get_node("DetailUnlocksMargin/DetailUnlocks") as Label
 	assert_bool(unlocks_lbl.visible).is_true()
 	assert_str(unlocks_lbl.text).contains("Infantry")
 	assert_str(unlocks_lbl.text).contains("Barracks")
@@ -612,7 +612,7 @@ func test_detail_panel_unlocks_hidden_when_none() -> void:
 	viewer._show_detail_panel("fire_mastery")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
 	var unlocks_header: Label = vbox.get_node("DetailUnlocksHeader") as Label
-	var unlocks_lbl: Label = vbox.get_node("DetailUnlocks") as Label
+	var unlocks_lbl: Label = vbox.get_node("DetailUnlocksMargin/DetailUnlocks") as Label
 	assert_bool(unlocks_header.visible).is_false()
 	assert_bool(unlocks_lbl.visible).is_false()
 
@@ -624,7 +624,7 @@ func test_unlocks_not_in_benefits_section() -> void:
 	# stone_tools has unlock_buildings in effects — should NOT appear in Benefits
 	viewer._show_detail_panel("stone_tools")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
-	var effects_lbl: Label = vbox.get_node("DetailEffects") as Label
+	var effects_lbl: Label = vbox.get_node("DetailEffectsMargin/DetailEffects") as Label
 	assert_str(effects_lbl.text).not_contains("Unlock Buildings")
 	assert_str(effects_lbl.text).not_contains("Unlock Units")
 
@@ -639,7 +639,7 @@ func test_decimal_fraction_formatted_as_percentage() -> void:
 	# stone_tools has effects: {economic_bonus: {gather_rate: 0.1}}
 	viewer._show_detail_panel("stone_tools")
 	var vbox: VBoxContainer = _get_detail_vbox(viewer)
-	var effects_lbl: Label = vbox.get_node("DetailEffects") as Label
+	var effects_lbl: Label = vbox.get_node("DetailEffectsMargin/DetailEffects") as Label
 	assert_str(effects_lbl.text).contains("10%")
 	assert_str(effects_lbl.text).not_contains("0.1")
 

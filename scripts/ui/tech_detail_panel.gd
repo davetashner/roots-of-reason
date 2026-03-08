@@ -13,9 +13,9 @@ const COLOR_UNAFFORDABLE := Color("#2196F3")
 const COLOR_LOCKED := Color("#666666")
 const COLOR_RESEARCHING := Color("#FFA726")
 
-const DETAIL_IMAGE_SIZE := Vector2(256, 256)
+const DETAIL_IMAGE_SIZE := Vector2(180, 180)
 const TECH_SPRITE_PATH := "res://assets/sprites/tech/%s.png"
-const PANEL_WIDTH: float = 460.0
+const PANEL_WIDTH: float = 420.0
 const PANEL_HEIGHT: float = 600.0
 const SLIDE_DURATION: float = 0.3
 
@@ -35,7 +35,7 @@ func _init() -> void:
 	style.border_color = Color(0.4, 0.4, 0.6)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(6)
-	style.set_content_margin_all(12)
+	style.set_content_margin_all(20)
 	add_theme_stylebox_override("panel", style)
 
 
@@ -150,21 +150,23 @@ func show_tech(
 
 	# Effects
 	var effects: Dictionary = data.get("effects", {})
-	var effects_lbl: Label = vbox.get_node("DetailEffects")
+	var effects_lbl: Label = vbox.get_node("DetailEffectsMargin/DetailEffects")
 	var effects_header: Label = vbox.get_node("DetailEffectsHeader")
 	var formatted_effects: String = _format_effects(effects)
 	if formatted_effects != "":
 		effects_lbl.text = formatted_effects
 		effects_header.visible = true
 		effects_lbl.visible = true
+		effects_lbl.get_parent().visible = true
 	else:
 		effects_header.visible = false
 		effects_lbl.visible = false
+		effects_lbl.get_parent().visible = false
 
 	# Buildings unlocked
 	var unlock_buildings: Array = effects.get("unlock_buildings", [])
 	var unlocks_header: Label = vbox.get_node("DetailUnlocksHeader")
-	var unlocks_lbl: Label = vbox.get_node("DetailUnlocks")
+	var unlocks_lbl: Label = vbox.get_node("DetailUnlocksMargin/DetailUnlocks")
 	var unlock_parts: Array[String] = []
 	for bldg_name: Variant in unlock_buildings:
 		unlock_parts.append(str(bldg_name).replace("_", " ").capitalize())
@@ -176,31 +178,37 @@ func show_tech(
 		unlocks_lbl.text = "\n".join(unlock_parts)
 		unlocks_header.visible = true
 		unlocks_lbl.visible = true
+		unlocks_lbl.get_parent().visible = true
 	else:
 		unlocks_header.visible = false
 		unlocks_lbl.visible = false
+		unlocks_lbl.get_parent().visible = false
 
 	# Prerequisites
 	var prereq_header: Label = vbox.get_node("DetailPrereqHeader")
-	var prereq_lbl: Label = vbox.get_node("DetailPrereqs")
+	var prereq_lbl: Label = vbox.get_node("DetailPrereqsMargin/DetailPrereqs")
 	if not prereq_info.is_empty():
 		prereq_lbl.text = "\n".join(prereq_info)
 		prereq_header.visible = true
 		prereq_lbl.visible = true
+		prereq_lbl.get_parent().visible = true
 	else:
 		prereq_header.visible = false
 		prereq_lbl.visible = false
+		prereq_lbl.get_parent().visible = false
 
 	# Leads to
 	var leads_header: Label = vbox.get_node("DetailLeadsToHeader")
-	var leads_lbl: Label = vbox.get_node("DetailLeadsTo")
+	var leads_lbl: Label = vbox.get_node("DetailLeadsToMargin/DetailLeadsTo")
 	if not leads_to_info.is_empty():
 		leads_lbl.text = "\n".join(leads_to_info)
 		leads_header.visible = true
 		leads_lbl.visible = true
+		leads_lbl.get_parent().visible = true
 	else:
 		leads_header.visible = false
 		leads_lbl.visible = false
+		leads_lbl.get_parent().visible = false
 
 	# Research button
 	var research_btn: Button = vbox.get_node("DetailResearchBtn")
@@ -275,7 +283,7 @@ func _build_contents() -> void:
 	var vbox := VBoxContainer.new()
 	vbox.name = "DetailVBox"
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.add_theme_constant_override("separation", 6)
 	scroll.add_child(vbox)
 
 	# Close button row
@@ -346,14 +354,14 @@ func _build_contents() -> void:
 	_add_label(vbox, "DetailTime", 14, Color.WHITE)
 	vbox.add_child(HSeparator.new())
 	_add_section_header(vbox, "DetailEffectsHeader", "Benefits", Color(0.7, 0.9, 0.7))
-	_add_label(vbox, "DetailEffects", 13, Color(0.8, 0.8, 0.8))
+	_add_indented_label(vbox, "DetailEffects", 13, Color(0.8, 0.8, 0.8))
 	_add_section_header(vbox, "DetailUnlocksHeader", "Unlocks", Color(0.9, 0.75, 0.5))
-	_add_label(vbox, "DetailUnlocks", 13, Color(0.8, 0.8, 0.8))
+	_add_indented_label(vbox, "DetailUnlocks", 13, Color(0.8, 0.8, 0.8))
 	vbox.add_child(HSeparator.new())
 	_add_section_header(vbox, "DetailPrereqHeader", "Requires", Color(0.7, 0.7, 0.9))
-	_add_label(vbox, "DetailPrereqs", 13, Color(0.8, 0.8, 0.8))
+	_add_indented_label(vbox, "DetailPrereqs", 13, Color(0.8, 0.8, 0.8))
 	_add_section_header(vbox, "DetailLeadsToHeader", "Leads To", Color(0.9, 0.8, 0.6))
-	_add_label(vbox, "DetailLeadsTo", 13, Color(0.8, 0.8, 0.8))
+	_add_indented_label(vbox, "DetailLeadsTo", 13, Color(0.8, 0.8, 0.8))
 	vbox.add_child(HSeparator.new())
 
 	# Research button
@@ -373,6 +381,19 @@ func _add_label(parent: VBoxContainer, lbl_name: String, font_size: int, color: 
 	lbl.add_theme_color_override("font_color", color)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(lbl)
+
+
+func _add_indented_label(parent: VBoxContainer, lbl_name: String, font_size: int, color: Color) -> void:
+	var margin := MarginContainer.new()
+	margin.name = lbl_name + "Margin"
+	margin.add_theme_constant_override("margin_left", 12)
+	parent.add_child(margin)
+	var lbl := Label.new()
+	lbl.name = lbl_name
+	lbl.add_theme_font_size_override("font_size", font_size)
+	lbl.add_theme_color_override("font_color", color)
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	margin.add_child(lbl)
 
 
 func _add_section_header(parent: VBoxContainer, lbl_name: String, text: String, color: Color) -> void:
