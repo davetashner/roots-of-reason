@@ -13,7 +13,7 @@
     "wood": 100
   },
   "population_bonus": 0,
-  "garrison_capacity": 0,
+  "garrison_capacity": 6,
   "is_drop_off": true,
   "drop_off_types": [
     "food"
