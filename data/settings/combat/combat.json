@@ -37,5 +37,12 @@
     "ungarrison_radius_tiles": 2,
     "garrison_reach_tiles": 2,
     "garrison_load_time": 0.5
+  },
+  "garrison_heal": {
+    "interval": 3.0,
+    "hp_per_tick": 1,
+    "required_tech": "herbal_medicine",
+    "building_types": ["town_center"],
+    "unit_types": ["villager"]
   }
 }

@@ -323,9 +323,10 @@
     "research_time": 40,
     "prerequisites": ["agriculture"],
     "effects": {
-      "war_survival": { "chance": 0.10, "hp_flat": 1 }
+      "war_survival": { "chance": 0.10, "hp_flat": 1 },
+      "garrison_heal": true
     },
-    "description": "Harvest medicinal plants to treat battlefield injuries. Gives wounded soldiers a 10% chance to survive lethal damage.",
+    "description": "Harvest medicinal plants to treat battlefield injuries. Gives wounded soldiers a 10% chance to survive lethal damage and allows Town Centers to slowly heal garrisoned villagers.",
     "flavor_text": "Poultices and tinctures pull soldiers back from the brink."
   },
   {

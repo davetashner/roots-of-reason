@@ -340,3 +340,130 @@ func test_deselect_hides_overlay() -> void:
 func test_selection_overlay_z_index_above_sprite() -> void:
 	var b := _create_building(false)
 	assert_int(b._selection_overlay.z_index).is_greater(0)
+
+
+# -- Garrison Heal --
+
+
+class MockTechManager:
+	extends Node
+
+	var _researched: Dictionary = {}
+
+	func mark_researched(tech_id: String, player_id: int) -> void:
+		if not _researched.has(player_id):
+			_researched[player_id] = []
+		_researched[player_id].append(tech_id)
+
+	func is_tech_researched(tech_id: String, player_id: int = 0) -> bool:
+		var techs: Array = _researched.get(player_id, [])
+		return tech_id in techs
+
+
+class HealableUnit:
+	extends Node2D
+	var unit_type: String = "villager"
+	var hp: int = 5
+	var max_hp: int = 10
+	var owner_id: int = 0
+
+
+func _create_heal_building() -> Node2D:
+	var b := _create_building(false)
+	b.building_name = "town_center"
+	b.garrison_capacity = 15
+	b._garrison_heal_config = {
+		"interval": 3.0,
+		"hp_per_tick": 1,
+		"required_tech": "herbal_medicine",
+		"building_types": ["town_center"],
+		"unit_types": ["villager"],
+	}
+	return b
+
+
+func _add_mock_tech_manager(researched: bool = true) -> MockTechManager:
+	var tm := MockTechManager.new()
+	tm.name = "TechManager"
+	if researched:
+		tm.mark_researched("herbal_medicine", 0)
+	get_tree().root.add_child(tm)
+	return tm
+
+
+func test_garrison_heal_heals_damaged_villager() -> void:
+	var tm := _add_mock_tech_manager(true)
+	var b := _create_heal_building()
+	var u := HealableUnit.new()
+	add_child(u)
+	auto_free(u)
+	b._garrisoned_units.append(u)
+	# Accumulate past the interval
+	b._tick_garrison_heal(3.0)
+	assert_int(u.hp).is_equal(6)
+	tm.queue_free()
+
+
+func test_garrison_heal_does_not_exceed_max_hp() -> void:
+	var tm := _add_mock_tech_manager(true)
+	var b := _create_heal_building()
+	var u := HealableUnit.new()
+	u.hp = 10
+	u.max_hp = 10
+	add_child(u)
+	auto_free(u)
+	b._garrisoned_units.append(u)
+	b._tick_garrison_heal(3.0)
+	assert_int(u.hp).is_equal(10)
+	tm.queue_free()
+
+
+func test_garrison_heal_requires_tech() -> void:
+	var tm := _add_mock_tech_manager(false)
+	var b := _create_heal_building()
+	var u := HealableUnit.new()
+	add_child(u)
+	auto_free(u)
+	b._garrisoned_units.append(u)
+	b._tick_garrison_heal(3.0)
+	assert_int(u.hp).is_equal(5)
+	tm.queue_free()
+
+
+func test_garrison_heal_only_town_center() -> void:
+	var tm := _add_mock_tech_manager(true)
+	var b := _create_heal_building()
+	b.building_name = "barracks"
+	var u := HealableUnit.new()
+	add_child(u)
+	auto_free(u)
+	b._garrisoned_units.append(u)
+	b._tick_garrison_heal(3.0)
+	assert_int(u.hp).is_equal(5)
+	tm.queue_free()
+
+
+func test_garrison_heal_only_villagers() -> void:
+	var tm := _add_mock_tech_manager(true)
+	var b := _create_heal_building()
+	var u := HealableUnit.new()
+	u.unit_type = "infantry"
+	add_child(u)
+	auto_free(u)
+	b._garrisoned_units.append(u)
+	b._tick_garrison_heal(3.0)
+	assert_int(u.hp).is_equal(5)
+	tm.queue_free()
+
+
+func test_garrison_heal_accumulator_saved() -> void:
+	var b := _create_heal_building()
+	b._garrison_heal_accumulator = 1.5
+	var state: Dictionary = b.save_state()
+	assert_float(float(state.get("garrison_heal_accumulator", 0.0))).is_equal_approx(1.5, 0.01)
+
+
+func test_garrison_heal_accumulator_loaded() -> void:
+	var b := _create_heal_building()
+	b.load_state({"garrison_heal_accumulator": 2.0, "building_name": "town_center"})
+	assert_float(b._garrison_heal_accumulator).is_equal_approx(2.0, 0.01)
