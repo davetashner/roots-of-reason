@@ -74,6 +74,8 @@ func detect(world_pos: Vector2) -> Node:
 	for entity: Node in candidates:
 		if not is_instance_valid(entity):
 			continue
+		if entity is CanvasItem and not entity.visible:
+			continue
 		if not entity.has_method("is_point_inside"):
 			continue
 		if entity.is_point_inside(world_pos):

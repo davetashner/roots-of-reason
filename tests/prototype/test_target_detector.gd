@@ -67,3 +67,23 @@ func test_detect_skips_freed_entities() -> void:
 	e1.free()
 	var result: Variant = detector.detect(Vector2(205, 200))
 	assert_object(result).is_same(e2)
+
+
+func test_detect_skips_invisible_entities() -> void:
+	var detector := _create_detector()
+	var hidden := _create_entity(Vector2(100, 100))
+	hidden.visible = false
+	var vis := _create_entity(Vector2(110, 100))
+	detector.register_entity(hidden)
+	detector.register_entity(vis)
+	var result: Variant = detector.detect(Vector2(105, 100))
+	assert_object(result).is_same(vis)
+
+
+func test_detect_invisible_entity_not_found_alone() -> void:
+	var detector := _create_detector()
+	var hidden := _create_entity(Vector2(100, 100))
+	hidden.visible = false
+	detector.register_entity(hidden)
+	var result: Variant = detector.detect(Vector2(105, 100))
+	assert_object(result).is_null()
