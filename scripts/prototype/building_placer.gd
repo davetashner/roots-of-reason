@@ -212,6 +212,9 @@ func _create_building(bname: String, grid_pos: Vector2i, footprint: Vector2i) ->
 	building.owner_id = _player_id
 	building.max_hp = int(_building_stats.get("hp", 100))
 	building.entity_category = "own_building" if _player_id == 0 else "enemy_building"
+	# Flip dock sprite when water is to the left (north/west in grid space)
+	if _building_stats.get("placement_constraint", "") == "adjacent_to_water":
+		building.flip_sprite = _is_water_to_left(grid_pos, footprint)
 	# Start under construction
 	building.under_construction = true
 	building.build_progress = 0.0
@@ -239,6 +242,41 @@ func _cleanup_ghost() -> void:
 func _get_footprint() -> Vector2i:
 	var fp: Array = _building_stats.get("footprint", [1, 1])
 	return Vector2i(int(fp[0]), int(fp[1]))
+
+
+func _is_water_to_left(grid_pos: Vector2i, footprint: Vector2i) -> bool:
+	## Check if adjacent water is predominantly to the left (lower screen X).
+	## In isometric space, screen-left means decreasing grid X or decreasing grid Y.
+	## Returns true when the sprite should be flipped horizontally.
+	if _map_node == null or not _map_node.has_method("get_terrain_at"):
+		return false
+	var water_terrains: Array[String] = ["water", "shallows", "deep_water"]
+	var cells := BuildingValidator.get_footprint_cells(grid_pos, footprint)
+	var left_count: int = 0
+	var right_count: int = 0
+	var directions: Array[Vector2i] = [
+		Vector2i(-1, -1),
+		Vector2i(0, -1),
+		Vector2i(1, -1),
+		Vector2i(-1, 0),
+		Vector2i(1, 0),
+		Vector2i(-1, 1),
+		Vector2i(0, 1),
+		Vector2i(1, 1),
+	]
+	for cell in cells:
+		for dir in directions:
+			var neighbor := cell + dir
+			if _map_node.get_terrain_at(neighbor) in water_terrains:
+				# In isometric: screen X increases with (grid_x - grid_y)
+				# Water at lower (grid_x - grid_y) relative to building center = left
+				var center_iso: int = grid_pos.x - grid_pos.y
+				var neighbor_iso: int = neighbor.x - neighbor.y
+				if neighbor_iso < center_iso:
+					left_count += 1
+				elif neighbor_iso > center_iso:
+					right_count += 1
+	return left_count > right_count
 
 
 func apply_building_effect(building: Node2D) -> void:
