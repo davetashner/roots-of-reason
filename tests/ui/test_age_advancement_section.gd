@@ -285,7 +285,7 @@ func test_tooltip_shows_costs() -> void:
 	assert_str(section._button.tooltip_text).contains("Cost:")
 
 
-func test_hidden_when_missing_techs() -> void:
+func test_visible_but_disabled_when_missing_techs() -> void:
 	var section := _create_section()
 	var adv := _create_mock_advancement()
 	var missing: Array[String] = ["stone_tools"]
@@ -293,7 +293,21 @@ func test_hidden_when_missing_techs() -> void:
 	section.setup(adv)
 	var building := _create_mock_building()
 	section.update_display(building)
-	assert_bool(section.visible).is_false()
+	assert_bool(section.visible).is_true()
+	assert_bool(section._button.disabled).is_true()
+
+
+func test_missing_techs_tooltip_lists_techs() -> void:
+	var section := _create_section()
+	var adv := _create_mock_advancement()
+	var missing: Array[String] = ["stone_tools", "fire_mastery"]
+	adv.set_meta("missing_techs", missing)
+	section.setup(adv)
+	var building := _create_mock_building()
+	section.update_display(building)
+	assert_str(section._button.tooltip_text).contains("Missing technologies:")
+	assert_str(section._button.tooltip_text).contains("Stone Tools")
+	assert_str(section._button.tooltip_text).contains("Fire Mastery")
 
 
 func test_button_disabled_when_insufficient_resources() -> void:
@@ -314,6 +328,28 @@ func test_button_disabled_when_insufficient_resources() -> void:
 	var building := _create_mock_building()
 	section.update_display(building)
 	assert_bool(section._button.disabled).is_true()
+
+
+func test_insufficient_resources_tooltip_shows_shortfall() -> void:
+	var section := _create_section()
+	var adv := _create_mock_advancement()
+	section.setup(adv)
+	(
+		ResourceManager
+		. init_player(
+			0,
+			{
+				ResourceManager.ResourceType.FOOD: 100,
+				ResourceManager.ResourceType.WOOD: 200,
+				ResourceManager.ResourceType.STONE: 50,
+			}
+		)
+	)
+	var building := _create_mock_building()
+	section.update_display(building)
+	assert_str(section._button.tooltip_text).contains("Insufficient resources:")
+	assert_str(section._button.tooltip_text).contains("Food: 100 / 200")
+	assert_str(section._button.tooltip_text).contains("Stone: 50 / 200")
 
 
 func test_button_enabled_when_can_advance() -> void:
