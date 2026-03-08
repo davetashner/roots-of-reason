@@ -641,6 +641,9 @@ func _update() -> void:
 		return
 	if _is_building(_tracked_entity):
 		_update_building_hp(_tracked_entity as Node2D)
+		if _tracked_entity == null or not is_instance_valid(_tracked_entity):
+			clear()
+			return
 		if _tracked_entity.under_construction:
 			var pct := int(_tracked_entity.build_progress * 100.0)
 			_stats_label.text = "Progress: %d%%" % pct
@@ -680,6 +683,9 @@ func _update() -> void:
 			if state_text != "":
 				new_stats += "\n" + state_text
 			_stats_label.text = new_stats
+		if _tracked_entity == null or not is_instance_valid(_tracked_entity):
+			clear()
+			return
 		_update_train_section(_tracked_entity as Node2D)
 		_update_queue_display(_tracked_entity as Node2D)
 		_update_age_section(_tracked_entity as Node2D)
@@ -830,6 +836,9 @@ func _get_carry_text(unit: Node2D) -> String:
 
 
 func _update_queue_display(building: Node2D) -> void:
+	if building == null or not is_instance_valid(building):
+		_hide_queue_section()
+		return
 	var pq: Node = building.get_node_or_null("ProductionQueue")
 	if pq == null or not pq.has_method("get_queue"):
 		_hide_queue_section()

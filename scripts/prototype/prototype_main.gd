@@ -15,6 +15,7 @@ const BATTLE_MUSIC_COOLDOWN := 10.0
 const BIRDS_SFX := "res://assets/audio/sfx/ambient/birds_chirping.ogg"
 const AMBIENT_INTERVAL_MIN := 20.0
 const AMBIENT_INTERVAL_MAX := 35.0
+const TECH_TREE_REMINDER_TIME := 180.0  # 3 minutes of game time
 
 var _camera: Camera2D
 var _input_handler: Node
@@ -71,6 +72,7 @@ var _fog_timer: float = 0.0
 var _battle_music_timer: float = 0.0
 var _ambient_timer: float = 0.0
 var _ambient_player: AudioStreamPlayer = null
+var _tech_tree_reminder_fired: bool = false
 
 
 func _ready() -> void:
@@ -126,6 +128,7 @@ func _process(delta: float) -> void:
 			_ambient_timer = randf_range(AMBIENT_INTERVAL_MIN, AMBIENT_INTERVAL_MAX)
 	if _flow != null:
 		_flow.tick_sheep_conversion(delta)
+	_check_tech_tree_reminder()
 
 
 func _setup_ambient_audio() -> void:
@@ -408,6 +411,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif key.keycode == KEY_T:
 				if _tech_tree_viewer != null:
 					_tech_tree_viewer.toggle_visible()
+					_tech_tree_reminder_fired = true
 
 
 func _toggle_pause_menu() -> void:
@@ -419,6 +423,28 @@ func _toggle_pause_menu() -> void:
 		_pause_menu.hide_menu()
 	else:
 		_pause_menu.show_menu()
+
+
+func _check_tech_tree_reminder() -> void:
+	if _tech_tree_reminder_fired:
+		return
+	if GameManager.game_time < TECH_TREE_REMINDER_TIME:
+		return
+	# Skip if the player already started or completed research
+	if _tech_manager != null:
+		if _tech_manager.get_current_research(0) != "":
+			_tech_tree_reminder_fired = true
+			return
+		if not _tech_manager.get_researched_techs(0).is_empty():
+			_tech_tree_reminder_fired = true
+			return
+	_tech_tree_reminder_fired = true
+	if _notification_panel != null:
+		_notification_panel.notify_center(
+			"Your civilization has begun to organize. Press [T] to research your first technology."
+		)
+	if _tech_tree_viewer != null and not _tech_tree_viewer.visible:
+		_tech_tree_viewer.toggle_visible()
 
 
 # -- Flow controller delegation (public API kept on root for signal compat) --

@@ -16,7 +16,6 @@
   "drop_off_types": [],
   "units_produced": [
     "infantry",
-    "archer",
     "cavalry"
   ],
   "age_required": 1,

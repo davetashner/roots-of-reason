@@ -1,0 +1,29 @@
+{
+  "name": "Archery Range",
+  "category": "military",
+  "hp": 900,
+  "footprint": [
+    2,
+    2
+  ],
+  "build_time": 40,
+  "build_cost": {
+    "wood": 150,
+    "gold": 25
+  },
+  "population_bonus": 0,
+  "garrison_capacity": 5,
+  "is_drop_off": false,
+  "drop_off_types": [],
+  "units_produced": [
+    "archer"
+  ],
+  "age_required": 1,
+  "required_techs": [
+    "archery"
+  ],
+  "placement_constraint": "",
+  "defense": 1,
+  "los": 6,
+  "select_sfx": "res://assets/audio/sfx/buildings/archery_range_select.ogg"
+}
