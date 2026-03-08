@@ -56,6 +56,8 @@ var _bar_width: float = 40.0
 var _bar_height: float = 5.0
 var _bar_offset_y: float = -30.0
 
+var _select_sfx: String = ""
+
 var _sprite: Sprite2D = null
 var _has_sprite: bool = false
 var _build_seq_texture: Texture2D = null
@@ -93,6 +95,7 @@ func _load_building_stats() -> void:
 	drop_off_types.clear()
 	for t in types:
 		drop_off_types.append(str(t))
+	_select_sfx = str(stats.get("select_sfx", ""))
 	# Load sheep pen food generation config
 	if building_name == "sheep_pen":
 		var fauna_cfg: Dictionary = GameUtils.dl_settings("map/fauna")
@@ -377,6 +380,8 @@ func select() -> void:
 	if _selection_overlay != null:
 		_selection_overlay.visible = true
 		_selection_overlay.queue_redraw()
+	if _select_sfx != "" and not under_construction:
+		AudioManager.play_ui_sound(_select_sfx)
 	queue_redraw()
 
 

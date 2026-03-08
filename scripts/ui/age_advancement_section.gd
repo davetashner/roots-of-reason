@@ -55,6 +55,9 @@ func setup(age_advancement: Node, player_id: int = 0) -> void:
 
 
 func update_display(building: Node2D) -> void:
+	if building == null or not is_instance_valid(building):
+		visible = false
+		return
 	if _age_advancement == null:
 		visible = false
 		return

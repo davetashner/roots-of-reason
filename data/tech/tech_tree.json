@@ -93,6 +93,20 @@
     }
   },
   {
+    "id": "archery",
+    "name": "Archery",
+    "age": 1,
+    "cost": { "wood": 150, "gold": 50 },
+    "research_time": 40,
+    "prerequisites": ["bronze_working"],
+    "effects": {
+      "unlock_buildings": ["archery_range"],
+      "unlock_units": ["archer"]
+    },
+    "description": "Craft bronze-tipped arrows and train dedicated bowmen. Unlocks the Archery Range and Archer units for ranged warfare.",
+    "flavor_text": "The arrow finds what the spear cannot reach."
+  },
+  {
     "id": "writing",
     "name": "Writing",
     "age": 1,
