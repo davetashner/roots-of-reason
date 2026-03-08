@@ -478,9 +478,10 @@
     "research_time": 60,
     "prerequisites": ["herbal_medicine"],
     "effects": {
-      "war_survival": { "chance": 0.20, "hp_percent": 0.05 }
+      "war_survival": { "chance": 0.20, "hp_percent": 0.05 },
+      "queue_capacity_multiplier": 2
     },
-    "description": "Train physicians in wound treatment and surgical procedures. Doubles the chance of soldiers surviving lethal damage in battle.",
+    "description": "Train physicians in wound treatment and surgical procedures. Doubles the chance of soldiers surviving lethal damage in battle and doubles unit production queue capacity.",
     "flavor_text": "Trained hands stitch what battle has torn."
   },
   {

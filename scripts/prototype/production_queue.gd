@@ -21,6 +21,7 @@ var _owner_id: int = 0
 var _queue: Array[String] = []
 var _costs_queue: Array[Dictionary] = []  # parallel array: parsed ResourceType costs
 var _max_queue_size: int = 5
+var _base_max_queue_size: int = 5
 var _progress: float = 0.0
 var _current_train_time: float = 0.0
 var _paused: bool = false
@@ -44,6 +45,7 @@ func _load_config() -> void:
 	if cfg.is_empty():
 		return
 	_max_queue_size = int(cfg.get("max_queue_size", _max_queue_size))
+	_base_max_queue_size = _max_queue_size
 	var offset: Array = cfg.get("rally_point_offset", [_rally_point_offset.x, _rally_point_offset.y])
 	if offset.size() >= 2:
 		_rally_point_offset = Vector2i(int(offset[0]), int(offset[1]))
@@ -62,6 +64,8 @@ func setup(
 	if _tech_manager == null:
 		_tech_manager = _find_tech_manager()
 	_build_unit_tech_requirements()
+	_connect_tech_signals()
+	_apply_existing_queue_techs()
 
 
 func _process(delta: float) -> void:
@@ -354,13 +358,7 @@ func _find_tech_manager() -> Node:
 func _build_unit_tech_requirements() -> void:
 	## Scans the tech tree for unlock_units effects and builds a reverse lookup.
 	_unit_tech_requirements.clear()
-	var tech_tree: Variant = null
-	if Engine.has_singleton("DataLoader"):
-		tech_tree = DataLoader.load_json("res://data/tech/tech_tree.json")
-	elif is_instance_valid(Engine.get_main_loop()):
-		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
-		if dl and dl.has_method("load_json"):
-			tech_tree = dl.load_json("res://data/tech/tech_tree.json")
+	var tech_tree: Variant = _load_tech_tree()
 	if tech_tree == null or not (tech_tree is Array):
 		return
 	for tech: Dictionary in tech_tree:
@@ -369,6 +367,58 @@ func _build_unit_tech_requirements() -> void:
 		var tech_id: String = str(tech.get("id", ""))
 		for unit_name: String in unlock_units:
 			_unit_tech_requirements[unit_name] = tech_id
+
+
+func _connect_tech_signals() -> void:
+	if _tech_manager == null:
+		return
+	if _tech_manager.has_signal("tech_researched"):
+		_tech_manager.tech_researched.connect(_on_tech_researched)
+
+
+func _apply_existing_queue_techs() -> void:
+	## Check if any queue-expanding tech is already researched at setup time.
+	if _tech_manager == null:
+		return
+	var multiplier: int = _get_queue_multiplier_from_tech_tree()
+	if multiplier > 1:
+		_max_queue_size = _base_max_queue_size * multiplier
+
+
+func _get_queue_multiplier_from_tech_tree() -> int:
+	## Scan the tech tree for researched techs with queue_capacity_multiplier.
+	var tech_tree: Variant = _load_tech_tree()
+	if tech_tree == null:
+		return 1
+	var multiplier: int = 1
+	for tech: Dictionary in tech_tree:
+		var effects: Dictionary = tech.get("effects", {})
+		if "queue_capacity_multiplier" not in effects:
+			continue
+		var tech_id: String = str(tech.get("id", ""))
+		if _tech_manager.has_method("is_tech_researched"):
+			if _tech_manager.is_tech_researched(tech_id, _owner_id):
+				multiplier *= int(effects["queue_capacity_multiplier"])
+	return multiplier
+
+
+func _on_tech_researched(player_id: int, _tech_id: String, effects: Dictionary) -> void:
+	if player_id != _owner_id:
+		return
+	if "queue_capacity_multiplier" not in effects:
+		return
+	var mult: int = int(effects["queue_capacity_multiplier"])
+	_max_queue_size = _base_max_queue_size * mult
+
+
+func _load_tech_tree() -> Variant:
+	if Engine.has_singleton("DataLoader"):
+		return DataLoader.load_json("res://data/tech/tech_tree.json")
+	if is_instance_valid(Engine.get_main_loop()):
+		var dl: Node = Engine.get_main_loop().root.get_node_or_null("DataLoader")
+		if dl and dl.has_method("load_json"):
+			return dl.load_json("res://data/tech/tech_tree.json")
+	return null
 
 
 func _is_unit_tech_unlocked(unit_type: String) -> bool:
@@ -412,6 +462,7 @@ func save_state() -> Dictionary:
 		"current_train_time": _current_train_time,
 		"paused": _paused,
 		"owner_id": _owner_id,
+		"max_queue_size": _max_queue_size,
 	}
 	if _has_rally_target:
 		state["rally_target_pos"] = [_rally_target_pos.x, _rally_target_pos.y]
@@ -431,6 +482,8 @@ func load_state(data: Dictionary) -> void:
 	_current_train_time = float(data.get("current_train_time", 0.0))
 	_paused = bool(data.get("paused", false))
 	_owner_id = int(data.get("owner_id", _owner_id))
+	if data.has("max_queue_size"):
+		_max_queue_size = int(data["max_queue_size"])
 	if data.has("rally_target_pos"):
 		var rtp: Array = data["rally_target_pos"]
 		if rtp.size() >= 2:
