@@ -292,3 +292,44 @@ func test_save_load_preserves_progress() -> void:
 	# Progress should be approximately 10/20 = 0.5
 	assert_float(pq2._progress).is_greater(9.0)
 	assert_float(pq2._current_train_time).is_greater(0.0)
+
+
+func test_save_load_preserves_max_queue_size() -> void:
+	_init_resources()
+	var pq := _create_queue()
+	pq._max_queue_size = 10
+	var state: Dictionary = pq.save_state()
+	var pq2 := _create_queue()
+	pq2.load_state(state)
+	assert_int(pq2.get_max_queue_size()).is_equal(10)
+
+
+# --- Queue capacity tech ---
+
+
+func test_queue_capacity_multiplier_doubles_max() -> void:
+	_init_resources()
+	var pq := _create_queue()
+	assert_int(pq.get_max_queue_size()).is_equal(5)
+	var effects: Dictionary = {"queue_capacity_multiplier": 2}
+	pq._on_tech_researched(0, "surgery", effects)
+	assert_int(pq.get_max_queue_size()).is_equal(10)
+
+
+func test_queue_capacity_multiplier_ignores_other_player() -> void:
+	_init_resources()
+	var pq := _create_queue()
+	var effects: Dictionary = {"queue_capacity_multiplier": 2}
+	pq._on_tech_researched(1, "surgery", effects)
+	assert_int(pq.get_max_queue_size()).is_equal(5)
+
+
+func test_queue_capacity_allows_more_units() -> void:
+	_init_resources(5000)
+	var pq := _create_queue()
+	var effects: Dictionary = {"queue_capacity_multiplier": 2}
+	pq._on_tech_researched(0, "surgery", effects)
+	for i in 10:
+		assert_bool(pq.add_to_queue("villager")).is_true()
+	assert_bool(pq.add_to_queue("villager")).is_false()
+	assert_int(pq.get_queue().size()).is_equal(10)
