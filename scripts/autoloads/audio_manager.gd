@@ -72,6 +72,8 @@ func play_music(track_path: String) -> void:
 	if stream == null:
 		push_warning("AudioManager: Music track not found: %s" % track_path)
 		return
+	if stream is AudioStreamOggVorbis:
+		(stream as AudioStreamOggVorbis).loop = true
 	_crossfade_to(stream)
 	_current_music_track = track_path
 	music_changed.emit(_current_music_track)

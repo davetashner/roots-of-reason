@@ -57,8 +57,8 @@ func _create_tech_manager() -> Node:
 	return node
 
 
-func _create_viewer(tm: Node) -> Panel:
-	var viewer := Panel.new()
+func _create_viewer(tm: Node) -> PanelContainer:
+	var viewer := PanelContainer.new()
 	viewer.name = "TechTreeViewer"
 	viewer.set_script(TechTreeViewerScript)
 	add_child(viewer)
@@ -75,7 +75,7 @@ func _research_tech(tm: Node, player_id: int, tech_id: String) -> void:
 	tm._complete_research(player_id)
 
 
-func _get_detail_vbox(viewer: Panel) -> VBoxContainer:
+func _get_detail_vbox(viewer: PanelContainer) -> VBoxContainer:
 	## Convenience: returns the VBoxContainer inside the detail panel.
 	var panel: PanelContainer = viewer.get_detail_panel()
 	return panel.get_node("DetailScroll/DetailVBox") as VBoxContainer
