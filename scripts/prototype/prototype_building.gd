@@ -50,6 +50,8 @@ var _farm_food_node: Node2D = null
 var _farm_max_food: int = 0
 var _sheep_food_per_unit: float = 0.0
 var _sheep_food_accumulator: float = 0.0
+var _garrison_heal_accumulator: float = 0.0
+var _garrison_heal_config: Dictionary = {}
 
 var _combat_config: Dictionary = {}
 var _construction_alpha: float = 0.4
@@ -119,6 +121,7 @@ func _load_combat_config() -> void:
 	if not cfg.is_empty():
 		_combat_config = cfg
 		_garrison_config = cfg.get("garrison", {})
+		_garrison_heal_config = cfg.get("garrison_heal", {})
 
 
 func _load_destruction_config() -> void:
@@ -317,6 +320,7 @@ func _process(delta: float) -> void:
 	if not _garrisoned_units.is_empty():
 		_tick_garrison_arrows(game_delta)
 		_tick_sheep_food(game_delta)
+		_tick_garrison_heal(game_delta)
 
 
 func get_entity_category() -> String:
@@ -702,6 +706,34 @@ func _tick_sheep_food(game_delta: float) -> void:
 		ResourceManager.add_resource(owner_id, ResourceManager.ResourceType.FOOD, food_to_add)
 
 
+func _tick_garrison_heal(game_delta: float) -> void:
+	if _garrison_heal_config.is_empty():
+		return
+	var allowed_buildings: Array = _garrison_heal_config.get("building_types", [])
+	if not allowed_buildings.has(building_name):
+		return
+	var tech_id: String = str(_garrison_heal_config.get("required_tech", ""))
+	if not tech_id.is_empty():
+		var tech_manager := get_node_or_null("/root/TechManager")
+		if tech_manager == null or not tech_manager.is_tech_researched(tech_id, owner_id):
+			return
+	var interval: float = float(_garrison_heal_config.get("interval", 3.0))
+	var hp_per_tick: int = int(_garrison_heal_config.get("hp_per_tick", 1))
+	var allowed_units: Array = _garrison_heal_config.get("unit_types", [])
+	_garrison_heal_accumulator += game_delta
+	if _garrison_heal_accumulator < interval:
+		return
+	_garrison_heal_accumulator -= interval
+	for unit in _garrisoned_units:
+		if not is_instance_valid(unit):
+			continue
+		if not allowed_units.is_empty() and "unit_type" in unit:
+			if not allowed_units.has(unit.unit_type):
+				continue
+		if "hp" in unit and "max_hp" in unit and unit.hp < unit.max_hp:
+			unit.hp = mini(unit.hp + hp_per_tick, unit.max_hp)
+
+
 func _find_nearest_hostile(max_range: float) -> Node2D:
 	var root := get_parent()
 	if root == null:
@@ -767,6 +799,8 @@ func save_state() -> Dictionary:
 		state["farm_food_total_yield"] = _farm_food_node.total_yield
 	if _sheep_food_accumulator > 0.0:
 		state["sheep_food_accumulator"] = _sheep_food_accumulator
+	if _garrison_heal_accumulator > 0.0:
+		state["garrison_heal_accumulator"] = _garrison_heal_accumulator
 	return state
 
 
@@ -797,6 +831,7 @@ func load_state(data: Dictionary) -> void:
 	for n in g_names:
 		_pending_garrison_names.append(str(n))
 	_sheep_food_accumulator = float(data.get("sheep_food_accumulator", 0.0))
+	_garrison_heal_accumulator = float(data.get("garrison_heal_accumulator", 0.0))
 	_farm_max_food = int(data.get("farm_food_total_yield", 0))
 	if _is_ruins:
 		entity_category = "ruins"
