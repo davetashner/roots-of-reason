@@ -764,3 +764,42 @@ func test_drop_off_found_inside_building_layer() -> void:
 	gc.tick(1.0)
 	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_DROP_OFF)
 	assert_object(gc.drop_off_target).is_same(b)
+
+
+# ---------------------------------------------------------------------------
+# BuildingLayer regression — replacement resource inside a sub-layer must be found
+# ---------------------------------------------------------------------------
+
+
+func test_replacement_resource_found_inside_building_layer() -> void:
+	var layer := Node2D.new()
+	layer.name = "BuildingLayer"
+	_root.add_child(layer)
+	auto_free(layer)
+	var res1 := _make_resource(Vector2(50, 0), "wood", 0)
+	var res2 := ResourceFactory.create_resource_node({position = Vector2(80, 0), resource_type = "wood", current_yield = 100})
+	layer.add_child(res2)
+	auto_free(res2)
+	var gc := _make_component()
+	gc.assign_target(res1)
+	_unit._moving = false
+	_unit.position = res1.position
+	gc.gather_state = GathererComponentScript.GatherState.GATHERING
+	gc.tick(1.0)
+	# Resource depleted, should find replacement in sub-layer
+	assert_object(gc.gather_target).is_same(res2)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_RESOURCE)
+
+
+func test_stuck_moving_to_resource_tries_replacement() -> void:
+	var res1 := _make_resource(Vector2(500, 0), "wood", 100)
+	var res2 := _make_resource(Vector2(80, 0), "wood", 100)
+	var gc := _make_component()
+	gc.assign_target(res1)
+	# Simulate move_to() failure — unit is not moving and far from target
+	_unit._moving = false
+	_unit.position = Vector2.ZERO
+	gc.tick(1.0)
+	# Should try replacement since stuck (not moving, not in range)
+	assert_object(gc.gather_target).is_same(res2)
+	assert_int(gc.gather_state).is_equal(GathererComponentScript.GatherState.MOVING_TO_RESOURCE)
