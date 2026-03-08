@@ -1,4 +1,4 @@
-extends Panel
+extends PanelContainer
 ## In-game tech tree viewer showing all ages, techs, and dependencies.
 ## Displays a scrollable grid of tech buttons organized by age columns.
 ## Color-coded: gold (researched), green (available), blue (prereqs met but
