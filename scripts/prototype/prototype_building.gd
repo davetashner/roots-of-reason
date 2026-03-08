@@ -25,6 +25,7 @@ var garrison_capacity: int = 0
 var under_construction: bool = false
 var build_progress: float = 0.0
 var last_attacker_id: int = -1
+var flip_sprite: bool = false
 var _build_time: float = 1.0
 
 var _is_ruins: bool = false
@@ -191,6 +192,8 @@ func _try_load_sprite() -> void:
 		var player_color := Color(0.2, 0.4, 0.9) if owner_id == 0 else Color(0.8, 0.2, 0.2)
 		mat.set_shader_parameter("player_color", player_color)
 		_sprite.material = mat
+	if flip_sprite:
+		_sprite.flip_h = true
 	add_child(_sprite)
 	_has_sprite = true
 	_update_sprite_appearance()
@@ -753,6 +756,7 @@ func save_state() -> Dictionary:
 		"garrisoned_units": garrisoned_names,
 		"los": los,
 		"dog_los_bonus": _dog_los_bonus,
+		"flip_sprite": flip_sprite,
 	}
 	if _farm_food_node != null and is_instance_valid(_farm_food_node):
 		state["farm_food_current_yield"] = _farm_food_node.current_yield
@@ -783,6 +787,7 @@ func load_state(data: Dictionary) -> void:
 	garrison_capacity = int(data.get("garrison_capacity", 0))
 	los = int(data.get("los", 0))
 	_dog_los_bonus = int(data.get("dog_los_bonus", 0))
+	flip_sprite = bool(data.get("flip_sprite", false))
 	_pending_garrison_names.clear()
 	var g_names: Array = data.get("garrisoned_units", [])
 	for n in g_names:
