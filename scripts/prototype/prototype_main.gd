@@ -344,9 +344,9 @@ func _setup_camera() -> void:
 		min_pos.y = minf(min_pos.y, corner.y)
 		max_pos.x = maxf(max_pos.x, corner.x)
 		max_pos.y = maxf(max_pos.y, corner.y)
-	# Shrink bounds inward to reduce grey area visible at diamond corners
+	# Shrink bounds slightly to trim empty void at diamond corners
 	var raw_bounds := Rect2(min_pos, max_pos - min_pos)
-	var inset := raw_bounds.size * 0.15
+	var inset := raw_bounds.size * 0.03
 	var bounds := Rect2(raw_bounds.position + inset, raw_bounds.size - inset * 2.0)
 	_camera.setup(bounds)
 
