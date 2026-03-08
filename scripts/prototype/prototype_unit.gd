@@ -545,8 +545,9 @@ func _tick_build(game_delta: float) -> void:
 	var civ_mult: float = _get_civ_build_multiplier()
 	var work: float = (_build_speed / build_time) * game_delta * civ_mult
 	_build_target.apply_build_work(work)
-	# Check if construction completed
-	if not _build_target.under_construction:
+	# Check if construction completed — _build_target may have been cleared
+	# by signal handlers (e.g. _auto_gather_after_build) during apply_build_work
+	if _build_target != null and not _build_target.under_construction:
 		_build_target = null
 
 
