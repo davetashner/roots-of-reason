@@ -306,6 +306,8 @@ func show_unit(unit: Node2D) -> void:
 
 
 func show_building(building: Node2D) -> void:
+	if building == null or not is_instance_valid(building):
+		return
 	_tracked_entity = building
 	_tracked_entities.clear()
 	_is_multi = false
@@ -718,6 +720,8 @@ func _update_unit_hp(unit: Node2D, stats: Dictionary) -> void:
 
 
 func _update_building_hp(building: Node2D) -> void:
+	if building == null or not is_instance_valid(building):
+		return
 	if building.under_construction:
 		_set_build_progress_bar(building.build_progress)
 		return
