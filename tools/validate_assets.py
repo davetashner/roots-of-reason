@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Validate game assets against ADR-008 sprite scale contract.
 
-Checks naming conventions, dimensions, and optional player-color masks
-for all PNG files under the assets/ directory.
+Checks naming conventions, dimensions, optional player-color masks
+for all PNG files, and audio encoding (Ogg Vorbis required) for .ogg files
+under the assets/ directory.
 """
 from __future__ import annotations
 
@@ -221,6 +222,48 @@ def check_player_color_mask(
 
 
 # ---------------------------------------------------------------------------
+# Audio encoding validation
+# ---------------------------------------------------------------------------
+
+# Ogg page header magic, followed by the codec identification header.
+# Vorbis: first audio page payload starts with b"\x01vorbis"
+# Opus:   first audio page payload starts with b"OpusHead"
+_OGG_MAGIC = b"OggS"
+
+
+def check_ogg_encoding(filepath: Path, rel_path: str) -> str | None:
+    """Return an error if an .ogg file is not Vorbis-encoded.
+
+    Godot's ``oggvorbisstr`` importer only supports Ogg Vorbis. Files
+    encoded with Opus (common from AI music generators like Suno) will
+    fail to import silently.
+    """
+    try:
+        with open(filepath, "rb") as f:
+            header = f.read(64)
+    except OSError:
+        return f"Could not read OGG file: {rel_path}"
+
+    if len(header) < 36 or header[:4] != _OGG_MAGIC:
+        return f"Not a valid OGG file: {rel_path}"
+
+    # The codec identification sits in the first page's payload.
+    # Ogg page header is 27 bytes + segment table. We scan the first
+    # 64 bytes for known codec signatures.
+    if b"\x01vorbis" in header:
+        return None  # Vorbis — all good
+
+    if b"OpusHead" in header:
+        return (
+            f"Audio encoding: {rel_path} is Ogg Opus, not Ogg Vorbis. "
+            f"Godot requires Vorbis. Re-encode with: "
+            f"ffmpeg -i <file> /tmp/out.wav && oggenc -q 6 -o <file> /tmp/out.wav"
+        )
+
+    return f"Audio encoding: {rel_path} uses an unknown OGG codec (expected Vorbis)"
+
+
+# ---------------------------------------------------------------------------
 # Main validation
 # ---------------------------------------------------------------------------
 
@@ -246,12 +289,24 @@ def validate_assets(
             continue
 
         for fname in filenames:
-            # Only validate PNGs (skip .import files and others)
-            if not fname.lower().endswith(".png"):
-                continue
-
             filepath = Path(dirpath) / fname
             rel_path = os.path.relpath(filepath, assets_dir)
+            lower_fname = fname.lower()
+
+            # Validate OGG audio files
+            if lower_fname.endswith(".ogg"):
+                file_count += 1
+                if verbose:
+                    print(f"  Checking: {rel_path}")
+                err = check_ogg_encoding(filepath, rel_path)
+                if err:
+                    errors.append(err)
+                continue
+
+            # Only validate PNGs (skip .import files and others)
+            if not lower_fname.endswith(".png"):
+                continue
+
             file_count += 1
 
             if verbose:
@@ -273,7 +328,7 @@ def validate_assets(
                 errors.append(err)
 
     if verbose:
-        print(f"\n  Scanned {file_count} PNG file(s)")
+        print(f"\n  Scanned {file_count} asset file(s)")
 
     return errors
 
