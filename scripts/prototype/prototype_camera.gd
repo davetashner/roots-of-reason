@@ -1,6 +1,6 @@
 extends Camera2D
 ## Prototype isometric camera with pan, zoom, edge-scroll, middle-mouse drag,
-## trackpad gestures, bounds clamping, cursor-centered zoom, and save/load support.
+## trackpad gestures, bounds clamping, center-anchored zoom, and save/load support.
 
 const GESTURE_DEBOUNCE_MSEC: int = 200
 
@@ -63,9 +63,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 		match mb.button_index:
 			MOUSE_BUTTON_WHEEL_UP:
-				_zoom_toward_cursor(1)
+				_zoom_toward_center(1)
 			MOUSE_BUTTON_WHEEL_DOWN:
-				_zoom_toward_cursor(-1)
+				_zoom_toward_center(-1)
 			MOUSE_BUTTON_MIDDLE:
 				_dragging = mb.pressed
 				_drag_start = mb.position
@@ -78,7 +78,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var pan := event as InputEventPanGesture
 		var zoom_delta := -pan.delta.y * _trackpad_zoom_sensitivity
 		if absf(zoom_delta) > 0.001:
-			_zoom_toward_cursor_smooth(zoom_delta)
+			_zoom_toward_center_smooth(zoom_delta)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMagnifyGesture:
 		# macOS trackpad pinch-to-zoom
@@ -86,37 +86,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mag := event as InputEventMagnifyGesture
 		var zoom_delta := mag.factor - 1.0
 		if absf(zoom_delta) > 0.001:
-			_zoom_toward_cursor_smooth(zoom_delta)
+			_zoom_toward_center_smooth(zoom_delta)
 		get_viewport().set_input_as_handled()
 
 
-func _zoom_toward_cursor_smooth(amount: float) -> void:
-	var old_zoom := zoom.x
+func _zoom_toward_center_smooth(amount: float) -> void:
 	_target_zoom = clampf(_target_zoom + amount, _zoom_min, _zoom_max)
-	var vp := get_viewport()
-	if vp == null:
-		return
-	var mouse_screen := vp.get_mouse_position()
-	var vp_size := get_viewport_rect().size
-	var offset_from_center := mouse_screen - vp_size * 0.5
-	var world_offset_old := offset_from_center / old_zoom
-	var world_offset_new := offset_from_center / _target_zoom
-	position += world_offset_old - world_offset_new
 
 
-func _zoom_toward_cursor(direction: int) -> void:
-	var old_zoom := zoom.x
+func _zoom_toward_center(direction: int) -> void:
 	_target_zoom = clampf(_target_zoom + direction * _zoom_step, _zoom_min, _zoom_max)
-	# Cursor-centered zoom: shift position so world point under cursor stays put
-	var vp := get_viewport()
-	if vp == null:
-		return
-	var mouse_screen := vp.get_mouse_position()
-	var vp_size := get_viewport_rect().size
-	var offset_from_center := mouse_screen - vp_size * 0.5
-	var world_offset_old := offset_from_center / old_zoom
-	var world_offset_new := offset_from_center / _target_zoom
-	position += world_offset_old - world_offset_new
 
 
 func _handle_keyboard_pan(delta: float) -> void:
