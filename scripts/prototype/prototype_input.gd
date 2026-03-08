@@ -17,6 +17,7 @@ const VILLAGER_SELECT_SFX: Array[String] = [
 	"res://assets/audio/sfx/units/villager_select_3.ogg",
 	"res://assets/audio/sfx/units/villager_select_4.ogg",
 ]
+const VOICE_COOLDOWN := 2.0
 
 var _units: Array[Node] = []
 var _box_selecting: bool = false
@@ -36,6 +37,7 @@ var _cursor_overlay: Node = null
 var _command_config: Dictionary = {}
 var _attack_move_mode: bool = false
 var _patrol_mode: bool = false
+var _last_voice_time_ms: int = 0
 var _patrol_first_point: Vector2 = Vector2.ZERO
 var _formation_manager: RefCounted = null
 var _formation_type: int = 0  # FormationManager.FormationType.STAGGERED
@@ -362,15 +364,25 @@ func get_active_group() -> int:
 	return _last_recalled_group
 
 
+func _is_voice_on_cooldown() -> bool:
+	var now := Time.get_ticks_msec()
+	if now - _last_voice_time_ms < int(VOICE_COOLDOWN * 1000):
+		return true
+	_last_voice_time_ms = now
+	return false
+
+
 func _play_unit_select_sfx(unit: Node) -> void:
 	if "unit_type" in unit and unit.unit_type == "villager":
-		AudioManager.play_ui_sound(VILLAGER_SELECT_SFX.pick_random())
+		if not _is_voice_on_cooldown():
+			AudioManager.play_ui_sound(VILLAGER_SELECT_SFX.pick_random())
 
 
 func _play_selection_sfx() -> void:
 	for unit in _get_selected_units():
 		if "unit_type" in unit and unit.unit_type == "villager":
-			AudioManager.play_ui_sound(VILLAGER_SELECT_SFX.pick_random())
+			if not _is_voice_on_cooldown():
+				AudioManager.play_ui_sound(VILLAGER_SELECT_SFX.pick_random())
 			return
 
 
