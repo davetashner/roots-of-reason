@@ -10,6 +10,13 @@ const RESOURCE_NAME_TO_TYPE: Dictionary = {
 	"knowledge": ResourceManager.ResourceType.KNOWLEDGE,
 }
 
+const COLOR_READY := Color(0.2, 0.5, 0.3)
+const COLOR_READY_HOVER := Color(0.25, 0.6, 0.35)
+const COLOR_READY_PRESSED := Color(0.15, 0.4, 0.25)
+const COLOR_DISABLED := Color(0.15, 0.15, 0.15, 0.5)
+const COLOR_CANCEL := Color(0.5, 0.2, 0.1)
+const COLOR_CANCEL_HOVER := Color(0.6, 0.25, 0.15)
+
 var _age_advancement: Node = null
 var _player_id: int = 0
 
@@ -33,9 +40,13 @@ func _ready() -> void:
 	add_child(btn_row)
 
 	_button = Button.new()
-	_button.custom_minimum_size = Vector2(180, 28)
+	_button.custom_minimum_size = Vector2(180, 32)
 	_button.add_theme_font_size_override("font_size", 12)
+	_button.add_theme_color_override("font_color", Color.WHITE)
+	_button.add_theme_color_override("font_hover_color", Color.WHITE)
+	_button.add_theme_color_override("font_disabled_color", Color(0.5, 0.5, 0.5))
 	_button.pressed.connect(_on_button_pressed)
+	_style_button_ready()
 	btn_row.add_child(_button)
 
 	_progress_bar = ProgressBar.new()
@@ -85,12 +96,14 @@ func update_display(building: Node2D) -> void:
 		_button.text = "Cancel"
 		_button.tooltip_text = "Cancel age advancement"
 		_button.disabled = false
+		_style_button_cancel()
 		_progress_bar.visible = true
 		_progress_bar.value = _age_advancement.get_advance_progress() * 100.0
 		_status_label.visible = false
 	else:
 		visible = true
 		_button.text = "Advance to %s" % age_name
+		_style_button_ready()
 		_progress_bar.visible = false
 		var missing: Array[String] = _age_advancement.get_missing_techs(_player_id)
 		var raw_costs: Dictionary = _age_advancement.get_advance_cost_raw(next_age)
@@ -185,3 +198,27 @@ func _on_button_pressed() -> void:
 		_age_advancement.cancel_advancement(_player_id)
 	else:
 		_age_advancement.start_advancement(_player_id)
+
+
+func _style_button_ready() -> void:
+	_apply_style("normal", COLOR_READY)
+	_apply_style("hover", COLOR_READY_HOVER)
+	_apply_style("pressed", COLOR_READY_PRESSED)
+	_apply_style("disabled", COLOR_DISABLED)
+
+
+func _style_button_cancel() -> void:
+	_apply_style("normal", COLOR_CANCEL)
+	_apply_style("hover", COLOR_CANCEL_HOVER)
+	_apply_style("pressed", COLOR_CANCEL)
+	_apply_style("disabled", COLOR_DISABLED)
+
+
+func _apply_style(state: String, color: Color) -> void:
+	var s := StyleBoxFlat.new()
+	s.bg_color = color
+	s.set_corner_radius_all(4)
+	s.set_content_margin_all(4)
+	s.border_color = color.lightened(0.3)
+	s.set_border_width_all(1)
+	_button.add_theme_stylebox_override(state, s)
