@@ -442,11 +442,15 @@ func _update_sprite_appearance() -> void:
 
 func _get_build_frame_index() -> int:
 	## Map build_progress (0.0-1.0) to a frame index.
-	## Frame 0 shown from 0-33%, frame 1 from 33-66%, last frame from 66%+.
+	## The final frame is reserved for 100% complete (build_progress >= 0.999).
+	## Earlier frames are distributed evenly across 0-99% progress.
 	if _build_seq_frame_count <= 1:
 		return 0
-	var idx: int = int(build_progress * float(_build_seq_frame_count))
-	return clampi(idx, 0, _build_seq_frame_count - 1)
+	if build_progress >= 0.999:
+		return _build_seq_frame_count - 1
+	var usable_frames: int = _build_seq_frame_count - 1
+	var idx: int = int(build_progress * float(usable_frames))
+	return clampi(idx, 0, usable_frames - 1)
 
 
 func _draw() -> void:

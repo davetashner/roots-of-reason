@@ -481,3 +481,27 @@ func test_context_command_resolve_garrison() -> void:
 	handler._target_detector.register_entity(building)
 	var cmd: String = handler._resolve_command_at(Vector2(305, 300))
 	assert_str(cmd).is_equal("garrison")
+
+
+# -- Unit selection priority over resources --
+
+
+func test_unit_at_prefers_unit_over_resource() -> void:
+	var handler := _create_handler()
+	# Resource at same position, registered first
+	var res := Node2D.new()
+	res.set_script(ResourceScript)
+	res.position = Vector2(50, 50)
+	res.global_position = Vector2(50, 50)
+	auto_free(res)
+	res.resource_name = "oak_tree"
+	res.resource_type = "wood"
+	res.total_yield = 100
+	res.current_yield = 100
+	handler.register_unit(res)
+	# Unit at same position, registered second
+	var unit := _create_unit(Vector2(50, 50))
+	handler.register_unit(unit)
+	# Click at the overlapping position — should select the unit, not resource
+	var hit: Node = handler._unit_at(Vector2(50, 50))
+	assert_object(hit).is_same(unit)

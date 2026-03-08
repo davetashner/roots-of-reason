@@ -318,12 +318,13 @@ func test_frame_index_at_mid_progress() -> void:
 
 
 func test_frame_index_at_late_progress() -> void:
-	## At 80% progress the building should show frame 2 (roof/complete).
+	## At 80% progress the building should show frame 1 (partial) — final frame
+	## is reserved for 100% complete.
 	var ctx := _create_scene()
 	var house := _place_house(ctx, Vector2i(5, 5))
 	house.build_progress = 0.80
 	if house._build_seq_frame_count >= 3:
-		assert_int(house._get_build_frame_index()).is_equal(2)
+		assert_int(house._get_build_frame_index()).is_equal(1)
 
 
 func test_frame_index_at_full_progress() -> void:
@@ -337,27 +338,29 @@ func test_frame_index_at_full_progress() -> void:
 
 func test_frame_progression_through_full_build() -> void:
 	## Incrementally build and verify frames advance: 0 → 1 → 2.
+	## With 3 frames and final reserved for 100%:
+	##   frame 0: 0-49%, frame 1: 50-99%, frame 2: 100% only.
 	var ctx := _create_scene()
 	var house := _place_house(ctx, Vector2i(5, 5))
 	if house._build_seq_frame_count < 3:
 		return  # Skip if no building sequence spritesheet
-	# Foundation phase (0-33%)
+	# Foundation phase (0-49%)
 	assert_int(house._get_build_frame_index()).is_equal(0)
 	house.apply_build_work(0.10)
 	assert_int(house._get_build_frame_index()).is_equal(0)
 	house.apply_build_work(0.10)
 	assert_int(house._get_build_frame_index()).is_equal(0)
-	# Partial build phase (33-66%)
 	house.apply_build_work(0.15)
 	assert_float(house.build_progress).is_equal_approx(0.35, 0.001)
-	assert_int(house._get_build_frame_index()).is_equal(1)
+	assert_int(house._get_build_frame_index()).is_equal(0)
+	# Partial build phase (50-99%) — frame 1
 	house.apply_build_work(0.20)
+	assert_float(house.build_progress).is_equal_approx(0.55, 0.001)
 	assert_int(house._get_build_frame_index()).is_equal(1)
-	# Complete phase (66%+)
 	house.apply_build_work(0.15)
 	assert_float(house.build_progress).is_equal_approx(0.70, 0.001)
-	assert_int(house._get_build_frame_index()).is_equal(2)
-	# Finish construction
+	assert_int(house._get_build_frame_index()).is_equal(1)
+	# Finish construction — final frame only at 100%
 	house.apply_build_work(0.30)
 	assert_bool(house.under_construction).is_false()
 	assert_int(house.hp).is_equal(550)

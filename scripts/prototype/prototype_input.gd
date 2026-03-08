@@ -336,6 +336,10 @@ func _handle_mouse_button(mb: InputEventMouseButton) -> void:
 
 
 func _unit_at(world_pos: Vector2) -> Node:
+	# Prefer mobile units over resources/buildings when hit boxes overlap.
+	var best: Node = null
+	var best_is_unit := false
+	var best_dist := INF
 	for unit in _units:
 		if not is_instance_valid(unit):
 			continue
@@ -345,8 +349,20 @@ func _unit_at(world_pos: Vector2) -> Node:
 			if not is_sheep:
 				continue
 		if unit.has_method("is_point_inside") and unit.is_point_inside(world_pos):
-			return unit
-	return null
+			var cat: String = unit.entity_category if "entity_category" in unit else ""
+			var is_unit: bool = cat != "resource_node" and not cat.ends_with("_building")
+			var dist: float = unit.global_position.distance_to(world_pos)
+			if is_unit and not best_is_unit:
+				best = unit
+				best_is_unit = true
+				best_dist = dist
+			elif is_unit == best_is_unit and dist < best_dist:
+				best = unit
+				best_dist = dist
+			elif best == null:
+				best = unit
+				best_dist = dist
+	return best
 
 
 func _deselect_all() -> void:

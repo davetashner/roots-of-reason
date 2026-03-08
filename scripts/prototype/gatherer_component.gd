@@ -73,6 +73,10 @@ func _tick_moving_to_resource() -> void:
 	if dist <= gather_reach and not _unit._moving:
 		gather_state = GatherState.GATHERING
 		gather_accumulator = 0.0
+	elif not _unit._moving and dist > gather_reach:
+		# Unit isn't moving but hasn't reached the resource — move_to() likely
+		# failed (e.g. all neighboring cells blocked). Try a different resource.
+		_try_find_replacement_resource()
 
 
 func _tick_gathering(game_delta: float) -> void:
@@ -96,7 +100,7 @@ func _tick_gathering(game_delta: float) -> void:
 		var to_extract := mini(whole, room)
 		var gathered: int = gather_target.apply_gather_work(float(to_extract))
 		carried_amount += gathered
-		gather_accumulator -= float(to_extract)
+		gather_accumulator -= float(gathered)
 	if carried_amount >= carry_capacity:
 		_start_drop_off_trip()
 
@@ -207,7 +211,7 @@ func _try_find_replacement_resource() -> void:
 		return
 	var best: Node2D = null
 	var best_dist := INF
-	for child in root.get_children():
+	for child in _iter_entities(root):
 		if child == gather_target or "entity_category" not in child:
 			continue
 		if child.entity_category != "resource_node":
