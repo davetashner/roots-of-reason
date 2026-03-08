@@ -777,7 +777,8 @@ func test_replacement_resource_found_inside_building_layer() -> void:
 	_root.add_child(layer)
 	auto_free(layer)
 	var res1 := _make_resource(Vector2(50, 0), "wood", 0)
-	var res2 := ResourceFactory.create_resource_node({position = Vector2(80, 0), resource_type = "wood", current_yield = 100})
+	var overrides := {position = Vector2(80, 0), resource_type = "wood", current_yield = 100}
+	var res2 := ResourceFactory.create_resource_node(overrides)
 	layer.add_child(res2)
 	auto_free(res2)
 	var gc := _make_component()
